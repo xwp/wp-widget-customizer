@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Widget Customizer
- * Description: Edit widgets in the Theme Customizer
+ * Description: Edit sidebar widgets in the Theme Customizer. Adds a section for each sidebar and a control for each widget.
  * Version:     0.1
  * Author:      X-Team, Weston Ruter
  * Author URI:  http://x-team.com/
@@ -45,7 +45,6 @@ class Widget_Customizer {
 		$mo_file = sprintf( '%s/%s/%s-%s.mo', WP_LANG_DIR, $text_domain, $text_domain, $locale );
 		load_textdomain( $text_domain, $mo_file );
 		$plugin_rel_path = dirname( plugin_basename( __FILE__ ) ) . trailingslashit( self::get_plugin_meta( 'DomainPath' ) );
-		error_log($plugin_rel_path);
 		load_plugin_textdomain( $text_domain, false, $plugin_rel_path );
 	}
 
