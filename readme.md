@@ -34,6 +34,10 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ![After change, before save](assets/screenshot-2.png)
 
+### I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
+
+![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-3.png)
+
 ## Changelog ##
 
 ### 0.1 ###

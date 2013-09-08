@@ -27,6 +27,7 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 1. Before changes
 2. After change, before save
+3. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
 == Changelog ==
 
