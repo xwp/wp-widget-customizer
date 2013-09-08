@@ -3,6 +3,7 @@
  * Lightweight WordPress readme.txt parser and converter to Markdown
  * The WordPress-Plugin-Readme-Parser project is too heavy and has too many dependencies for what we need.
  * See: https://github.com/markjaquith/WordPress-Plugin-Readme-Parser
+ * @version 1.0.1
  */
 
 class XTeam_WordPress_Readme_Parser {
@@ -90,10 +91,23 @@ class XTeam_WordPress_Readme_Parser {
 				$screenshots = array();
 				preg_match_all( '/^\d+\. (.+?)$/m', $body, $screenshot_matches, PREG_SET_ORDER ) || \WP_CLI::error( 'Malformed screenshot section' );
 				foreach ( $screenshot_matches as $i => $screenshot_match ) {
+					foreach ( array( 'jpg', 'gif', 'png' ) as $ext ) {
+						$filepath = sprintf( 'assets/screenshot-%d.%s', $i + 1, $ext );
+						if ( file_exists( dirname( $this->path ) . DIRECTORY_SEPARATOR . $filepath ) ) {
+							break;
+						}
+						else {
+							$filepath = null;
+						}
+					}
+					if ( empty( $filepath ) ) {
+						continue;
+					}
+
 					$screenshot_name = $screenshot_match[1];
 					$new_body .= sprintf( "### %s\n", $screenshot_name );
 					$new_body .= "\n";
-					$new_body .= sprintf( "![%s](assets/screenshot-%d.png)\n", $screenshot_name, $i + 1 );
+					$new_body .= sprintf( "![%s](%s)\n", $screenshot_name, $filepath );
 					$new_body .= "\n";
 				}
 				return $new_body;
