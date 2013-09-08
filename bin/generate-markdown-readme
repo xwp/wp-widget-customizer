@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+try {
+	$readme_txt_path = __DIR__ . '/../readme.txt';
+	$readme_md_path = __DIR__ . '/../readme.md';
+
+	require_once __DIR__ . '/../lib/readme-parser.php';
+
+	$readme = new XTeam_WordPress_Readme_Parser( array( 'path' => $readme_txt_path ) );
+
+	$md_args = array();
+	if ( file_exists( __DIR__ . '/../.travis.yml' ) ) {
+		$md_args['travis_ci_url'] = preg_replace( '/^.+?:(.+)\.git$/', 'https://travis-ci.org/$1', trim(`git config --get remote.origin.url`) );
+	}
+	$markdown = $readme->to_markdown( $md_args );
+
+	$is_written = file_put_contents( $readme_md_path, $markdown );
+	if ( ! $is_written ) {
+		throw new Exception( 'Failed to write to readme.md' );
+	}
+	fwrite( STDERR, "Successfully wrote to readme.md\n" );
+}
+catch( Exception $e ) {
+	fwrite( STDERR, $e->getMessage() . "\n" );
+	exit( 1 );
+}
