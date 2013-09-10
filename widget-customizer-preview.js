@@ -1,8 +1,7 @@
-/*global wp, jQuery, WidgetCustomizer_exports */
+/*global wp, jQuery */
 var WidgetCustomizerPreview = (function ($) {
 	'use strict';
 
-	var customize = wp.customize;
 	var self = {
 		rendered_sidebars: []
 	};

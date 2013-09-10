@@ -173,7 +173,7 @@ class Widget_Customizer {
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
 			'widget-customizer-preview',
-			plugin_dir_url( __FILE__) . 'customize-preview.js',
+			plugin_dir_url( __FILE__) . 'widget-customizer-preview.js',
 			array( 'jquery', 'customize-preview' ),
 			self::get_version(),
 			true
