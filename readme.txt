@@ -33,5 +33,8 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 == Changelog ==
 
+= 0.2 =
+Only show customizer sections for sidebars which can currently be seen in the preview; sections show/hide dynamically as the preview frame is navigated.
+
 = 0.1 =
 First Release
