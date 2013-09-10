@@ -1,5 +1,5 @@
-/*global wp, jQuery, CustomizerWidgets_exports, console, alert */
-var CustomizerWidgets = (function ($) {
+/*global wp, jQuery, WidgetCustomizer_exports, console, alert */
+var WidgetCustomizer = (function ($) {
 	'use strict';
 
 	var customize = wp.customize;
@@ -9,7 +9,7 @@ var CustomizerWidgets = (function ($) {
 		nonce_value: null,
 		nonce_post_key: null
 	};
-	$.extend(self, CustomizerWidgets_exports);
+	$.extend(self, WidgetCustomizer_exports);
 
 	self.constuctor = customize.Control.extend({
 		ready: function() {

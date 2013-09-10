@@ -36,7 +36,9 @@ class Widget_Customizer {
 		self::load_textdomain();
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
-		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'enqueue_deps' ) );
+		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
+		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
+		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
 	}
 
 	static function load_textdomain() {
@@ -89,7 +91,7 @@ class Widget_Customizer {
 			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 			$section_args = array(
 				'title' => sprintf(
-					__( 'Sidebar Widgets: %s', 'widget-customizer' ),
+					__( 'Sidebar: %s', 'widget-customizer' ),
 					$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
 				),
 				'description' => $sidebar['description'],
@@ -135,28 +137,77 @@ class Widget_Customizer {
 	/**
 	 * @action customize_controls_enqueue_scripts
 	 */
-	static function enqueue_deps() {
-		wp_enqueue_script(
-			'widget-customizer',
-			plugin_dir_url( __FILE__) . 'widget-customizer.js',
-			array( 'jquery', 'customize-controls' ),
-			self::get_version()
-		);
+	static function customize_controls_enqueue_deps() {
 		wp_enqueue_style(
 			'widget-customizer',
 			plugin_dir_url( __FILE__ ) . 'widget-customizer.css',
 			array(),
 			self::get_version()
 		);
+		wp_enqueue_script(
+			'widget-customizer',
+			plugin_dir_url( __FILE__) . 'widget-customizer.js',
+			array( 'jquery', 'customize-controls' ),
+			self::get_version(),
+			true
+		);
 		wp_localize_script(
 			'widget-customizer',
-			'CustomizerWidgets_exports',
+			'WidgetCustomizer_exports',
 			array(
 				'ajax_action' => self::AJAX_ACTION,
 				'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
 				'nonce_post_key' => self::NONCE_POST_KEY,
 			)
 		);
+	}
+
+	static function customize_preview_init() {
+		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'customize_preview_enqueue_deps' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'export_preview_data' ) );
+	}
+
+	/**
+	 * @access wp_enqueue_scripts
+	 */
+	static function customize_preview_enqueue_deps() {
+		wp_enqueue_script(
+			'widget-customizer-preview',
+			plugin_dir_url( __FILE__) . 'customize-preview.js',
+			array( 'jquery', 'customize-preview' ),
+			self::get_version(),
+			true
+		);
+	}
+
+	static function export_preview_data() {
+		wp_print_scripts( array( 'widget-customizer-preview' ) );
+		?>
+		<script>
+		(function () {
+		/*global WidgetCustomizerPreview */
+		WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
+		}());
+		</script>
+		<?php
+	}
+
+	static protected $rendered_sidebars = array();
+
+	/**
+	 * @action dynamic_sidebar
+	 * @todo This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
+	 */
+	static function tally_rendered_sidebars( $widget ) {
+		global $sidebars_widgets;
+		foreach ( $sidebars_widgets as $sidebar_id => $widget_ids ) {
+			if ( in_array( $sidebar_id, self::$rendered_sidebars ) ) {
+				continue;
+			}
+			if ( in_array( $widget['id'], $widget_ids ) ) {
+				self::$rendered_sidebars[] = $sidebar_id;
+			}
+		}
 	}
 
 	/**
