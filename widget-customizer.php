@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widget Customizer
  * Description: Edit sidebar widgets in the Theme Customizer. Adds a section for each sidebar and a control for each widget.
- * Version:     0.1
+ * Version:     0.2
  * Author:      X-Team, Weston Ruter
  * Author URI:  http://x-team.com/
  * License:     GPLv2+
