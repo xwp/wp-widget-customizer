@@ -34,9 +34,8 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 == Changelog ==
 
 = 0.3 =
-
- * Add banner image ([#10](https://github.com/x-team/wp-widget-customizer/issues/10)). Props [johnregan3](http://profiles.wordpress.org/johnregan3/).
- * Eliminate warning with an array type check
+* Add banner image ([#10](https://github.com/x-team/wp-widget-customizer/issues/10)). Props [johnregan3](http://profiles.wordpress.org/johnregan3/).
+* Eliminate warning with an array type check
 
 = 0.2 =
 Only show customizer sections for sidebars which can currently be seen in the preview; sections show/hide dynamically as the preview frame is navigated.
