@@ -204,7 +204,7 @@ class Widget_Customizer {
 			if ( in_array( $sidebar_id, self::$rendered_sidebars ) ) {
 				continue;
 			}
-			if ( in_array( $widget['id'], $widget_ids ) ) {
+			if ( is_array( $widget_ids ) && in_array( $widget['id'], $widget_ids ) ) {
 				self::$rendered_sidebars[] = $sidebar_id;
 			}
 		}
