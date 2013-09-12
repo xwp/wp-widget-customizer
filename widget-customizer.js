@@ -26,6 +26,8 @@ var WidgetCustomizer = (function ($) {
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
+
+			control.controlTabs();
 		},
 
 		/**
@@ -68,11 +70,20 @@ var WidgetCustomizer = (function ($) {
 				control.container.find( '.widget-content' ).prop( 'disabled', false );
 				control.container.removeClass( 'widget-form-loading' );
 			});
+		},
+
+		controlTabs: function() {
+			$('.widget-top').click( function () {
+				$(this).next().toggleClass('visible');
+			});
 		}
+
 	});
 
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	customize.controlConstructor.widget_form = self.constuctor;
+
+
 
 	return self;
 }( jQuery ));
