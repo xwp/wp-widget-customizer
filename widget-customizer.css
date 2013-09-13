@@ -21,7 +21,3 @@
 .customize-control-widget_form .widget .widget-top a {
 	cursor: pointer;
 }
-
-.customize-control-widget_form .widget-inside.visible {
-	display:block;
-}

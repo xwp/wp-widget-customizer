@@ -74,7 +74,7 @@ var WidgetCustomizer = (function ($) {
 
 		controlTabs: function() {
 			$('.widget-top').click( function () {
-				$(this).next().toggleClass('visible');
+				$(this).next().stop().slideToggle();
 			});
 		}
 
