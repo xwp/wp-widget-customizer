@@ -13,5 +13,15 @@ var WidgetCustomizerPreview = (function ($) {
 		});
 	});
 
+	$('.widget').click(function() {
+		var widgetId = '#customize-control-widget_'+jQuery(this).attr('id');
+		parent.jQuery("li.selected").removeClass('selected');
+		parent.jQuery(widgetId).toggleClass('selected');
+		console.log(widgetId);
+	});
+
+
+
 	return self;
+
 }( jQuery ));

@@ -26,6 +26,8 @@ var WidgetCustomizer = (function ($) {
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
+
+			control.editingEffects();
 		},
 
 		/**
@@ -34,6 +36,7 @@ var WidgetCustomizer = (function ($) {
 		update_widget: function ( instance_override ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
+
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
@@ -68,7 +71,45 @@ var WidgetCustomizer = (function ($) {
 				control.container.find( '.widget-content' ).prop( 'disabled', false );
 				control.container.removeClass( 'widget-form-loading' );
 			});
-		}
+		},
+
+		editingEffects: function() {
+			var control = this;
+			var widgetId;
+			
+			/*On control hover*/
+	  		$(control.container).hover( function () {
+	  			var toRemove = 'customize-control-widget_';
+	  			widgetId = '#'+$(this).attr('id').replace( toRemove, '' );
+ 				
+				$('iframe').contents().find(widgetId).css({
+    				'border-radius' : '3px',
+    				'outline' : 'none',
+    				'box-shadow' : '0 0 5px #CE0000'
+				});
+				
+			},
+			function(){
+				$('iframe').contents().find(widgetId).css({ 'box-shadow' : 'none' });
+			});
+			
+			/*On control input click*/
+			$(control.container).find('input').click( function () {
+	  			var toRemove = 'customize-control-widget_';
+	  			widgetId = '#'+$(this).closest(control.container).attr('id').replace( toRemove, '' );
+ 				
+ 				$('iframe').contents().find('body, html').animate({
+					scrollTop: $('iframe').contents().find(widgetId).offset().top-20
+				}, 1000);
+				
+			});
+
+			/*On Widget preview click - Adds border to control, Change to open after update*/
+			$('iframe').contents().find('.widget').bind('click',function(e) {
+			    alert('bingo?');
+			 });
+
+	  	}
 	});
 
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type

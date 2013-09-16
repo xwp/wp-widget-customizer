@@ -9,3 +9,9 @@
 	-ms-user-select: none;
 	user-select: none;
 }
+
+.selected{
+	border-radius: 3px;
+    outline: 'none';
+	box-shadow: 0 0 5px #CE0000;
+}
