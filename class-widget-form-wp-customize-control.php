@@ -35,7 +35,6 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 					</h4>
 				</div>
 			</div>
-			<!-- need to remove display:block -->
 			<div class="customize-control-content widget-inside">
 				<fieldset class="widget-content">
 				<?php
