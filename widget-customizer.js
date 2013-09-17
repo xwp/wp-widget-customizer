@@ -16,24 +16,30 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			control.setting.bind( function( to ) {
-				control.update_widget( to );
+				control.updateWidget( to );
 			});
 
 			control.container.find( '.widget-control-update' ).on( 'click', function (e) {
-				control.update_widget();
+				control.updateWidget();
 			});
 
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
 
+
+			control.setupControlToggle();
+
+			control.setupWidgetTitle();
+
 			control.editingEffects();
+
 		},
 
 		/**
 		 * @param {object} instance_override  When the model changes, the instance is sent this way
 		 */
-		update_widget: function ( instance_override ) {
+		updateWidget: function ( instance_override ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
 
@@ -73,6 +79,44 @@ var WidgetCustomizer = (function ($) {
 			});
 		},
 
+		setupControlToggle: function() {
+			var control = this;
+			control.container.find('.widget-top').on( 'click', function (e) {
+				// Copied from wpWidgets.init() in wp-admin/js/widgets.js
+				var target = $(this);
+				var widget = target.closest('div.widget');
+				var inside = widget.children('.widget-inside');
+				if ( inside.is(':hidden') ) {
+					inside.slideDown('fast');
+				} else {
+					inside.slideUp('fast', function() {
+						widget.css({'width':'', margin:''});
+					});
+				}
+				e.preventDefault();
+			} );
+		},
+
+		setupWidgetTitle: function () {
+			var control = this;
+			control.setting.bind( function( to ) {
+				control.updateInWidgetTitle();
+			});
+			control.updateInWidgetTitle();
+		},
+
+		updateInWidgetTitle: function () {
+			var control = this;
+			var title = control.setting().title;
+			var in_widget_title = control.container.find('.in-widget-title');
+			if ( title ) {
+				in_widget_title.text( ': ' + title );
+			}
+			else {
+				in_widget_title.text( '' );
+			}
+		},
+		
 		editingEffects: function() {
 			var control = this;
 			var widgetId;
@@ -83,9 +127,9 @@ var WidgetCustomizer = (function ($) {
 	  			widgetId = '#'+$(this).attr('id').replace( toRemove, '' );
  				
 				$('iframe').contents().find(widgetId).css({
-    				'border-radius' : '3px',
+    				'border-radius' : '2px',
     				'outline' : 'none',
-    				'box-shadow' : '0 0 5px #CE0000'
+    				'box-shadow' : '0 0 3px #CE0000'
 				});
 				
 			},
@@ -103,11 +147,6 @@ var WidgetCustomizer = (function ($) {
 				}, 1000);
 				
 			});
-
-			/*On Widget preview click - Adds border to control, Change to open after update*/
-			$('iframe').contents().find('.widget').bind('click',function(e) {
-			    alert('bingo?');
-			 });
 
 	  	}
 	});

@@ -10,8 +10,14 @@
 	user-select: none;
 }
 
-.selected{
-	border-radius: 3px;
-    outline: 'none';
-	box-shadow: 0 0 5px #CE0000;
+.customize-control-widget_form .widget {
+	margin-bottom: 0;
+}
+
+.customize-control-widget_form .widget .widget-top {
+	cursor: default;
+}
+
+.customize-control-widget_form .widget .widget-top a {
+	cursor: pointer;
 }
