@@ -73,17 +73,28 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		controlTabs: function() {
-			$('.widget-top').click( function () {
-				$(this).next().stop().slideToggle();
-			});
+			var control = this;
+			control.container.find('.widget-top').on( 'click', function (e) {
+				// Copied from wpWidgets.init() in wp-admin/js/widgets.js
+				var target = $(this);
+				var widget = target.closest('div.widget');
+				var inside = widget.children('.widget-inside');
+				if ( inside.is(':hidden') ) {
+					inside.slideDown('fast');
+				} else {
+					inside.slideUp('fast', function() {
+						widget.css({'width':'', margin:''});
+					});
+				}
+				e.preventDefault();
+			} );
+
 		}
 
 	});
 
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	customize.controlConstructor.widget_form = self.constuctor;
-
-
 
 	return self;
 }( jQuery ));
