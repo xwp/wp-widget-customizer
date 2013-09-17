@@ -29,9 +29,13 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 1. Before changes
 2. After change, before save
-3. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
+3. Widgets forms are collapsable (as of 0.4) with in-widget-title, same as on wp-admin/widgets.php
+4. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
 == Changelog ==
+
+= 0.4 =
+Render widget form controls in a collapsed state (with a toggle) as on the widgets admin page; add in-widget-title ([#7](https://github.com/x-team/wp-widget-customizer/issues/7)). Props [johnregan3](http://profiles.wordpress.org/johnregan3/).
 
 = 0.3 =
 * Add banner image ([#10](https://github.com/x-team/wp-widget-customizer/issues/10)). Props [johnregan3](http://profiles.wordpress.org/johnregan3/).
