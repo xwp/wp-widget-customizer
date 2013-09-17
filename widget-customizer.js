@@ -147,7 +147,6 @@ var WidgetCustomizer = (function ($) {
 				}, 1000);
 				
 			});
-
 	  	}
 	});
 
