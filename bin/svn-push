@@ -7,13 +7,23 @@ set -e
 
 cd $(dirname $0)/..
 
-if [ -n "$(git status -s -uno)" ]; then
-	git status
-	echo "Error: Git state has modified or staged files. Commit or reset." >&2
-	exit 1
-fi
 if [ ! -e svn-url ]; then
 	echo "Error: Missing svn-url file" >&2
+	exit 1
+fi
+
+force=
+while getopts 'f' option; do
+	case $option in
+		f)
+			force=1
+			;;
+	esac
+done
+
+if [ -n "$(git status -s -uno)" ] && [ -z "$force" ]; then
+	git status
+	echo "Error: Git state has modified or staged files. Commit or reset, or supply -f" >&2
 	exit 1
 fi
 
@@ -52,14 +62,21 @@ if ! grep -q "$plugin_version" readme.txt; then
 	exit 1
 fi
 
-if git show-ref --tags --quiet --verify -- "refs/tags/$plugin_version"; then
-	echo "Plugin version $plugin_version already tagged. Please bump version and try again"
+git show-ref --tags --quiet --verify -- "refs/tags/$plugin_version"
+has_tag=$?
+
+if [ $has_tag == 0 ] && [ -z "$force" ]; then
+	echo "Plugin version $plugin_version already tagged. Please bump version and try again, or supply -f"
 	exit 1
 fi
 
-echo "Tagging plugin version $plugin_version"
-git tag "$plugin_version" master
-git push origin "$plugin_version"
+if [ $has_tag != 0 ]; then
+	echo "Tagging plugin version $plugin_version"
+	git tag "$plugin_version" master
+	git push origin "$plugin_version"
+else
+	echo "Skipping plugin tag $plugin_version since already exists"
+fi
 
 if [ ! -e $svn_repo_dir ]; then
 	svn checkout $svn_url $svn_repo_dir
