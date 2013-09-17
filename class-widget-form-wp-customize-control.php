@@ -31,7 +31,7 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 				</div>
 				<div class="widget-title">
 					<h4 class="customize-control-title">
-						<?php echo esc_html( $this->label ); ?>
+						<?php echo esc_html( $this->label ); ?><span class="in-widget-title"></span>
 					</h4>
 				</div>
 			</div>
