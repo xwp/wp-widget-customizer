@@ -103,12 +103,6 @@ var WidgetCustomizer = (function ($) {
 				}, 1000);
 				
 			});
-
-			/*On Widget preview click - Adds border to control, Change to open after update*/
-			$('iframe').contents().find('.widget').bind('click',function(e) {
-			    alert('bingo?');
-			 });
-
 	  	}
 	});
 
