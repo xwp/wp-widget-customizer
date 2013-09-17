@@ -9,3 +9,15 @@
 	-ms-user-select: none;
 	user-select: none;
 }
+
+.customize-control-widget_form .widget {
+	margin-bottom: 0;
+}
+
+.customize-control-widget_form .widget .widget-top {
+	cursor: default;
+}
+
+.customize-control-widget_form .widget .widget-top a {
+	cursor: pointer;
+}
