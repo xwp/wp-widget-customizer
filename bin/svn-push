@@ -62,15 +62,16 @@ if ! grep -q "$plugin_version" readme.txt; then
 	exit 1
 fi
 
-git show-ref --tags --quiet --verify -- "refs/tags/$plugin_version"
-has_tag=$?
+if git show-ref --tags --quiet --verify -- "refs/tags/$plugin_version"; then
+	has_tag=1
+fi
 
-if [ $has_tag == 0 ] && [ -z "$force" ]; then
+if [ -z "$has_tag" ] && [ -z "$force" ]; then
 	echo "Plugin version $plugin_version already tagged. Please bump version and try again, or supply -f"
 	exit 1
 fi
 
-if [ $has_tag != 0 ]; then
+if [ -n "$has_tag" ]; then
 	echo "Tagging plugin version $plugin_version"
 	git tag "$plugin_version" master
 	git push origin "$plugin_version"
