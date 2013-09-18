@@ -6,7 +6,7 @@ Edit sidebar widgets in the Theme Customizer. Adds a section for each sidebar an
 
 **Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [johnregan3](http://profiles.wordpress.org/johnregan3)  
 **Tags:** [customizer](http://wordpress.org/plugins/tags/customizer), [widgets](http://wordpress.org/plugins/tags/widgets), [sidebars](http://wordpress.org/plugins/tags/sidebars), [preview](http://wordpress.org/plugins/tags/preview)  
-**Requires at least:** 3.7  
+**Requires at least:** 3.6  
 **Tested up to:** 3.7  
 **Stable tag:** trunk (master)  
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)  
