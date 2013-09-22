@@ -1,17 +1,15 @@
 === Widget Customizer ===
 Contributors:      X-team, westonruter, johnregan3
 Tags:              customizer, widgets, sidebars, preview
-Requires at least: 3.7
+Requires at least: 3.6
 Tested up to:      3.7
 Stable tag:        trunk
 License:           GPLv2 or later
 License URI:       http://www.gnu.org/licenses/gpl-2.0.html
 
-Edit sidebar widgets in the Theme Customizer. Adds a section for each sidebar and a control for each widget.
+Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
 
 == Description ==
-
-***IMPORTANT:*** *Currently requires applying a patch to WordPress core from [#25238](http://core.trac.wordpress.org/ticket/25238), which is marked for inclusion in next version of WordPress (3.7). This plugin will not work with WordPress 3.6 as-is if the patch is not applied.*
 
 Widgets in WordPress provide an easy way to add functionality to predefined areas of your theme templates. However, once you add a widget to a sidebar you have to leave the WordPress admin to go back to the frontend to actually see how the updated widget appears in the sidebar on your site's public frontend. While you are making these changes and expirimenting with a widget, it could be completely broken and everyone visiting your site will see this broken widget since there is no core way to preview changes made to widgets. But WordPress also provides an excellent way to preview changes to various settings on your site via the Theme Customizer. Changes made when using the Customizer are not visible to site visitors until you hit Save & Publish. So what if widgets could be edited in the Theme Customizer? That's what this plugin makes possible.
 
