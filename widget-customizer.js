@@ -12,6 +12,10 @@ var WidgetCustomizer = (function ($) {
 	$.extend(self, WidgetCustomizer_exports);
 
 	self.constuctor = customize.Control.extend({
+
+		/**
+		 *
+		 */
 		ready: function() {
 			var control = this;
 
@@ -28,11 +32,8 @@ var WidgetCustomizer = (function ($) {
 			});
 
 			control.setupControlToggle();
-
 			control.setupWidgetTitle();
-
 			control.editingEffects();
-
 		},
 
 		/**
@@ -78,32 +79,66 @@ var WidgetCustomizer = (function ($) {
 			});
 		},
 
+		/**
+		 * Show/hide the control when clicking on the form title
+		 */
 		setupControlToggle: function() {
 			var control = this;
 			control.container.find('.widget-top').on( 'click', function (e) {
-				// Copied from wpWidgets.init() in wp-admin/js/widgets.js
-				var target = $(this);
-				var widget = target.closest('div.widget');
-				var inside = widget.children('.widget-inside');
-				if ( inside.is(':hidden') ) {
-					inside.slideDown('fast');
-				} else {
-					inside.slideUp('fast', function() {
-						widget.css({'width':'', margin:''});
-					});
-				}
+				control.toggleForm();
 				e.preventDefault();
 			} );
 		},
 
+		/**
+		 * Expand the widget form control
+		 */
+		expandForm: function () {
+			this.toggleForm( true );
+		},
+
+		/**
+		 * Collapse the widget form control
+		 */
+		collapseForm: function () {
+			this.toggleForm( false );
+		},
+
+		/**
+		 * Expand or collapse the widget control
+		 * @param {boolean|undefined} [collapsed] If not supplied, will be inverse of current visibility
+		 */
+		toggleForm: function ( collapsed ) {
+			var control = this;
+			var widget = control.container.find('div.widget:first');
+			var inside = widget.find('.widget-inside:first');
+			if ( typeof collapsed === 'undefined' ) {
+				collapsed = ! inside.is(':hidden');
+			}
+			if ( collapsed ) {
+				inside.slideUp('fast', function() {
+					widget.css({'width':'', 'margin':''});
+				});
+			}
+			else {
+				inside.slideDown('fast');
+			}
+		},
+
+		/**
+		 * Update the title of the form if a title field is entered
+		 */
 		setupWidgetTitle: function () {
 			var control = this;
-			control.setting.bind( function( to ) {
+			control.setting.bind( function() {
 				control.updateInWidgetTitle();
 			});
 			control.updateInWidgetTitle();
 		},
 
+		/**
+		 * Set the widget control title based on any title setting
+		 */
 		updateInWidgetTitle: function () {
 			var control = this;
 			var title = control.setting().title;
@@ -115,35 +150,40 @@ var WidgetCustomizer = (function ($) {
 				in_widget_title.text( '' );
 			}
 		},
-		
+
+		/**
+		 * Highlight widgets in the preview when
+		 * @todo Add support for focus in addition to hover
+		 * @todo Should a widget remain highlighted as long as the widget form is expanded?
+		 */
 		editingEffects: function() {
 			var control = this;
-			var widgetId;
+			var widget_id;
 
 			/* On control hover */
 			$(control.container).hover(
 				function () {
 					var toRemove = 'customize-control-widget_';
-					widgetId = '#' + $(this).attr('id').replace( toRemove, '' );
+					widget_id = '#' + $(this).attr('id').replace( toRemove, '' );
 
-					$('iframe').contents().find(widgetId).css({
+					$('iframe').contents().find(widget_id).css({
 						'border-radius' : '2px',
 						'outline' : 'none',
 						'box-shadow' : '0 0 3px #CE0000'
 					});
 				},
 				function () {
-					$('iframe').contents().find(widgetId).css({ 'box-shadow' : 'none' });
+					$('iframe').contents().find(widget_id).css({ 'box-shadow' : 'none' });
 				}
 			);
 
 			/* On control input click */
 			$(control.container).find('input').click( function () {
 				var toRemove = 'customize-control-widget_';
-				widgetId = '#' + $(this).closest(control.container).attr('id').replace( toRemove, '' );
+				widget_id = '#' + $(this).closest(control.container).attr('id').replace( toRemove, '' );
 
 				$('iframe').contents().find('body, html').animate({
-					scrollTop: $('iframe').contents().find(widgetId).offset().top-20
+					scrollTop: $('iframe').contents().find(widget_id).offset().top-20
 				}, 1000);
 
 			});
