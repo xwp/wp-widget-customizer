@@ -218,6 +218,7 @@ class Widget_Customizer {
 	/**
 	 * @action dynamic_sidebar
 	 * @todo This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
+	 * @todo This does not get called for a sidebar which lacks widgets! Can be fixed with http://core.trac.wordpress.org/ticket/25368
 	 */
 	static function tally_rendered_sidebars( $widget ) {
 		global $sidebars_widgets;

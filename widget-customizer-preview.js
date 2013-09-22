@@ -47,23 +47,16 @@ var WidgetCustomizerPreview = (function ($) {
 		},
 
 		/**
-		 * @todo This also needs to expand the customizer section if it is not already expanded; at least it needs to highlight it
+		 * @todo This also needs to expand the customizer section if it is not already expanded; at least it needs to highlight it. box-shadow: 0px 0px 10px red?
+		 * @todo In addition to expanding the form, should we highlight the <div class="widget"> as a whole with box-shadow: 0px 0px 10px red?
 		 */
 		highlightControls: function() {
 
 			var selector = this.widget_selectors.join(',');
 			$(document).on( 'click', selector, function () {
-
-				var widget_id = '#customize-control-widget_' + $(this).attr('id');
-				var widget = parent.jQuery(widget_id).children('div.widget');
-				var inside = widget.children('.widget-inside');
-
-				if ( inside.is(':hidden') ) {
-					inside.slideDown('fast');
-				} else {
-					inside.slideUp('fast', function () {
-						widget.css({'width':'', margin:''});
-					});
+				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
+				if ( control ) {
+					control.expandForm();
 				}
 			});
 

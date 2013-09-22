@@ -106,22 +106,22 @@ var WidgetCustomizer = (function ($) {
 
 		/**
 		 * Expand or collapse the widget control
-		 * @param {boolean|undefined} [collapsed] If not supplied, will be inverse of current visibility
+		 * @param {boolean|undefined} [expanded] If not supplied, will be inverse of current visibility
 		 */
-		toggleForm: function ( collapsed ) {
+		toggleForm: function ( expanded ) {
 			var control = this;
 			var widget = control.container.find('div.widget:first');
 			var inside = widget.find('.widget-inside:first');
-			if ( typeof collapsed === 'undefined' ) {
-				collapsed = ! inside.is(':hidden');
+			if ( typeof expanded === 'undefined' ) {
+				expanded = ! inside.is(':visible');
 			}
-			if ( collapsed ) {
+			if ( expanded ) {
+				inside.slideDown('fast');
+			}
+			else {
 				inside.slideUp('fast', function() {
 					widget.css({'width':'', 'margin':''});
 				});
-			}
-			else {
-				inside.slideDown('fast');
 			}
 		},
 
@@ -158,46 +158,51 @@ var WidgetCustomizer = (function ($) {
 		 */
 		editingEffects: function() {
 			var control = this;
-			var widget_id;
 
 			/* On control hover */
 			$(control.container).hover(
 				function () {
-					var toRemove = 'customize-control-widget_';
-					widget_id = '#' + $(this).attr('id').replace( toRemove, '' );
-
-					$('iframe').contents().find(widget_id).css({
-						'border-radius' : '2px',
-						'outline' : 'none',
-						'box-shadow' : '0 0 3px #CE0000'
-					});
+					$('iframe') // @todo explicitly reference the preview window? Could be more than 1 iframe
+						.contents()
+						.find('#' + control.params.widget_id)
+						.css({
+							'border-radius' : '2px',
+							'outline' : 'none',
+							'box-shadow' : '0 0 3px #CE0000'
+						});
 				},
 				function () {
-					$('iframe').contents().find(widget_id).css({ 'box-shadow' : 'none' });
+					$('iframe') // @todo explicitly reference the preview window? Could be more than 1 iframe
+						.contents()
+						.find('#' + control.params.widget_id)
+						.css({ 'box-shadow' : 'none' });
 				}
 			);
 
 			/* On control input click */
 			$(control.container).find('input').click( function () {
-				var toRemove = 'customize-control-widget_';
-				widget_id = '#' + $(this).closest(control.container).attr('id').replace( toRemove, '' );
-
+				var widget_el = $('iframe').contents().find('#' + control.params.widget_id);
 				$('iframe').contents().find('body, html').animate({
-					scrollTop: $('iframe').contents().find(widget_id).offset().top-20
+					scrollTop: widget_el.offset().top - 20 // @todo 20 is for what?
 				}, 1000);
-
 			});
 		}
 	});
 
 	/**
 	 * Given a widget_id for a widget appearing in the preview.
-	 * @todo This should be used from the preview window to obtain the control instance
 	 * @param {string} widget_id
 	 * @return {null|object}
 	 */
 	self.getControlInstanceForWidget = function ( widget_id ) {
-		throw new Error( 'Not implemented yet' );
+		var widget_control = null;
+		wp.customize.control.each(function ( control ) {
+			if ( control.params.type === 'widget_form' && control.params.widget_id === widget_id ) {
+				widget_control = control;
+				// @todo How do we break?
+			}
+		});
+		return widget_control;
 	};
 
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
