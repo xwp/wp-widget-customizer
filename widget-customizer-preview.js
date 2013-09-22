@@ -13,5 +13,19 @@ var WidgetCustomizerPreview = (function ($) {
 		});
 	});
 
+	$('.widget').click(function() {
+		var widgetId = '#customize-control-widget_'+jQuery(this).attr('id');
+		var widget = parent.jQuery(widgetId).children('div.widget');
+		var inside = widget.children('.widget-inside');
+
+		if ( inside.is(':hidden') ) {
+			inside.slideDown('fast');
+		} else {
+			inside.slideUp('fast', function() {
+				widget.css({'width':'', margin:''});
+			});
+		}
+	});
+
 	return self;
 }( jQuery ));
