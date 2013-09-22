@@ -190,6 +190,16 @@ var WidgetCustomizer = (function ($) {
 		}
 	});
 
+	/**
+	 * Given a widget_id for a widget appearing in the preview.
+	 * @todo This should be used from the preview window to obtain the control instance
+	 * @param {string} widget_id
+	 * @return {null|object}
+	 */
+	self.getControlInstanceForWidget = function ( widget_id ) {
+		throw new Error( 'Not implemented yet' );
+	};
+
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	customize.controlConstructor.widget_form = self.constuctor;
 
