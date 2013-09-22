@@ -27,7 +27,6 @@ var WidgetCustomizer = (function ($) {
 				control.container.removeClass( 'previewer-loading' );
 			});
 
-
 			control.setupControlToggle();
 
 			control.setupWidgetTitle();
@@ -120,34 +119,35 @@ var WidgetCustomizer = (function ($) {
 		editingEffects: function() {
 			var control = this;
 			var widgetId;
-			
-			/*On control hover*/
-	  		$(control.container).hover( function () {
-	  			var toRemove = 'customize-control-widget_';
-	  			widgetId = '#'+$(this).attr('id').replace( toRemove, '' );
- 				
-				$('iframe').contents().find(widgetId).css({
-    				'border-radius' : '2px',
-    				'outline' : 'none',
-    				'box-shadow' : '0 0 3px #CE0000'
-				});
-				
-			},
-			function(){
-				$('iframe').contents().find(widgetId).css({ 'box-shadow' : 'none' });
-			});
-			
-			/*On control input click*/
+
+			/* On control hover */
+			$(control.container).hover(
+				function () {
+					var toRemove = 'customize-control-widget_';
+					widgetId = '#' + $(this).attr('id').replace( toRemove, '' );
+
+					$('iframe').contents().find(widgetId).css({
+						'border-radius' : '2px',
+						'outline' : 'none',
+						'box-shadow' : '0 0 3px #CE0000'
+					});
+				},
+				function () {
+					$('iframe').contents().find(widgetId).css({ 'box-shadow' : 'none' });
+				}
+			);
+
+			/* On control input click */
 			$(control.container).find('input').click( function () {
-	  			var toRemove = 'customize-control-widget_';
-	  			widgetId = '#'+$(this).closest(control.container).attr('id').replace( toRemove, '' );
- 				
- 				$('iframe').contents().find('body, html').animate({
+				var toRemove = 'customize-control-widget_';
+				widgetId = '#' + $(this).closest(control.container).attr('id').replace( toRemove, '' );
+
+				$('iframe').contents().find('body, html').animate({
 					scrollTop: $('iframe').contents().find(widgetId).offset().top-20
 				}, 1000);
-				
+
 			});
-	  	}
+		}
 	});
 
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
