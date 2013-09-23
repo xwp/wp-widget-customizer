@@ -59,9 +59,9 @@ var WidgetCustomizerPreview = (function ($) {
 			$(document).on( 'click', selector, function () {
 				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
 				if ( control ) {
-					control.expandForm(); // Expand customizer section and expand widget form
+					control.expandControlSection();
+					control.expandForm();
 					control.container.find(':input:visible:first').focus();
-					console.info(control.container.find(':input:visible:first'));
 				}
 			});
 
