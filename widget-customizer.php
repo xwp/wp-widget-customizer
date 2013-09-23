@@ -31,6 +31,10 @@
 class Widget_Customizer {
 	const AJAX_ACTION = 'update_widget';
 	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
+	/**
+	 * @var this plugin directory name
+	 */
+	const PLUGIN_DIR = 'wp-widget-customizer';
 
 	static function setup() {
 		self::load_textdomain();
@@ -140,13 +144,13 @@ class Widget_Customizer {
 	static function customize_controls_enqueue_deps() {
 		wp_enqueue_style(
 			'widget-customizer',
-			plugin_dir_url( __FILE__ ) . 'widget-customizer.css',
+			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.css',
 			array(),
 			self::get_version()
 		);
 		wp_enqueue_script(
 			'widget-customizer',
-			plugin_dir_url( __FILE__) . 'widget-customizer.js',
+			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.js',
 			array( 'jquery', 'customize-controls' ),
 			self::get_version(),
 			true
@@ -181,14 +185,14 @@ class Widget_Customizer {
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
 			'widget-customizer-preview',
-			plugin_dir_url( __FILE__) . 'widget-customizer-preview.js',
+			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer-preview.js',
 			array( 'jquery', 'customize-preview' ),
 			self::get_version(),
 			true
 		);
 		wp_enqueue_style(
 			'widget-customizer-preview',
-			plugin_dir_url( __FILE__) . 'widget-customizer-preview.css',
+			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer-preview.css',
 			array(),
 			self::get_version()
 		);
