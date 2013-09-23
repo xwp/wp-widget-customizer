@@ -45,6 +45,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Changelog ##
 
+### 0.5 ###
+Hovering over widgets in preview highlights corresponding customizer sections and controls in panel. Clicking a widget in preview opens widget form in panel and focuses on first input. Interacting with widget form highlights widget in preview. Note that this issue resolves a major usability problem illustrated by the [user test video](http://make.wordpress.org/ui/2013/09/18/widgets-sept-16-chat-notes/#comment-23907). Fixes issue [#5](https://github.com/x-team/wp-widget-customizer/pull/5). Props [rfvcorreia](http://www.rcorreia.com/), [westonruter](http://profiles.wordpress.org/westonruter/).
+
 ### 0.4 ###
 Render widget form controls in a collapsed state (with a toggle) as on the widgets admin page; add in-widget-title ([#7](https://github.com/x-team/wp-widget-customizer/issues/7)). Props [johnregan3](http://profiles.wordpress.org/johnregan3/).
 
