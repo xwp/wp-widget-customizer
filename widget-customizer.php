@@ -197,6 +197,9 @@ class Widget_Customizer {
 		global $wp_scripts;
 		$exports = array(
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'i18n' => array(
+				'widget_tooltip' => __( 'Click to edit widget in customizer…', 'widget-customizer' ),
+			),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer-preview',

@@ -6,6 +6,7 @@ var WidgetCustomizerPreview = (function ($) {
 		rendered_sidebars: [],
 		registered_sidebars: {},
 		widget_selectors: [],
+		i18n: {},
 
 		init: function () {
 			this.buildWidgetSelectors();
@@ -52,14 +53,19 @@ var WidgetCustomizerPreview = (function ($) {
 		 */
 		highlightControls: function() {
 
+			// @todo Highlight a customizer section when hovering over a widget contained within it
+
 			var selector = this.widget_selectors.join(',');
 			$(document).on( 'click', selector, function () {
 				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
 				if ( control ) {
-					control.expandForm();
+					control.expandForm(); // Expand customizer section and expand widget form
+					control.container.find(':input:visible:first').focus();
+					console.info(control.container.find(':input:visible:first'));
 				}
 			});
 
+			$(selector).attr( 'title', self.i18n.widget_tooltip );
 		}
 	};
 
