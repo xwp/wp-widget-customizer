@@ -14,7 +14,7 @@ var WidgetCustomizer = (function ($) {
 	self.constuctor = customize.Control.extend({
 
 		/**
-		 *
+		 * Set up the control
 		 */
 		ready: function() {
 			var control = this;
@@ -106,19 +106,21 @@ var WidgetCustomizer = (function ($) {
 
 		/**
 		 * Expand or collapse the widget control
-		 * @param {boolean|undefined} [expanded] If not supplied, will be inverse of current visibility
+		 * @param {boolean|undefined} [do_expand] If not supplied, will be inverse of current visibility
 		 */
-		toggleForm: function ( expanded ) {
+		toggleForm: function ( do_expand ) {
 			var control = this;
 			var widget = control.container.find('div.widget:first');
 			var inside = widget.find('.widget-inside:first');
-			if ( typeof expanded === 'undefined' ) {
-				expanded = ! inside.is(':visible');
+			if ( typeof do_expand === 'undefined' ) {
+				do_expand = ! inside.is(':visible');
 			}
-			if ( expanded ) {
+			if ( do_expand ) {
+				control.container.trigger('expand');
 				inside.slideDown('fast');
 			}
 			else {
+				control.container.trigger('collapse');
 				inside.slideUp('fast', function() {
 					widget.css({'width':'', 'margin':''});
 				});
@@ -152,36 +154,59 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
+		 * Inverse of WidgetCustomizer.getControlInstanceForWidget
+		 * @return {jQuery}
+		 */
+		getPreviewWidgetElement: function () {
+			var control = this;
+			var iframe_contents = $('#customize-preview iframe').contents();
+			return iframe_contents.find('#' + control.params.widget_id);
+		},
+
+		/**
+		 * Inside of the customizer preview, scroll the widget into view
+		 */
+		scrollPreviewWidgetIntoView: function () {
+			var control = this;
+			var widget_el = control.getPreviewWidgetElement();
+			if ( widget_el.length ) {
+				widget_el[0].scrollIntoView( false );
+			}
+		},
+
+		/**
+		 * Add the widget-customizer-highlighted-widget class to the widget for 500ms
+		 */
+		highlightPreviewWidget: function () {
+			var control = this;
+			control.getPreviewWidgetElement().addClass('widget-customizer-highlighted-widget');
+			setTimeout( function () {
+				control.getPreviewWidgetElement().removeClass('widget-customizer-highlighted-widget');
+			}, 500 );
+		},
+
+		/**
 		 * Highlight widgets in the preview when
-		 * @todo Add support for focus in addition to hover
-		 * @todo Should a widget remain highlighted as long as the widget form is expanded?
 		 */
 		editingEffects: function() {
 			var control = this;
 
-			/* On control hover */
-			$(control.container).hover(
-				function () {
-					$('#customize-preview iframe')
-						.contents()
-						.find('#' + control.params.widget_id)
-						.addClass('widget-customizer-highlighted-widget');
-				},
-				function () {
-					$('#customize-preview iframe')
-						.contents()
-						.find('#' + control.params.widget_id)
-						.removeClass('widget-customizer-highlighted-widget');
-				}
-			);
-
-			/* On control input click */
-			$(control.container).find('input').click( function () {
-				var widget_el = $('iframe').contents().find('#' + control.params.widget_id);
-				$('iframe').contents().find('body, html').animate({
-					scrollTop: widget_el.offset().top - 20 // @todo 20 is for what?
-				}, 1000);
+			// Highlight whenever hovering or clicking over the form
+			control.container.on('mouseenter click', function () {
+				control.highlightPreviewWidget();
 			});
+
+			// Highlight when the setting is updated
+			control.setting.bind( function() {
+				control.scrollPreviewWidgetIntoView();
+				control.highlightPreviewWidget();
+			});
+
+			// Highlight when the widget form is expanded
+			control.container.on('expand', function () {
+				control.scrollPreviewWidgetIntoView();
+			});
+
 		}
 	});
 
