@@ -167,7 +167,7 @@ class Widget_Customizer {
 			'ajax_action' => self::AJAX_ACTION,
 			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
 			'nonce_post_key' => self::NONCE_POST_KEY,
-	        'widget_order_nonce' => wp_create_nonce('save-sidebar-widgets'), //create same nonce as WordPress core
+	        'widget_order_nonce' => wp_create_nonce('save_widget_order'), //create same nonce as WordPress core
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
@@ -374,6 +374,7 @@ class Widget_Customizer {
 	}
 	public static function wp_ajax_update_widget_order ()
 	{
+	    check_ajax_referer('save_widget_order', 'nonce');
 	    $current = get_option('sidebars_widgets', array());
 	    $this_sidebar = key($_REQUEST['sidebars']);
 	    $reordered_sidebar = array();
