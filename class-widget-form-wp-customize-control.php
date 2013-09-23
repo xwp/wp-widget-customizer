@@ -8,6 +8,14 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 	public $widget_id;
 	public $sidebar_id;
 
+	public function to_json() {
+		parent::to_json();
+		$exported_properties = array( 'widget_id', 'sidebar_id' );
+		foreach( $exported_properties as $key ) {
+			$this->json[$key] = $this->$key;
+		}
+	}
+
 	public function render_content() {
 		global $wp_widget_factory, $wp_registered_widget_controls, $wp_registered_widgets;
 		$instance = $this->value();
