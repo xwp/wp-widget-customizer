@@ -21,3 +21,9 @@
 .customize-control-widget_form .widget .widget-top a {
 	cursor: pointer;
 }
+.control-section.accordion-section.widget-customizer-highlighted > .accordion-section-title,
+.customize-control-widget_form.widget-customizer-highlighted {
+	border-radius: 2 px;
+	outline: none;
+	box-shadow: 0 0 3px #CE0000;
+}

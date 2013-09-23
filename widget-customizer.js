@@ -185,13 +185,36 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
+		 * Highlight the widget control and section
+		 */
+		highlightSectionAndControl: function() {
+			var control = this;
+			var target_element;
+			if ( control.container.is(':hidden') ) {
+				target_element = control.container.closest('.control-section');
+			}
+			else {
+				target_element = control.container;
+			}
+
+			$('.widget-customizer-highlighted').removeClass('widget-customizer-highlighted');
+			target_element.addClass('widget-customizer-highlighted');
+			setTimeout( function () {
+				target_element.removeClass('widget-customizer-highlighted');
+			}, 500 );
+		},
+
+		/**
 		 * Add the widget-customizer-highlighted-widget class to the widget for 500ms
 		 */
 		highlightPreviewWidget: function () {
 			var control = this;
-			control.getPreviewWidgetElement().addClass('widget-customizer-highlighted-widget');
+			var widget_el = control.getPreviewWidgetElement();
+			var root_el = widget_el.closest('html');
+			root_el.find('.widget-customizer-highlighted-widget').removeClass('widget-customizer-highlighted-widget');
+			widget_el.addClass('widget-customizer-highlighted-widget');
 			setTimeout( function () {
-				control.getPreviewWidgetElement().removeClass('widget-customizer-highlighted-widget');
+				widget_el.removeClass('widget-customizer-highlighted-widget');
 			}, 500 );
 		},
 

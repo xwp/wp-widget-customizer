@@ -48,14 +48,22 @@ var WidgetCustomizerPreview = (function ($) {
 		},
 
 		/**
-		 * @todo This also needs to expand the customizer section if it is not already expanded; at least it needs to highlight it. box-shadow: 0px 0px 10px red?
-		 * @todo In addition to expanding the form, should we highlight the <div class="widget"> as a whole with box-shadow: 0px 0px 10px red?
+		 *
 		 */
 		highlightControls: function() {
 
-			// @todo Highlight a customizer section when hovering over a widget contained within it
-
 			var selector = this.widget_selectors.join(',');
+
+			$(selector).attr( 'title', self.i18n.widget_tooltip );
+
+			$(document).on( 'mouseenter', selector, function () {
+				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
+				if ( control ) {
+					control.highlightSectionAndControl();
+				}
+			});
+
+			// @todo click can interfere with interacting with the widget in the preview window; better to make a EDIT link overlay appear when hovering over the widget?
 			$(document).on( 'click', selector, function () {
 				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
 				if ( control ) {
@@ -64,8 +72,6 @@ var WidgetCustomizerPreview = (function ($) {
 					control.container.find(':input:visible:first').focus();
 				}
 			});
-
-			$(selector).attr( 'title', self.i18n.widget_tooltip );
 		}
 	};
 
