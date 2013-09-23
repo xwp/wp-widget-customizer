@@ -30,6 +30,7 @@
 
 class Widget_Customizer {
 	const AJAX_ACTION = 'update_widget';
+	const AJAX_ACTION_SORT = 'update_widget_order';
 	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 	/**
 	 * @var this plugin directory name
@@ -40,6 +41,7 @@ class Widget_Customizer {
 		self::load_textdomain();
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
+		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION_SORT ), array( __CLASS__, 'wp_ajax_update_widget_order' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
@@ -142,6 +144,9 @@ class Widget_Customizer {
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
+	    
+	    wp_enqueue_script('jquery-ui-sortable');
+	    
 		wp_enqueue_style(
 			'widget-customizer',
 			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.css',
@@ -162,6 +167,7 @@ class Widget_Customizer {
 			'ajax_action' => self::AJAX_ACTION,
 			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
 			'nonce_post_key' => self::NONCE_POST_KEY,
+	        'widget_order_nonce' => wp_create_nonce('save-sidebar-widgets'), //create same nonce as WordPress core
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
@@ -366,7 +372,21 @@ class Widget_Customizer {
 			wp_send_json_error( compact( 'message' ) );
 		}
 	}
-
+	public static function wp_ajax_update_widget_order ()
+	{
+	    $current = get_option('sidebars_widgets', array());
+	    $this_sidebar = key($_REQUEST['sidebars']);
+	    $reordered_sidebar = array();
+	    foreach ($_REQUEST['sidebars'][$this_sidebar] as $order => $control_id) {
+            $reordered_sidebar[] = str_replace('customize-control-widget_', '', $control_id);
+        } 
+	    if (! isset($current[$this_sidebar])) {
+            $current[$this_sidebar] = array();
+        }
+        $current[$this_sidebar] = $reordered_sidebar;
+        update_option('sidebars_widgets', $current);
+	    wp_send_json_success();
+	}
 	/**
 	 * @filter widget_form_callback
 	 * @todo Once PHP 5.3 is the minimum requirement, we can use a delicious closure for this ugliness
