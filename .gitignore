@@ -1,2 +1,5 @@
 .DS_Store
 /svn
+.project
+.settings/
+.gitignore
