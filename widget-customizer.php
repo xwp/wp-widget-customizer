@@ -151,24 +151,32 @@ class Widget_Customizer {
 			self::get_version(),
 			true
 		);
-		wp_localize_script(
+
+		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
+		global $wp_scripts;
+		$exports = array(
+			'ajax_action' => self::AJAX_ACTION,
+			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
+			'nonce_post_key' => self::NONCE_POST_KEY,
+			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+		);
+		$wp_scripts->add_data(
 			'widget-customizer',
-			'WidgetCustomizer_exports',
-			array(
-				'ajax_action' => self::AJAX_ACTION,
-				'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
-				'nonce_post_key' => self::NONCE_POST_KEY,
-			)
+			'data',
+			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode($exports) )
 		);
 	}
 
+	/**
+	 * @action customize_preview_init
+	 */
 	static function customize_preview_init() {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'customize_preview_enqueue_deps' ) );
-		add_action( 'wp_footer', array( __CLASS__, 'export_preview_data' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'export_preview_data' ), 9999 );
 	}
 
 	/**
-	 * @access wp_enqueue_scripts
+	 * @action wp_enqueue_scripts
 	 */
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
@@ -178,8 +186,31 @@ class Widget_Customizer {
 			self::get_version(),
 			true
 		);
+		wp_enqueue_style(
+			'widget-customizer-preview',
+			plugin_dir_url( __FILE__) . 'widget-customizer-preview.css',
+			array(),
+			self::get_version()
+		);
+
+		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
+		global $wp_scripts;
+		$exports = array(
+			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'i18n' => array(
+				'widget_tooltip' => __( 'Click to edit widget in customizer…', 'widget-customizer' ),
+			),
+		);
+		$wp_scripts->add_data(
+			'widget-customizer-preview',
+			'data',
+			sprintf( 'var WidgetCustomizerPreview_exports = %s;', json_encode($exports) )
+		);
 	}
 
+	/**
+	 * At the very end of the page, at the very end of the wp_footer, communicate the sidebars that appeared on the page
+	 */
 	static function export_preview_data() {
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
 		?>
@@ -197,6 +228,7 @@ class Widget_Customizer {
 	/**
 	 * @action dynamic_sidebar
 	 * @todo This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
+	 * @todo This does not get called for a sidebar which lacks widgets! Can be fixed with http://core.trac.wordpress.org/ticket/25368
 	 */
 	static function tally_rendered_sidebars( $widget ) {
 		global $sidebars_widgets;
