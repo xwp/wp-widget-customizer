@@ -162,20 +162,16 @@ var WidgetCustomizer = (function ($) {
 			/* On control hover */
 			$(control.container).hover(
 				function () {
-					$('iframe') // @todo explicitly reference the preview window? Could be more than 1 iframe
+					$('#customize-preview iframe')
 						.contents()
 						.find('#' + control.params.widget_id)
-						.css({
-							'border-radius' : '2px',
-							'outline' : 'none',
-							'box-shadow' : '0 0 3px #CE0000'
-						});
+						.addClass('widget-customizer-highlighted-widget');
 				},
 				function () {
-					$('iframe') // @todo explicitly reference the preview window? Could be more than 1 iframe
+					$('#customize-preview iframe')
 						.contents()
 						.find('#' + control.params.widget_id)
-						.css({ 'box-shadow' : 'none' });
+						.removeClass('widget-customizer-highlighted-widget');
 				}
 			);
 

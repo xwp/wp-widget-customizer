@@ -186,6 +186,13 @@ class Widget_Customizer {
 			self::get_version(),
 			true
 		);
+		wp_enqueue_style(
+			'widget-customizer-preview',
+			plugin_dir_url( __FILE__) . 'widget-customizer-preview.css',
+			array(),
+			self::get_version()
+		);
+
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
