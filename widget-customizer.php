@@ -167,7 +167,7 @@ class Widget_Customizer {
 			'ajax_action' => self::AJAX_ACTION,
 			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
 			'nonce_post_key' => self::NONCE_POST_KEY,
-	        'widget_order_nonce' => wp_create_nonce('save_widget_order'), //create same nonce as WordPress core
+	        'widget_order_nonce' => wp_create_nonce('save_widget_order'),
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
