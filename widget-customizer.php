@@ -32,10 +32,6 @@ class Widget_Customizer {
 	const AJAX_ACTION = 'update_widget';
 	const AJAX_ACTION_SORT = 'update_widget_order';
 	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
-	/**
-	 * @var this plugin directory name
-	 */
-	const PLUGIN_DIR = 'wp-widget-customizer';
 
 	static function setup() {
 		self::load_textdomain();
@@ -147,13 +143,13 @@ class Widget_Customizer {
 		wp_enqueue_script('jquery-ui-sortable');
 		wp_enqueue_style(
 			'widget-customizer',
-			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.css',
+			self::get_plugin_path_url('widget-customizer.css'),
 			array(),
 			self::get_version()
 		);
 		wp_enqueue_script(
 			'widget-customizer',
-			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.js',
+			self::get_plugin_path_url('widget-customizer.js'),
 			array( 'jquery', 'customize-controls' ),
 			self::get_version(),
 			true
@@ -165,7 +161,7 @@ class Widget_Customizer {
 			'ajax_action' => self::AJAX_ACTION,
 			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
 			'nonce_post_key' => self::NONCE_POST_KEY,
-	        'widget_order_nonce' => wp_create_nonce('save_widget_order'),
+			'widget_order_nonce' => wp_create_nonce('save_widget_order'),
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
@@ -189,14 +185,14 @@ class Widget_Customizer {
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
 			'widget-customizer-preview',
-			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer-preview.js',
+			self::get_plugin_path_url('widget-customizer-preview.js'),
 			array( 'jquery', 'customize-preview' ),
 			self::get_version(),
 			true
 		);
 		wp_enqueue_style(
 			'widget-customizer-preview',
-			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer-preview.css',
+			self::get_plugin_path_url('widget-customizer-preview.css'),
 			array(),
 			self::get_version()
 		);
@@ -222,13 +218,13 @@ class Widget_Customizer {
 	static function export_preview_data() {
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
 		?>
-		<script>
+<script>
 		(function () {
 		/*global WidgetCustomizerPreview */
 		WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
 		}());
 		</script>
-		<?php
+<?php
 	}
 
 	static protected $rendered_sidebars = array();
@@ -370,21 +366,20 @@ class Widget_Customizer {
 			wp_send_json_error( compact( 'message' ) );
 		}
 	}
-	public static function wp_ajax_update_widget_order ()
-	{
-	    check_ajax_referer('save_widget_order', 'nonce');
-	    $current = get_option('sidebars_widgets', array());
-	    $this_sidebar = key($_REQUEST['sidebars']);
-	    $reordered_sidebar = array();
-	    foreach ($_REQUEST['sidebars'][$this_sidebar] as $order => $control_id) {
-            $reordered_sidebar[] = str_replace('customize-control-widget_', '', $control_id);
-        } 
-	    if (! isset($current[$this_sidebar])) {
-            $current[$this_sidebar] = array();
-        }
-        $current[$this_sidebar] = $reordered_sidebar;
-        update_option('sidebars_widgets', $current);
-	    wp_send_json_success();
+	public static function wp_ajax_update_widget_order() {
+		check_ajax_referer ( 'save_widget_order', 'nonce' );
+		$current = get_option ( 'sidebars_widgets', array () );
+		$this_sidebar = key ( $_REQUEST['sidebars'] );
+		$reordered_sidebar = array ();
+		foreach ( $_REQUEST ['sidebars'] [$this_sidebar] as $order => $control_id ) {
+			$reordered_sidebar [] = str_replace ( 'customize-control-widget_', '', $control_id );
+		}
+		if (! isset ( $current [$this_sidebar] )) {
+			$current [ $this_sidebar ] = array ();
+		}
+		$current [$this_sidebar] = $reordered_sidebar;
+		update_option ( 'sidebars_widgets', $current );
+		wp_send_json_success ();
 	}
 	/**
 	 * @filter widget_form_callback
@@ -393,6 +388,19 @@ class Widget_Customizer {
 	static function _widget_form_callback( $instance ) {
 		$instance = self::$_current_widget_instance;
 		return $instance;
+	}
+	/**
+	 * Gets Plugin URL from a path
+	 * Not using plugin_dir_url because it is not symlink-friendly
+	 */
+	public static function get_plugin_path_url( $path = null ) {
+		$plugin_dirname = basename( dirname( __FILE__ ) );
+		$base_dir = trailingslashit( plugin_dir_url( '' ) ) . $plugin_dirname;
+		if ( $path ) {
+			return trailingslashit( $base_dir ) . ltrim( $path, '/' );
+		} else {
+			return $base_dir;
+		}
 	}
 
 	static protected $_current_widget_instance;
