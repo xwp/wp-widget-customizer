@@ -144,9 +144,7 @@ class Widget_Customizer {
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
-	    
-	    wp_enqueue_script('jquery-ui-sortable');
-	    
+		wp_enqueue_script('jquery-ui-sortable');
 		wp_enqueue_style(
 			'widget-customizer',
 			plugins_url( self::PLUGIN_DIR, self::PLUGIN_DIR ) . '/widget-customizer.css',
