@@ -18,7 +18,7 @@ var WidgetCustomizer = (function ($) {
 		 */
 		ready: function() {
 			var control = this;
-
+			
 			control.setting.bind( function( to ) {
 				control.updateWidget( to );
 			});
@@ -258,7 +258,41 @@ var WidgetCustomizer = (function ($) {
 		});
 		return widget_control;
 	};
-
+	
+	self.initalizeSortables = function  ()
+	{
+		$(".accordion-section-content").sortable({
+			update: function  (e, ui)
+			{
+				var sidebar_id = $($(this).find('.sidebar')[0]).val(); 
+				var widgets_array = $(this).sortable('toArray');
+				var widget_ids = new Array();
+				$.each(widgets_array, function  (k,v){
+					widget_ids.push(v);
+				});
+				//@todo ajax load start state
+				var widgets_order_value = widget_ids;
+				var data_obj = {
+						"action": "update_widget_order",
+						"savewidgets": self.widget_order_nonce
+					};
+				data_obj['sidebars['+sidebar_id+']'] = widgets_order_value; 
+				$.ajax({
+					method: 'POST',
+					url: wp.ajax.settings.url,
+					data: data_obj,
+					success: function  ()
+					{
+						//@todo enable load states
+						//@todo what's the best way to trigger a customizer refresh?
+					}
+				});
+			}
+		}); 
+	};
+	
+	//@todo where is the best place to hook this inside the wp.customize API?
+	self.initalizeSortables();
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	customize.controlConstructor.widget_form = self.constuctor;
 
