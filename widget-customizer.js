@@ -259,7 +259,7 @@ var WidgetCustomizer = (function ($) {
 		return widget_control;
 	};
 	
-	self.InitalizeSortables = function  ()
+	self.initalizeSortables = function  ()
 	{
 		$(".accordion-section-content").sortable({
 			update: function  (e, ui)
@@ -292,7 +292,7 @@ var WidgetCustomizer = (function ($) {
 	};
 	
 	//@todo where is the best place to hook this inside the wp.customize API?
-	self.InitalizeSortables();
+	self.initalizeSortables();
 	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	customize.controlConstructor.widget_form = self.constuctor;
 
