@@ -143,13 +143,13 @@ class Widget_Customizer {
 		wp_enqueue_script('jquery-ui-sortable');
 		wp_enqueue_style(
 			'widget-customizer',
-			self::get_plugin_path_url('widget-customizer.css'),
+			self::get_plugin_path_url( 'widget-customizer.css' ),
 			array(),
 			self::get_version()
 		);
 		wp_enqueue_script(
 			'widget-customizer',
-			self::get_plugin_path_url('widget-customizer.js'),
+			self::get_plugin_path_url( 'widget-customizer.js' ),
 			array( 'jquery', 'customize-controls' ),
 			self::get_version(),
 			true
@@ -185,14 +185,14 @@ class Widget_Customizer {
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
 			'widget-customizer-preview',
-			self::get_plugin_path_url('widget-customizer-preview.js'),
+			self::get_plugin_path_url( 'widget-customizer-preview.js' ),
 			array( 'jquery', 'customize-preview' ),
 			self::get_version(),
 			true
 		);
 		wp_enqueue_style(
 			'widget-customizer-preview',
-			self::get_plugin_path_url('widget-customizer-preview.css'),
+			self::get_plugin_path_url( 'widget-customizer-preview.css' ),
 			array(),
 			self::get_version()
 		);
@@ -202,7 +202,7 @@ class Widget_Customizer {
 		$exports = array(
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 			'i18n' => array(
-				'widget_tooltip' => __( 'Click to edit widget in customizer', 'widget-customizer' ),
+				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
 			),
 		);
 		$wp_scripts->add_data(
@@ -218,13 +218,13 @@ class Widget_Customizer {
 	static function export_preview_data() {
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
 		?>
-<script>
+		<script>
 		(function () {
 		/*global WidgetCustomizerPreview */
 		WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
 		}());
 		</script>
-<?php
+		<?php
 	}
 
 	static protected $rendered_sidebars = array();
@@ -366,21 +366,26 @@ class Widget_Customizer {
 			wp_send_json_error( compact( 'message' ) );
 		}
 	}
-	public static function wp_ajax_update_widget_order() {
-		check_ajax_referer ( 'save_widget_order', 'nonce' );
-		$current = get_option ( 'sidebars_widgets', array () );
-		$this_sidebar = key ( $_REQUEST['sidebars'] );
+
+	/**
+	 * @action wp_ajax_update_widget_order
+	 */
+	static function wp_ajax_update_widget_order() {
+		check_ajax_referer( 'save_widget_order', 'nonce' );
+		$current = get_option( 'sidebars_widgets', array() );
+		$this_sidebar = key( $_REQUEST['sidebars'] );
 		$reordered_sidebar = array ();
-		foreach ( $_REQUEST ['sidebars'] [$this_sidebar] as $order => $control_id ) {
-			$reordered_sidebar [] = str_replace ( 'customize-control-widget_', '', $control_id );
+		foreach ( $_REQUEST['sidebars'][$this_sidebar] as $order => $control_id ) {
+			$reordered_sidebar[] = str_replace( 'customize-control-widget_', '', $control_id );
 		}
-		if (! isset ( $current [$this_sidebar] )) {
-			$current [ $this_sidebar ] = array ();
+		if ( ! isset( $current[$this_sidebar] )) {
+			$current[$this_sidebar] = array();
 		}
-		$current [$this_sidebar] = $reordered_sidebar;
-		update_option ( 'sidebars_widgets', $current );
-		wp_send_json_success ();
+		$current[$this_sidebar] = $reordered_sidebar;
+		update_option( 'sidebars_widgets', $current );
+		wp_send_json_success();
 	}
+
 	/**
 	 * @filter widget_form_callback
 	 * @todo Once PHP 5.3 is the minimum requirement, we can use a delicious closure for this ugliness
@@ -389,11 +394,12 @@ class Widget_Customizer {
 		$instance = self::$_current_widget_instance;
 		return $instance;
 	}
+
 	/**
 	 * Gets Plugin URL from a path
 	 * Not using plugin_dir_url because it is not symlink-friendly
 	 */
-	public static function get_plugin_path_url( $path = null ) {
+	static function get_plugin_path_url( $path = null ) {
 		$plugin_dirname = basename( dirname( __FILE__ ) );
 		$base_dir = trailingslashit( plugin_dir_url( '' ) ) . $plugin_dirname;
 		if ( $path ) {
