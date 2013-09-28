@@ -4,9 +4,9 @@ var WidgetCustomizer = (function ($) {
 
 	var customize = wp.customize;
 	var self = {
-		ajax_action: null, // @todo this should be update_ajax_action
-		nonce_value: null,
-		nonce_post_key: null
+		update_widget_ajax_action: null,
+		update_widget_nonce_value: null,
+		update_widget_nonce_post_key: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -88,8 +88,8 @@ var WidgetCustomizer = (function ($) {
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
 			var params = {};
-			params.action = self.ajax_action;
-			params[self.nonce_post_key] = self.nonce_value;
+			params.action = self.update_widget_ajax_action;
+			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
 			if ( instance_override ) {
 				params.json_instance_override = JSON.stringify( instance_override );
 			}

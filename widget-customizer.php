@@ -29,13 +29,13 @@
  */
 
 class Widget_Customizer {
-	const AJAX_ACTION = 'update_widget';
-	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
+	const UPDATE_WIDGET_AJAX_ACTION = 'update_widget';
+	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
-		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
+		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
@@ -185,10 +185,9 @@ class Widget_Customizer {
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
-			'ajax_action' => self::AJAX_ACTION,
-			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
-			'nonce_post_key' => self::NONCE_POST_KEY,
-			'widget_order_nonce' => wp_create_nonce('save_widget_order'),
+			'update_widget_ajax_action' => self::UPDATE_WIDGET_AJAX_ACTION,
+			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
+			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
@@ -297,7 +296,7 @@ class Widget_Customizer {
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
 		try {
-			if ( ! check_ajax_referer( self::AJAX_ACTION, self::NONCE_POST_KEY, false ) ) {
+			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
 			}
 			if ( ! current_user_can('edit_theme_options') ) {
@@ -307,7 +306,7 @@ class Widget_Customizer {
 				throw new Widget_Customizer_Exception( __( 'Incomplete request', 'widget-customizer' ) );
 			}
 
-			unset( $_POST[self::NONCE_POST_KEY], $_POST['action'] );
+			unset( $_POST[self::UPDATE_WIDGET_NONCE_POST_KEY], $_POST['action'] );
 
 			do_action('load-widgets.php');
 			do_action('widgets.php');
