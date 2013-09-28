@@ -263,7 +263,8 @@ var WidgetCustomizer = (function ($) {
 	 * Turn each sidebar customizer section into a sortable
 	 */
 	self.initalizeSortables = function  () {
-		$(".accordion-section-content").sortable({
+		$('.accordion-section-content').sortable({
+			items: '> .customize-control-widget_form',
 			update: function  () {
 				var sidebar_id = $($(this).find('.sidebar')[0]).val();
 				var widgets_array = $(this).sortable('toArray');
