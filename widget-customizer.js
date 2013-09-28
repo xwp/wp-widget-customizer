@@ -37,7 +37,7 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
-		 * @param {object} instance_override  When the model changes, the instance is sent this way
+		 * @param {object} [instance_override]  When the model changes, the instance is sent this way
 		 */
 		updateWidget: function ( instance_override ) {
 			var control = this;
@@ -70,7 +70,7 @@ var WidgetCustomizer = (function ($) {
 					alert( message );
 				}
 			});
-			jqxhr.fail( function (jqXHR, textStatus, errorThrown) {
+			jqxhr.fail( function (jqXHR, textStatus ) {
 				alert( textStatus );
 			});
 			jqxhr.always( function () {
