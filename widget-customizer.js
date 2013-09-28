@@ -21,7 +21,7 @@ var WidgetCustomizer = (function ($) {
 		 */
 		ready: function() {
 			var control = this;
-			control.makeWidgetsReorderable();
+			control.setupOrdering();
 			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
 			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
 			// @link https://github.com/x-team/wp-widget-customizer/issues/3
@@ -30,8 +30,10 @@ var WidgetCustomizer = (function ($) {
 		/**
 		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
 		 */
-		makeWidgetsReorderable: function () {
+		setupOrdering: function () {
 			var control = this;
+
+			// Update widget order setting when controls are re-ordered
 			this.container.closest( '.accordion-section-content' ).sortable({
 				items: '> .customize-control-widget_form',
 				axis: 'y',
@@ -39,9 +41,38 @@ var WidgetCustomizer = (function ($) {
 					var widget_container_ids = $(this).sortable('toArray');
 					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
 						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					} );
+					});
 					control.setting( widget_ids );
 				}
+			});
+
+			// Update ordering of widget control forms when the setting is updated
+			control.setting.bind( function( to ) {
+				var section_container = control.container.closest('.accordion-section-content');
+				var controls = section_container.find('> .customize-control-widget_form');
+
+				// Build up index
+				var widget_positions = {};
+				$.each( to, function ( i, widget_id ) {
+					widget_positions[widget_id] = i;
+				});
+				controls.each( function () {
+					var widget_id = $(this).find('input[name="widget-id"]').val();
+					$(this).data('widget-id', widget_id);
+				});
+
+				// Sort widget controls to their new positions
+				controls.sort(function ( a, b ) {
+					var a_widget_id = $(a).data('widget-id');
+					var b_widget_id = $(b).data('widget-id');
+					if ( widget_positions[a_widget_id] === widget_positions[b_widget_id] ) {
+						return 0;
+					}
+					return widget_positions[a_widget_id] < widget_positions[b_widget_id] ? -1 : 1;
+				});
+
+				// Append the controls to put them in the right order
+				section_container.append( controls );
 			});
 		}
 
