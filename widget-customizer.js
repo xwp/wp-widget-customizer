@@ -4,14 +4,54 @@ var WidgetCustomizer = (function ($) {
 
 	var customize = wp.customize;
 	var self = {
-		control: null,
-		ajax_action: null,
+		ajax_action: null, // @todo this should be update_ajax_action
 		nonce_value: null,
 		nonce_post_key: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
-	self.constuctor = customize.Control.extend({
+	/**
+	 * Sidebar Widgets control
+	 * Note that 'sidebar_widgets' must match the Sidebar_Widgets_WP_Customize_Control::$type
+	 */
+	customize.controlConstructor.sidebar_widgets = customize.Control.extend({
+
+		/**
+		 * Set up the control
+		 */
+		ready: function() {
+			var control = this;
+			control.makeWidgetsReorderable();
+			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
+			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
+			// @link https://github.com/x-team/wp-widget-customizer/issues/3
+		},
+
+		/**
+		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 */
+		makeWidgetsReorderable: function () {
+			var control = this;
+			this.container.closest( '.accordion-section-content' ).sortable({
+				items: '> .customize-control-widget_form',
+				axis: 'y',
+				update: function () {
+					var widget_container_ids = $(this).sortable('toArray');
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+					} );
+					control.setting( widget_ids );
+				}
+			});
+		}
+
+	});
+
+	/**
+	 * Widget Form control
+	 * Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
+	 */
+	customize.controlConstructor.widget_form = customize.Control.extend({
 
 		/**
 		 * Set up the control
@@ -259,44 +299,6 @@ var WidgetCustomizer = (function ($) {
 		return widget_control;
 	};
 
-	/**
-	 * Turn each sidebar customizer section into a sortable
-	 */
-	self.initalizeSortables = function  () {
-		$('.accordion-section-content').sortable({
-			items: '> .customize-control-widget_form',
-			update: function  () {
-				var sidebar_id = $($(this).find('.sidebar')[0]).val();
-				var widgets_array = $(this).sortable('toArray');
-				var widget_ids = [];
-				$.each(widgets_array, function (k,v) {
-					widget_ids.push(v);
-				});
-				//@todo ajax load start state
-				var widgets_order_value = widget_ids;
-				var data_obj = {
-					action: 'update_widget_order',
-					savewidgets: self.widget_order_nonce
-				};
-				data_obj['sidebars[' + sidebar_id + ']'] = widgets_order_value;
-				$.ajax({
-					method: 'POST',
-					url: wp.ajax.settings.url,
-					data: data_obj,
-					success: function  () {
-						//@todo enable load states
-						//@todo what's the best way to trigger a customizer refresh?
-					}
-				});
-			}
-		});
-	};
-
-	//@todo where is the best place to hook this inside the wp.customize API?
-	self.initalizeSortables();
-
-	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
-	customize.controlConstructor.widget_form = self.constuctor;
 
 	return self;
 }( jQuery ));

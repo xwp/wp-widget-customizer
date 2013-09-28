@@ -1,3 +1,7 @@
+customize-control-sidebar_widgets {
+	display: none;
+}
+
 .customize-control-widget_form.previewer-loading .spinner {
 	display: inline;
 }

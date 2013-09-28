@@ -30,14 +30,12 @@
 
 class Widget_Customizer {
 	const AJAX_ACTION = 'update_widget';
-	const AJAX_ACTION_SORT = 'update_widget_order';
 	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
-		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION_SORT ), array( __CLASS__, 'wp_ajax_update_widget_order' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
@@ -78,6 +76,8 @@ class Widget_Customizer {
 	 */
 	static function customize_register( $wp_customize ) {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
+		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
+
 		foreach ( $GLOBALS['sidebars_widgets'] as $sidebar_id => $widgets ) {
 			$skip = (
 				'wp_inactive_widgets' === $sidebar_id
@@ -101,6 +101,33 @@ class Widget_Customizer {
 			$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
 			$wp_customize->add_section( $section_id, $section_args );
 
+			/**
+			 * Add control for managing widgets in sidebar
+			 */
+			$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
+			$wp_customize->add_setting(
+				$setting_id,
+				array(
+					'type' => 'option',
+					'capability' => 'edit_theme_options',
+					'transport' => 'refresh',
+					// @todo add support for postMessage for some widgets; will need to use Ajax
+				)
+			);
+			$control = new Sidebar_Widgets_WP_Customize_Control(
+				$wp_customize,
+				$setting_id,
+				array(
+					'section' => $section_id,
+					'sidebar_id' => $sidebar_id,
+					'priority' => 10 - 1,
+				)
+			);
+			$wp_customize->add_control( $control );
+
+			/**
+			 * Add controls for each widget in the sidebar
+			 */
 			foreach ( $widgets as $i => $widget_id ) {
 				// Skip widgets persisting in DB which have been deactivated in code
 				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
@@ -175,8 +202,21 @@ class Widget_Customizer {
 	 * @action customize_preview_init
 	 */
 	static function customize_preview_init() {
+		add_filter( 'sidebars_widgets', array( __CLASS__, 'preview_sidebars_widgets' ), 1 );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'customize_preview_enqueue_deps' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'export_preview_data' ), 9999 );
+	}
+
+	/**
+	 * When previewing, make sure the proper previewing widgets are used. Because wp_get_sidebars_widgets()
+	 * gets called early at init (via wp_convert_widget_settings()) and can set global variable
+	 * $_wp_sidebars_widgets to the value of get_option( 'sidebars_widgets' ) before the customizer
+	 * preview filter is added, we have to reset it after the filter has been added.
+	 * @filter sidebars_widgets
+	 */
+	static function preview_sidebars_widgets( $sidebars_widgets ) {
+		$sidebars_widgets = get_option( 'sidebars_widgets' );
+		return $sidebars_widgets;
 	}
 
 	/**
@@ -220,8 +260,8 @@ class Widget_Customizer {
 		?>
 		<script>
 		(function () {
-		/*global WidgetCustomizerPreview */
-		WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
+			/*global WidgetCustomizerPreview */
+			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
 		}());
 		</script>
 		<?php
@@ -365,25 +405,6 @@ class Widget_Customizer {
 			}
 			wp_send_json_error( compact( 'message' ) );
 		}
-	}
-
-	/**
-	 * @action wp_ajax_update_widget_order
-	 */
-	static function wp_ajax_update_widget_order() {
-		check_ajax_referer( 'save_widget_order', 'nonce' );
-		$current = get_option( 'sidebars_widgets', array() );
-		$this_sidebar = key( $_REQUEST['sidebars'] );
-		$reordered_sidebar = array ();
-		foreach ( $_REQUEST['sidebars'][$this_sidebar] as $order => $control_id ) {
-			$reordered_sidebar[] = str_replace( 'customize-control-widget_', '', $control_id );
-		}
-		if ( ! isset( $current[$this_sidebar] )) {
-			$current[$this_sidebar] = array();
-		}
-		$current[$this_sidebar] = $reordered_sidebar;
-		update_option( 'sidebars_widgets', $current );
-		wp_send_json_success();
 	}
 
 	/**
