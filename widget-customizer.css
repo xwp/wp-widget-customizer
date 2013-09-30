@@ -1,6 +1,11 @@
+customize-control-sidebar_widgets {
+	display: none;
+}
+
 .customize-control-widget_form.previewer-loading .spinner {
 	display: inline;
 }
+
 .customize-control-widget_form.widget-form-loading .widget-content {
 	opacity: 0.7;
 	pointer-events: none;
@@ -21,6 +26,11 @@
 .customize-control-widget_form .widget .widget-top a {
 	cursor: pointer;
 }
+
+.customize-control-widget_form .widget .customize-control-title {
+	cursor: move;
+}
+
 .control-section.accordion-section.widget-customizer-highlighted > .accordion-section-title,
 .customize-control-widget_form.widget-customizer-highlighted {
 	border-radius: 2 px;

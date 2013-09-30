@@ -29,13 +29,13 @@
  */
 
 class Widget_Customizer {
-	const AJAX_ACTION = 'update_widget';
-	const NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
+	const UPDATE_WIDGET_AJAX_ACTION = 'update_widget';
+	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
-		add_action( sprintf( 'wp_ajax_%s', self::AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
+		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
@@ -76,6 +76,8 @@ class Widget_Customizer {
 	 */
 	static function customize_register( $wp_customize ) {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
+		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
+
 		foreach ( $GLOBALS['sidebars_widgets'] as $sidebar_id => $widgets ) {
 			$skip = (
 				'wp_inactive_widgets' === $sidebar_id
@@ -99,6 +101,33 @@ class Widget_Customizer {
 			$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
 			$wp_customize->add_section( $section_id, $section_args );
 
+			/**
+			 * Add control for managing widgets in sidebar
+			 */
+			$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
+			$wp_customize->add_setting(
+				$setting_id,
+				array(
+					'type' => 'option',
+					'capability' => 'edit_theme_options',
+					'transport' => 'refresh',
+					// @todo add support for postMessage for some widgets; will need to use Ajax
+				)
+			);
+			$control = new Sidebar_Widgets_WP_Customize_Control(
+				$wp_customize,
+				$setting_id,
+				array(
+					'section' => $section_id,
+					'sidebar_id' => $sidebar_id,
+					'priority' => 10 - 1,
+				)
+			);
+			$wp_customize->add_control( $control );
+
+			/**
+			 * Add controls for each widget in the sidebar
+			 */
 			foreach ( $widgets as $i => $widget_id ) {
 				// Skip widgets persisting in DB which have been deactivated in code
 				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
@@ -138,15 +167,16 @@ class Widget_Customizer {
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
+		wp_enqueue_script('jquery-ui-sortable');
 		wp_enqueue_style(
 			'widget-customizer',
-			plugin_dir_url( __FILE__ ) . 'widget-customizer.css',
+			self::get_plugin_path_url( 'widget-customizer.css' ),
 			array(),
 			self::get_version()
 		);
 		wp_enqueue_script(
 			'widget-customizer',
-			plugin_dir_url( __FILE__) . 'widget-customizer.js',
+			self::get_plugin_path_url( 'widget-customizer.js' ),
 			array( 'jquery', 'customize-controls' ),
 			self::get_version(),
 			true
@@ -155,9 +185,9 @@ class Widget_Customizer {
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
-			'ajax_action' => self::AJAX_ACTION,
-			'nonce_value' => wp_create_nonce( self::AJAX_ACTION ),
-			'nonce_post_key' => self::NONCE_POST_KEY,
+			'update_widget_ajax_action' => self::UPDATE_WIDGET_AJAX_ACTION,
+			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
+			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 		);
 		$wp_scripts->add_data(
@@ -171,8 +201,21 @@ class Widget_Customizer {
 	 * @action customize_preview_init
 	 */
 	static function customize_preview_init() {
+		add_filter( 'sidebars_widgets', array( __CLASS__, 'preview_sidebars_widgets' ), 1 );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'customize_preview_enqueue_deps' ) );
 		add_action( 'wp_footer', array( __CLASS__, 'export_preview_data' ), 9999 );
+	}
+
+	/**
+	 * When previewing, make sure the proper previewing widgets are used. Because wp_get_sidebars_widgets()
+	 * gets called early at init (via wp_convert_widget_settings()) and can set global variable
+	 * $_wp_sidebars_widgets to the value of get_option( 'sidebars_widgets' ) before the customizer
+	 * preview filter is added, we have to reset it after the filter has been added.
+	 * @filter sidebars_widgets
+	 */
+	static function preview_sidebars_widgets( $sidebars_widgets ) {
+		$sidebars_widgets = get_option( 'sidebars_widgets' );
+		return $sidebars_widgets;
 	}
 
 	/**
@@ -181,14 +224,14 @@ class Widget_Customizer {
 	static function customize_preview_enqueue_deps() {
 		wp_enqueue_script(
 			'widget-customizer-preview',
-			plugin_dir_url( __FILE__) . 'widget-customizer-preview.js',
+			self::get_plugin_path_url( 'widget-customizer-preview.js' ),
 			array( 'jquery', 'customize-preview' ),
 			self::get_version(),
 			true
 		);
 		wp_enqueue_style(
 			'widget-customizer-preview',
-			plugin_dir_url( __FILE__) . 'widget-customizer-preview.css',
+			self::get_plugin_path_url( 'widget-customizer-preview.css' ),
 			array(),
 			self::get_version()
 		);
@@ -198,7 +241,7 @@ class Widget_Customizer {
 		$exports = array(
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 			'i18n' => array(
-				'widget_tooltip' => __( 'Click to edit widget in customizer…', 'widget-customizer' ),
+				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
 			),
 		);
 		$wp_scripts->add_data(
@@ -216,8 +259,8 @@ class Widget_Customizer {
 		?>
 		<script>
 		(function () {
-		/*global WidgetCustomizerPreview */
-		WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
+			/*global WidgetCustomizerPreview */
+			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
 		}());
 		</script>
 		<?php
@@ -253,7 +296,7 @@ class Widget_Customizer {
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
 		try {
-			if ( ! check_ajax_referer( self::AJAX_ACTION, self::NONCE_POST_KEY, false ) ) {
+			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
 			}
 			if ( ! current_user_can('edit_theme_options') ) {
@@ -263,7 +306,7 @@ class Widget_Customizer {
 				throw new Widget_Customizer_Exception( __( 'Incomplete request', 'widget-customizer' ) );
 			}
 
-			unset( $_POST[self::NONCE_POST_KEY], $_POST['action'] );
+			unset( $_POST[self::UPDATE_WIDGET_NONCE_POST_KEY], $_POST['action'] );
 
 			do_action('load-widgets.php');
 			do_action('widgets.php');
@@ -370,6 +413,20 @@ class Widget_Customizer {
 	static function _widget_form_callback( $instance ) {
 		$instance = self::$_current_widget_instance;
 		return $instance;
+	}
+
+	/**
+	 * Gets Plugin URL from a path
+	 * Not using plugin_dir_url because it is not symlink-friendly
+	 */
+	static function get_plugin_path_url( $path = null ) {
+		$plugin_dirname = basename( dirname( __FILE__ ) );
+		$base_dir = trailingslashit( plugin_dir_url( '' ) ) . $plugin_dirname;
+		if ( $path ) {
+			return trailingslashit( $base_dir ) . ltrim( $path, '/' );
+		} else {
+			return $base_dir;
+		}
 	}
 
 	static protected $_current_widget_instance;

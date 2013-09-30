@@ -4,14 +4,85 @@ var WidgetCustomizer = (function ($) {
 
 	var customize = wp.customize;
 	var self = {
-		control: null,
-		ajax_action: null,
-		nonce_value: null,
-		nonce_post_key: null
+		update_widget_ajax_action: null,
+		update_widget_nonce_value: null,
+		update_widget_nonce_post_key: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
-	self.constuctor = customize.Control.extend({
+	/**
+	 * Sidebar Widgets control
+	 * Note that 'sidebar_widgets' must match the Sidebar_Widgets_WP_Customize_Control::$type
+	 */
+	customize.controlConstructor.sidebar_widgets = customize.Control.extend({
+
+		/**
+		 * Set up the control
+		 */
+		ready: function() {
+			var control = this;
+			control.setupOrdering();
+			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
+			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
+			// @link https://github.com/x-team/wp-widget-customizer/issues/3
+		},
+
+		/**
+		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 */
+		setupOrdering: function () {
+			var control = this;
+
+			// Update widget order setting when controls are re-ordered
+			this.container.closest( '.accordion-section-content' ).sortable({
+				items: '> .customize-control-widget_form',
+				axis: 'y',
+				update: function () {
+					var widget_container_ids = $(this).sortable('toArray');
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+					});
+					control.setting( widget_ids );
+				}
+			});
+
+			// Update ordering of widget control forms when the setting is updated
+			control.setting.bind( function( to ) {
+				var section_container = control.container.closest('.accordion-section-content');
+				var controls = section_container.find('> .customize-control-widget_form');
+
+				// Build up index
+				var widget_positions = {};
+				$.each( to, function ( i, widget_id ) {
+					widget_positions[widget_id] = i;
+				});
+				controls.each( function () {
+					var widget_id = $(this).find('input[name="widget-id"]').val();
+					$(this).data('widget-id', widget_id);
+				});
+
+				// Sort widget controls to their new positions
+				controls.sort(function ( a, b ) {
+					var a_widget_id = $(a).data('widget-id');
+					var b_widget_id = $(b).data('widget-id');
+					if ( widget_positions[a_widget_id] === widget_positions[b_widget_id] ) {
+						return 0;
+					}
+					return widget_positions[a_widget_id] < widget_positions[b_widget_id] ? -1 : 1;
+				});
+
+				// Append the controls to put them in the right order
+				section_container.append( controls );
+			});
+		}
+
+	});
+
+	/**
+	 * Widget Form control
+	 * Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
+	 */
+	customize.controlConstructor.widget_form = customize.Control.extend({
 
 		/**
 		 * Set up the control
@@ -23,7 +94,7 @@ var WidgetCustomizer = (function ($) {
 				control.updateWidget( to );
 			});
 
-			control.container.find( '.widget-control-update' ).on( 'click', function (e) {
+			control.container.find( '.widget-control-update' ).on( 'click', function () {
 				control.updateWidget();
 			});
 
@@ -48,8 +119,8 @@ var WidgetCustomizer = (function ($) {
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
 			var params = {};
-			params.action = self.ajax_action;
-			params[self.nonce_post_key] = self.nonce_value;
+			params.action = self.update_widget_ajax_action;
+			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
 			if ( instance_override ) {
 				params.json_instance_override = JSON.stringify( instance_override );
 			}
@@ -169,7 +240,7 @@ var WidgetCustomizer = (function ($) {
 		 */
 		getPreviewWidgetElement: function () {
 			var control = this;
-			var iframe_contents = $('#customize-preview iframe').contents();
+			var iframe_contents = $('#customize-preview').find('iframe').contents();
 			return iframe_contents.find('#' + control.params.widget_id);
 		},
 
@@ -259,8 +330,6 @@ var WidgetCustomizer = (function ($) {
 		return widget_control;
 	};
 
-	// Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
-	customize.controlConstructor.widget_form = self.constuctor;
 
 	return self;
 }( jQuery ));
