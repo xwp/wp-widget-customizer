@@ -38,7 +38,10 @@ class Widget_Customizer {
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
-		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_sidebars' ) );
+
+		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_actions' ) );
+		add_filter( 'temp_is_active_sidebar', array( __CLASS__, 'tally_sidebars_via_is_active_sidebar_calls' ), 10, 2 );
+		add_filter( 'temp_dynamic_sidebar_has_widgets', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_calls' ), 10, 2 );
 	}
 
 	static function load_textdomain() {
@@ -78,18 +81,19 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
-		foreach ( $GLOBALS['sidebars_widgets'] as $sidebar_id => $widgets ) {
+		foreach( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
+			$widgets = array();
+			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
+				$widgets = $GLOBALS['sidebars_widgets'][$sidebar_id];
+			}
 			$skip = (
 				'wp_inactive_widgets' === $sidebar_id
-				||
-				empty( $widgets )
 				||
 				! isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] )
 			);
 			if ( $skip ) {
 				continue;
 			}
-			$sidebar = $GLOBALS['wp_registered_sidebars'][$sidebar_id];
 			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 			$section_args = array(
 				'title' => sprintf(
@@ -260,7 +264,7 @@ class Widget_Customizer {
 		<script>
 		(function () {
 			/*global WidgetCustomizerPreview */
-			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( self::$rendered_sidebars ) ?>;
+			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( array_unique( self::$rendered_sidebars ) ) ?>;
 		}());
 		</script>
 		<?php
@@ -269,11 +273,13 @@ class Widget_Customizer {
 	static protected $rendered_sidebars = array();
 
 	/**
+	 * This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
+	 * This does not get called for a sidebar which lacks widgets.
+	 * See core patch which addresses the problem:
+	 * @link http://core.trac.wordpress.org/ticket/25368
 	 * @action dynamic_sidebar
-	 * @todo This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
-	 * @todo This does not get called for a sidebar which lacks widgets! Can be fixed with http://core.trac.wordpress.org/ticket/25368
 	 */
-	static function tally_rendered_sidebars( $widget ) {
+	static function tally_sidebars_via_dynamic_sidebar_actions( $widget ) {
 		global $sidebars_widgets;
 		foreach ( $sidebars_widgets as $sidebar_id => $widget_ids ) {
 			if ( in_array( $sidebar_id, self::$rendered_sidebars ) ) {
@@ -283,6 +289,32 @@ class Widget_Customizer {
 				self::$rendered_sidebars[] = $sidebar_id;
 			}
 		}
+	}
+
+	/**
+	 * Keep track of the times that is_active_sidebar() is called in the template, and assume that this
+	 * means that the sidebar would be rendered on the template if there were widgets populating it.
+	 * @see http://core.trac.wordpress.org/ticket/25368
+	 * @filter temp_is_active_sidebar
+	 */
+	static function tally_sidebars_via_is_active_sidebar_calls( $is_active, $sidebar_id ) {
+		self::$rendered_sidebars[] = $sidebar_id;
+		// We may need to force this to true, and also force-true the value for temp_dynamic_sidebar_has_widgets
+		// if we want to ensure that there is an area to drop widgets into, if the sidebar is empty.
+		return $is_active;
+	}
+
+	/**
+	 * Keep track of the times that dynamic_sidebar() is called in the template, and assume that this
+	 * means that the sidebar would be rendered on the template if there were widgets populating it.
+	 * @see http://core.trac.wordpress.org/ticket/25368
+	 * @filter temp_dynamic_sidebar_has_widgets
+	 */
+	static function tally_sidebars_via_dynamic_sidebar_calls( $has_widgets, $sidebar_id ) {
+		self::$rendered_sidebars[] = $sidebar_id;
+		// We may need to force this to true, and also force-true the value for temp_is_active_sidebar
+		// if we want to ensure that there is an area to drop widgets into, if the sidebar is empty.
+		return $has_widgets;
 	}
 
 	/**
