@@ -21,7 +21,9 @@ var WidgetCustomizer = (function ($) {
 		 */
 		ready: function() {
 			var control = this;
-			control.setupOrdering();
+			control.control_section = control.container.closest( '.control-section' );
+			control.section_content = control.container.closest( '.accordion-section-content' );
+			control.setupSortable();
 			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
 			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
 			// @link https://github.com/x-team/wp-widget-customizer/issues/3
@@ -30,13 +32,16 @@ var WidgetCustomizer = (function ($) {
 		/**
 		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
 		 */
-		setupOrdering: function () {
+		setupSortable: function () {
 			var control = this;
 
-			// Update widget order setting when controls are re-ordered
-			this.container.closest( '.accordion-section-content' ).sortable({
+			/**
+			 * Update widget order setting when controls are re-ordered
+			 */
+			control.section_content.sortable({
 				items: '> .customize-control-widget_form',
 				axis: 'y',
+				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
 					var widget_container_ids = $(this).sortable('toArray');
 					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
@@ -46,10 +51,11 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
-			// Update ordering of widget control forms when the setting is updated
+			/**
+			 * Update ordering of widget control forms when the setting is updated
+			 */
 			control.setting.bind( function( to ) {
-				var section_container = control.container.closest('.accordion-section-content');
-				var controls = section_container.find('> .customize-control-widget_form');
+				var controls = control.section_content.find('> .customize-control-widget_form');
 
 				// Build up index
 				var widget_positions = {};
@@ -72,7 +78,23 @@ var WidgetCustomizer = (function ($) {
 				});
 
 				// Append the controls to put them in the right order
-				section_container.append( controls );
+				control.section_content.append( controls );
+			});
+
+			/**
+			 * Expand other customizer sidebar section when dragging a control widget over it,
+			 * allowing the control to be dropped into another section
+			 */
+			control.control_section.find( '.accordion-section-title').droppable({
+				accept: '.customize-control-widget_form',
+				over: function ( event, ui ) {
+					if ( ! control.control_section.hasClass('open') ) {
+						control.control_section.addClass('open');
+						control.section_content.toggle(false).slideToggle(150, function () {
+							control.section_content.sortable( 'refreshPositions' );
+						});
+					}
+				}
 			});
 		}
 
@@ -329,7 +351,6 @@ var WidgetCustomizer = (function ($) {
 		});
 		return widget_control;
 	};
-
 
 	return self;
 }( jQuery ));

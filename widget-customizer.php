@@ -172,6 +172,7 @@ class Widget_Customizer {
 	 */
 	static function customize_controls_enqueue_deps() {
 		wp_enqueue_script('jquery-ui-sortable');
+		wp_enqueue_script('jquery-ui-droppable');
 		wp_enqueue_style(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.css' ),
