@@ -324,7 +324,7 @@ class Widget_Customizer {
 	 * @action wp_ajax_update_widget
 	 */
 	static function wp_ajax_update_widget() {
-		global $wp_registered_widgets, $wp_registered_widget_controls, $wp_registered_widget_updates;
+		global $wp_registered_widget_controls, $wp_registered_widget_updates;
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
@@ -347,23 +347,6 @@ class Widget_Customizer {
 
 			$id_base = $_POST['id_base'];
 			$widget_id = $_POST['widget-id'];
-			$sidebar_id = $_POST['sidebar'];
-			$multi_number = !empty($_POST['multi_number']) ? (int) $_POST['multi_number'] : 0;
-			$settings = isset($_POST['widget-' . $id_base]) && is_array($_POST['widget-' . $id_base]) ? $_POST['widget-' . $id_base] : false;
-
-			$sidebars = wp_get_sidebars_widgets();
-			$sidebar = isset($sidebars[$sidebar_id]) ? $sidebars[$sidebar_id] : array();
-
-			if ( $settings && preg_match( '/__i__|%i%/', key($settings) ) ) {
-				if ( !$multi_number ) {
-					throw new Widget_Customizer_Exception( $generic_error );
-				}
-
-				$_POST['widget-' . $id_base] = array( $multi_number => array_shift($settings) );
-				$widget_id = $id_base . '-' . $multi_number;
-				$sidebar[] = $widget_id;
-			}
-			$_POST['widget-id'] = $sidebar;
 
 			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 
@@ -375,7 +358,6 @@ class Widget_Customizer {
 
 					$widget_obj = $control['callback'][0]; // @todo There must be a better way to obtain the widget object
 					$all_instances = $widget_obj->get_settings();
-					$sidebars_widgets = wp_get_sidebars_widgets();
 
 					$settings = array();
 					if ( isset($_POST['widget-' . $widget_obj->id_base]) && is_array($_POST['widget-' . $widget_obj->id_base]) ) {

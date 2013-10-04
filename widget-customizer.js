@@ -116,9 +116,15 @@ var WidgetCustomizer = (function ($) {
 				control.updateWidget( to );
 			});
 
-			control.container.find( '.widget-control-update' ).on( 'click', function () {
+			control.container.find( '.widget-control-save' ).on( 'click', function (e) {
+				e.preventDefault();
 				control.updateWidget();
 			});
+
+			control.container.find( '.widget-control-close' ).on( 'click', function (e) {
+				e.preventDefault();
+				control.collapseForm();
+			} );
 
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
