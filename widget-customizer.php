@@ -29,7 +29,7 @@
  */
 
 class Widget_Customizer {
-	const UPDATE_WIDGET_AJAX_ACTION = 'update_widget';
+	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 
 	static function setup() {
@@ -46,8 +46,8 @@ class Widget_Customizer {
 
 	static function load_textdomain() {
 		$text_domain = self::get_plugin_meta( 'TextDomain' );
-		$locale  = apply_filters( 'plugin_locale', get_locale(), $text_domain );
-		$mo_file = sprintf( '%s/%s/%s-%s.mo', WP_LANG_DIR, $text_domain, $text_domain, $locale );
+		$locale      = apply_filters( 'plugin_locale', get_locale(), $text_domain );
+		$mo_file     = sprintf( '%s/%s/%s-%s.mo', WP_LANG_DIR, $text_domain, $text_domain, $locale );
 		load_textdomain( $text_domain, $mo_file );
 		$plugin_rel_path = dirname( plugin_basename( __FILE__ ) ) . trailingslashit( self::get_plugin_meta( 'DomainPath' ) );
 		load_plugin_textdomain( $text_domain, false, $plugin_rel_path );
@@ -81,7 +81,7 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
-		foreach( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
+		foreach ( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
 			$widgets = array();
 			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
 				$widgets = $GLOBALS['sidebars_widgets'][$sidebar_id];
@@ -171,8 +171,8 @@ class Widget_Customizer {
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
-		wp_enqueue_script('jquery-ui-sortable');
-		wp_enqueue_script('jquery-ui-droppable');
+		wp_enqueue_script( 'jquery-ui-sortable' );
+		wp_enqueue_script( 'jquery-ui-droppable' );
 		wp_enqueue_style(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.css' ),
@@ -198,7 +198,7 @@ class Widget_Customizer {
 		$wp_scripts->add_data(
 			'widget-customizer',
 			'data',
-			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode($exports) )
+			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode( $exports ) )
 		);
 	}
 
@@ -252,7 +252,7 @@ class Widget_Customizer {
 		$wp_scripts->add_data(
 			'widget-customizer-preview',
 			'data',
-			sprintf( 'var WidgetCustomizerPreview_exports = %s;', json_encode($exports) )
+			sprintf( 'var WidgetCustomizerPreview_exports = %s;', json_encode( $exports ) )
 		);
 	}
 
@@ -332,7 +332,7 @@ class Widget_Customizer {
 			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
 			}
-			if ( ! current_user_can('edit_theme_options') ) {
+			if ( ! current_user_can( 'edit_theme_options' ) ) {
 				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
 			}
 			if ( ! isset( $_POST['id_base'] ) ) {
@@ -341,11 +341,11 @@ class Widget_Customizer {
 
 			unset( $_POST[self::UPDATE_WIDGET_NONCE_POST_KEY], $_POST['action'] );
 
-			do_action('load-widgets.php');
-			do_action('widgets.php');
-			do_action('sidebar_admin_setup');
+			do_action( 'load-widgets.php' );
+			do_action( 'widgets.php' );
+			do_action( 'sidebar_admin_setup' );
 
-			$id_base = $_POST['id_base'];
+			$id_base   = $_POST['id_base'];
 			$widget_id = $_POST['widget-id'];
 
 			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
@@ -356,11 +356,11 @@ class Widget_Customizer {
 						break;
 					}
 
-					$widget_obj = $control['callback'][0]; // @todo There must be a better way to obtain the widget object
+					$widget_obj    = $control['callback'][0]; // @todo There must be a better way to obtain the widget object
 					$all_instances = $widget_obj->get_settings();
 
 					$settings = array();
-					if ( isset($_POST['widget-' . $widget_obj->id_base]) && is_array($_POST['widget-' . $widget_obj->id_base]) ) {
+					if ( isset( $_POST['widget-' . $widget_obj->id_base] ) && is_array( $_POST['widget-' . $widget_obj->id_base] ) ) {
 						$settings = $_POST['widget-' . $widget_obj->id_base];
 					} elseif ( isset($_POST['id_base']) && $_POST['id_base'] == $widget_obj->id_base ) {
 						$num = $_POST['multi_number'] ? (int) $_POST['multi_number'] : (int) $_POST['widget_number'];
@@ -374,14 +374,14 @@ class Widget_Customizer {
 						else {
 							$new_instance = stripslashes_deep( $new_instance );
 						}
-						$widget_obj->_set($number);
+						$widget_obj->_set( $number );
 
 						$old_instance = isset($all_instances[$number]) ? $all_instances[$number] : array();
 
-						$instance = $widget_obj->update($new_instance, $old_instance);
+						$instance = $widget_obj->update( $new_instance, $old_instance );
 
 						// filters the widget's settings before saving, return false to cancel saving (keep the old settings if updating)
-						$instance = apply_filters('widget_update_callback', $instance, $new_instance, $old_instance, $widget_obj);
+						$instance = apply_filters( 'widget_update_callback', $instance, $new_instance, $old_instance, $widget_obj );
 						if ( false !== $instance ) {
 							$all_instances[$number] = $instance;
 						}

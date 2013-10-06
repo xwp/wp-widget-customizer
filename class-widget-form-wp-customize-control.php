@@ -11,7 +11,7 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 	public function to_json() {
 		parent::to_json();
 		$exported_properties = array( 'widget_id', 'sidebar_id' );
-		foreach( $exported_properties as $key ) {
+		foreach ( $exported_properties as $key ) {
 			$this->json[$key] = $this->$key;
 		}
 	}

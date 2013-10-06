@@ -10,7 +10,7 @@ class Sidebar_Widgets_WP_Customize_Control extends WP_Customize_Control {
 	public function to_json() {
 		parent::to_json();
 		$exported_properties = array( 'sidebar_id' );
-		foreach( $exported_properties as $key ) {
+		foreach ( $exported_properties as $key ) {
 			$this->json[$key] = $this->$key;
 		}
 	}
@@ -28,7 +28,7 @@ class Sidebar_Widgets_WP_Customize_Control extends WP_Customize_Control {
 				<span class="customize-control-title"><?php echo esc_html_e( 'Add widget:', 'widget-customizer' ); ?></span>
 				<select>
 					<option></option>
-					<?php foreach( $wp_widget_factory->widgets as $class_name => $widget ): ?>
+					<?php foreach ( $wp_widget_factory->widgets as $class_name => $widget ): ?>
 						<option value="<?php echo esc_attr( $class_name ) ?>"><?php echo esc_html( $widget->name ) ?></option>
 					<?php endforeach; ?>
 				</select>
