@@ -86,12 +86,7 @@ class Widget_Customizer {
 			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
 				$widgets = $GLOBALS['sidebars_widgets'][$sidebar_id];
 			}
-			$skip = (
-				'wp_inactive_widgets' === $sidebar_id
-				||
-				! isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] )
-			);
-			if ( $skip ) {
+			if ( ! isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) || 'wp_inactive_widgets' === $sidebar_id ) {
 				continue;
 			}
 			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );

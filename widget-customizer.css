@@ -1,6 +1,6 @@
-customize-control-sidebar_widgets {
+.customize-control-sidebar_widgets {
 	display: none;
- 
+}
 .customize-control-sidebar_widgets .hide-if-js {
 	display: none; /* the link in here will fail if it ever gets used */
 }
