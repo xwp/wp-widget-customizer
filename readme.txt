@@ -34,6 +34,12 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 == Changelog ==
 
+= 0.7 =
+* Make detection of sidebars in previewed template more robust by integrating new temp hooks available in trunk. Fixes [#15](https://github.com/x-team/wp-widget-customizer/pull/15).
+* Allow widget form controls to be dragged to other sidebar sections. Fixes [#24](https://github.com/x-team/wp-widget-customizer/pull/24).
+* Eliminate duplicated code by re-using `wp_widget_control()`
+* Add PHPCS, JSHint, and Travis CI integration
+
 = 0.6 =
 Add drag-and-drop reordering of customizer controls, where the new order is itself previewed and is persisted until the settings are saved. Fixes issue [#1](https://github.com/x-team/wp-widget-customizer/pull/1). Props [bobbravo2](http://profiles.wordpress.org/bobbravo2/), [westonruter](http://profiles.wordpress.org/westonruter/).
 
