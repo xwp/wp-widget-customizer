@@ -126,6 +126,12 @@ var WidgetCustomizer = (function ($) {
 				control.collapseForm();
 			} );
 
+			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
+				if ( 13 === e.which ){ 
+					this.click();
+				}
+			});
+
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
