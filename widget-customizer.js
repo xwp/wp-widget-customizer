@@ -113,7 +113,9 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			control.setting.bind( function( to ) {
-				control.updateWidget( to );
+				if ( to ){ // to === false signals that the widget was removed
+					control.updateWidget( to );
+				}
 			});
 
 			control.container.find( '.widget-control-save' ).on( 'click', function (e) {
@@ -125,6 +127,11 @@ var WidgetCustomizer = (function ($) {
 				e.preventDefault();
 				control.collapseForm();
 			} );
+
+			control.container.find( '.widget-control-remove' ).on( 'click', function (e) {
+				e.preventDefault();
+				control.updateWidget( false, true); // true to remove the widget
+			});
 
 			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
 				if ( 13 === e.which ){ 
@@ -144,9 +151,10 @@ var WidgetCustomizer = (function ($) {
 		/**
 		 * @param {object} [instance_override]  When the model changes, the instance is sent this way
 		 */
-		updateWidget: function ( instance_override ) {
+		updateWidget: function ( instance_override, remove_widget ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
+			var removing = typeof remove_widget != 'undefined' && remove_widget;
 
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
@@ -158,11 +166,28 @@ var WidgetCustomizer = (function ($) {
 			if ( instance_override ) {
 				params.json_instance_override = JSON.stringify( instance_override );
 			}
+			if ( removing ){
+				params.remove_widget = 1;
+			}
 			data += '&' + $.param( params );
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {
-					control.container.find( '.widget-content' ).html( r.data.form );
+					if ( removing ){
+						control.container.slideToggle(function(){
+							this.remove();
+						});
+						control.removePreviewWidgetElement();
+
+						// @todo - there must be a better way to do this
+						// Remove references to the removed widget from wp.customize.settings 
+						var settings = customize.settings.settings['sidebars_widgets['+control.params.sidebar_id+']'];
+						settings.value.splice( settings.value.indexOf( control.params.widget_id ), 1 ); 
+						delete customize.settings.settings[control.params.settings.default];
+					}
+					else{
+						control.container.find( '.widget-content' ).html( r.data.form );
+					}
 					if ( ! instance_override ) {
 						control.setting( r.data.instance );
 					}
@@ -321,6 +346,15 @@ var WidgetCustomizer = (function ($) {
 			setTimeout( function () {
 				widget_el.removeClass('widget-customizer-highlighted-widget');
 			}, 500 );
+		},
+
+		/**
+		 * Removes the Preview Widget Element
+		 */
+		removePreviewWidgetElement: function () {
+			this.getPreviewWidgetElement().slideToggle(function(){
+				this.remove();
+			});
 		},
 
 		/**
