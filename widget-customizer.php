@@ -379,7 +379,7 @@ class Widget_Customizer {
 							wp_send_json_success( array( 'instance' => false ) );
 							return;
 						}
-						else{
+						else {
 							$instance = $widget_obj->update( $new_instance, $old_instance );
 
 							// filters the widget's settings before saving, return false to cancel saving (keep the old settings if updating)
@@ -387,7 +387,6 @@ class Widget_Customizer {
 							if ( false !== $instance ) {
 								$all_instances[$number] = $instance;
 							}
-
 						}
 
 						break; // run only once

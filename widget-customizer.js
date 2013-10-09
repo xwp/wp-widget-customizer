@@ -134,7 +134,7 @@ var WidgetCustomizer = (function ($) {
 			});
 
 			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
-				if ( 13 === e.which ){ 
+				if ( 13 === e.which ){
 					this.click();
 				}
 			});
@@ -154,7 +154,7 @@ var WidgetCustomizer = (function ($) {
 		updateWidget: function ( instance_override, remove_widget ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
-			var removing = typeof remove_widget != 'undefined' && remove_widget;
+			var removing = typeof remove_widget !== 'undefined' && remove_widget;
 
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
@@ -182,7 +182,7 @@ var WidgetCustomizer = (function ($) {
 						// @todo - there must be a better way to do this
 						// Remove references to the removed widget from wp.customize.settings 
 						var settings = customize.settings.settings['sidebars_widgets['+control.params.sidebar_id+']'];
-						settings.value.splice( settings.value.indexOf( control.params.widget_id ), 1 ); 
+						settings.value.splice( settings.value.indexOf( control.params.widget_id ), 1 );
 						delete customize.settings.settings[control.params.settings.default];
 					}
 					else{
