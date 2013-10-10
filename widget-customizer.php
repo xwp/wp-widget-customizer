@@ -448,6 +448,7 @@ add_action( 'plugins_loaded', array( 'Widget_Customizer', 'setup' ) );
 
 /**
  * Adds Message to Widgets Admin Page to guide user to Widget Customizer
+ *
  * @action widgets_admin_page
  */
 function widget_customizer_link() {
