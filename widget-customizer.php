@@ -455,7 +455,7 @@ function widget_customizer_link() {
 	?>
 	<div class="updated">
 		<p>
-			<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) ?>
+			<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) // xss ok ?>
 		</p>
 	</div>
 	<?php
