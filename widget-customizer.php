@@ -445,3 +445,19 @@ class Widget_Customizer {
 class Widget_Customizer_Exception extends Exception {}
 
 add_action( 'plugins_loaded', array( 'Widget_Customizer', 'setup' ) );
+
+/**
+ * Adds Message to Widgets Admin Page to guide user to Widget Customizer
+ * @action widgets_admin_page
+ */
+function widget_customizer_link() {
+	?>
+	<div class="updated">
+		<p>
+			<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) ?>
+		</p>
+	</div>
+	<?php
+}
+
+add_action( 'widgets_admin_page', 'widget_customizer_link' );
