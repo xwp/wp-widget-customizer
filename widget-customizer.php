@@ -450,7 +450,16 @@ class Widget_Customizer {
 		?>
 		<div class="updated">
 			<p>
-				<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) // xss ok ?>
+				<?php
+				echo sprintf(
+					__( 'The Widget Customizer plugin is activated. You can now edit and preview changes to widgets in the %1$s.', 'widget-customizer' ),
+					sprintf(
+						'<a href="%1$s">%2$s</a>',
+						admin_url( 'customize.php' ),
+						esc_html__( 'Customizer', 'widget-customizer' )
+					)
+				); // xss ok
+				?>
 			</p>
 		</div>
 		<?php
