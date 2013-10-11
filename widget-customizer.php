@@ -38,6 +38,7 @@ class Widget_Customizer {
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
+		add_action( 'widgets_admin_page', array( __CLASS__, 'widget_customizer_link' ) );
 
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_actions' ) );
 		add_filter( 'temp_is_active_sidebar', array( __CLASS__, 'tally_sidebars_via_is_active_sidebar_calls' ), 10, 2 );
@@ -440,25 +441,23 @@ class Widget_Customizer {
 	}
 
 	static protected $_current_widget_instance;
+
+	/**
+	 * Adds Message to Widgets Admin Page to guide user to Widget Customizer
+	 * @action widgets_admin_page
+	 */
+	static function widget_customizer_link() {
+		?>
+		<div class="updated">
+			<p>
+				<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) // xss ok ?>
+			</p>
+		</div>
+		<?php
+	}
+
 }
 
 class Widget_Customizer_Exception extends Exception {}
 
 add_action( 'plugins_loaded', array( 'Widget_Customizer', 'setup' ) );
-
-/**
- * Adds Message to Widgets Admin Page to guide user to Widget Customizer
- *
- * @action widgets_admin_page
- */
-function widget_customizer_link() {
-	?>
-	<div class="updated">
-		<p>
-			<?php echo sprintf( '%s. <a href="%s">%s.</a>', esc_html__( 'The WP Widget Customizer is Enabled', 'widget-customizer' ), admin_url( 'customize.php' ), esc_html__( 'Start editing Widgets in realtime', 'widget-customizer' ) ) // xss ok ?>
-		</p>
-	</div>
-	<?php
-}
-
-add_action( 'widgets_admin_page', 'widget_customizer_link' );
