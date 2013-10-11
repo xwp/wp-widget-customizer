@@ -26,7 +26,21 @@ var WidgetCustomizer = (function ($) {
 			control.setupSortable();
 			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
 			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
+			control.setupDeleteControl();
 			// @link https://github.com/x-team/wp-widget-customizer/issues/3
+		},
+		
+		/**
+		 * Update the preview window based on the current widgets, possibly having just be reordered, 
+		 * added to or removed from.
+		 */
+		updatePreview: function(){
+			var control = this;
+			var widget_container_ids = control.section_content.sortable('toArray');
+			var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+				return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+			});
+			control.setting( widget_ids );
 		},
 
 		/**
@@ -43,11 +57,7 @@ var WidgetCustomizer = (function ($) {
 				axis: 'y',
 				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
-					var widget_container_ids = $(this).sortable('toArray');
-					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					});
-					control.setting( widget_ids );
+					control.updatePreview();
 				}
 			});
 
@@ -96,6 +106,22 @@ var WidgetCustomizer = (function ($) {
 					}
 				}
 			});
+		},
+		
+		/**
+		 * Listed for clicks on the .widget-control-remove link
+		 */
+		setupDeleteControl: function(){
+			var control = this;
+			
+			control.control_section.on( 'click', 'a.widget-control-remove', function(e){
+				e.preventDefault();
+				$(this).parents('.customize-control').slideToggle(function(){
+					this.remove();
+					control.updatePreview();
+				});
+				return false;
+			});
 		}
 
 	});
@@ -113,9 +139,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			control.setting.bind( function( to ) {
-				if ( to ){ // to === false signals that the widget was removed
-					control.updateWidget( to );
-				}
+				control.updateWidget( to );
 			});
 
 			control.container.find( '.widget-control-save' ).on( 'click', function (e) {
@@ -127,11 +151,6 @@ var WidgetCustomizer = (function ($) {
 				e.preventDefault();
 				control.collapseForm();
 			} );
-
-			control.container.find( '.widget-control-remove' ).on( 'click', function (e) {
-				e.preventDefault();
-				control.updateWidget( false, true); // true to remove the widget
-			});
 
 			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
 				if ( 13 === e.which ){
@@ -151,10 +170,9 @@ var WidgetCustomizer = (function ($) {
 		/**
 		 * @param {object} [instance_override]  When the model changes, the instance is sent this way
 		 */
-		updateWidget: function ( instance_override, remove_widget ) {
+		updateWidget: function ( instance_override ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
-			var removing = typeof remove_widget !== 'undefined' && remove_widget;
 
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
@@ -166,28 +184,11 @@ var WidgetCustomizer = (function ($) {
 			if ( instance_override ) {
 				params.json_instance_override = JSON.stringify( instance_override );
 			}
-			if ( removing ){
-				params.remove_widget = 1;
-			}
 			data += '&' + $.param( params );
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {
-					if ( removing ){
-						control.container.slideToggle(function(){
-							this.remove();
-						});
-						control.removePreviewWidgetElement();
-
-						// @todo - there must be a better way to do this
-						// Remove references to the removed widget from wp.customize.settings 
-						var settings = customize.settings.settings['sidebars_widgets['+control.params.sidebar_id+']'];
-						settings.value.splice( settings.value.indexOf( control.params.widget_id ), 1 );
-						delete customize.settings.settings[control.params.settings.default];
-					}
-					else{
-						control.container.find( '.widget-content' ).html( r.data.form );
-					}
+					control.container.find( '.widget-content' ).html( r.data.form );
 					if ( ! instance_override ) {
 						control.setting( r.data.instance );
 					}
@@ -346,15 +347,6 @@ var WidgetCustomizer = (function ($) {
 			setTimeout( function () {
 				widget_el.removeClass('widget-customizer-highlighted-widget');
 			}, 500 );
-		},
-
-		/**
-		 * Removes the Preview Widget Element
-		 */
-		removePreviewWidgetElement: function () {
-			this.getPreviewWidgetElement().slideToggle(function(){
-				this.remove();
-			});
 		},
 
 		/**

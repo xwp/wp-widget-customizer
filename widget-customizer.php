@@ -342,7 +342,6 @@ class Widget_Customizer {
 
 			$id_base   = $_POST['id_base'];
 			$widget_id = $_POST['widget-id'];
-			$removing  = isset($_POST['remove_widget']) && $_POST['remove_widget'];
 
 			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 
@@ -373,20 +372,13 @@ class Widget_Customizer {
 						$widget_obj->_set( $number );
 
 						$old_instance = isset($all_instances[$number]) ? $all_instances[$number] : array();
-						
-						if ( $removing ){
-							// false signals that the widget was removed
-							wp_send_json_success( array( 'instance' => false ) );
-							return;
-						}
-						else {
-							$instance = $widget_obj->update( $new_instance, $old_instance );
 
-							// filters the widget's settings before saving, return false to cancel saving (keep the old settings if updating)
-							$instance = apply_filters( 'widget_update_callback', $instance, $new_instance, $old_instance, $widget_obj );
-							if ( false !== $instance ) {
-								$all_instances[$number] = $instance;
-							}
+						$instance = $widget_obj->update( $new_instance, $old_instance );
+
+						// filters the widget's settings before saving, return false to cancel saving (keep the old settings if updating)
+						$instance = apply_filters( 'widget_update_callback', $instance, $new_instance, $old_instance, $widget_obj );
+						if ( false !== $instance ) {
+							$all_instances[$number] = $instance;
 						}
 
 						break; // run only once
