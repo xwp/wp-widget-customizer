@@ -30,6 +30,10 @@
 	cursor: default;
 }
 
+.customize-control-widget_form .widget .widget-top {
+	cursor: move;
+}
+
 .customize-control-widget_form .widget .widget-top a {
 	cursor: pointer;
 }
