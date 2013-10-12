@@ -26,7 +26,21 @@ var WidgetCustomizer = (function ($) {
 			control.setupSortable();
 			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
 			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
+			control.setupDeleteControl();
 			// @link https://github.com/x-team/wp-widget-customizer/issues/3
+		},
+		
+		/**
+		 * Update the preview window based on the current widgets, possibly having just be reordered, 
+		 * added to or removed from.
+		 */
+		updatePreview: function(){
+			var control = this;
+			var widget_container_ids = control.section_content.sortable('toArray');
+			var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+				return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+			});
+			control.setting( widget_ids );
 		},
 
 		/**
@@ -43,11 +57,7 @@ var WidgetCustomizer = (function ($) {
 				axis: 'y',
 				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
-					var widget_container_ids = $(this).sortable('toArray');
-					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					});
-					control.setting( widget_ids );
+					control.updatePreview();
 				}
 			});
 
@@ -96,6 +106,22 @@ var WidgetCustomizer = (function ($) {
 					}
 				}
 			});
+		},
+		
+		/**
+		 * Listed for clicks on the .widget-control-remove link
+		 */
+		setupDeleteControl: function(){
+			var control = this;
+			
+			control.control_section.on( 'click', 'a.widget-control-remove', function(e){
+				e.preventDefault();
+				$(this).parents('.customize-control').slideToggle(function(){
+					this.remove();
+					control.updatePreview();
+				});
+				return false;
+			});
 		}
 
 	});
@@ -125,6 +151,12 @@ var WidgetCustomizer = (function ($) {
 				e.preventDefault();
 				control.collapseForm();
 			} );
+
+			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
+				if ( 13 === e.which ){
+					this.click();
+				}
+			});
 
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
