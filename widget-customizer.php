@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widget Customizer
  * Description: Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
- * Version:     0.7
+ * Version:     0.8
  * Author:      X-Team
  * Author URI:  http://x-team.com/wordpress/
  * License:     GPLv2+
@@ -38,6 +38,7 @@ class Widget_Customizer {
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
+		add_action( 'widgets_admin_page', array( __CLASS__, 'widget_customizer_link' ) );
 
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_actions' ) );
 		add_filter( 'temp_is_active_sidebar', array( __CLASS__, 'tally_sidebars_via_is_active_sidebar_calls' ), 10, 2 );
@@ -80,6 +81,8 @@ class Widget_Customizer {
 	static function customize_register( $wp_customize ) {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
+
+		add_action( 'update_option_sidebars_widgets', array( __CLASS__, 'refresh_trashed_widgets' ) );
 
 		foreach ( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
 			$widgets = array();
@@ -163,6 +166,16 @@ class Widget_Customizer {
 	}
 
 	/**
+	 *
+	 * @action update_option_sidebars_widgets
+	 */
+	static function refresh_trashed_widgets() {
+		global $sidebars_widgets;
+		$sidebars_widgets = wp_get_sidebars_widgets(); // Update global for retrieve_widgets()
+		retrieve_widgets();
+	}
+
+	/**
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
@@ -189,6 +202,10 @@ class Widget_Customizer {
 			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'i18n' => array(
+				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customzier' ),
+				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar', 'tooltip on btn a widget to the inactive widgets sidebar', 'widget-customzier' ),
+			),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer',
@@ -440,6 +457,30 @@ class Widget_Customizer {
 	}
 
 	static protected $_current_widget_instance;
+
+	/**
+	 * Adds Message to Widgets Admin Page to guide user to Widget Customizer
+	 * @action widgets_admin_page
+	 */
+	static function widget_customizer_link() {
+		?>
+		<div class="updated">
+			<p>
+				<?php
+				echo sprintf(
+					__( 'The Widget Customizer plugin is activated. You can now edit and preview changes to widgets in the %1$s.', 'widget-customizer' ),
+					sprintf(
+						'<a href="%1$s">%2$s</a>',
+						admin_url( 'customize.php' ),
+						esc_html__( 'Customizer', 'widget-customizer' )
+					)
+				); // xss ok
+				?>
+			</p>
+		</div>
+		<?php
+	}
+
 }
 
 class Widget_Customizer_Exception extends Exception {}
