@@ -5,10 +5,6 @@
 	display: none; /* the link in here will fail if it ever gets used */
 }
 
-.customize-control-widget_form .widget-control-actions .alignleft {
-	display: none; /* We will show this again once we add Delete support */
-}
-
 .customize-control-widget_form.previewer-loading .spinner {
 	display: inline;
 }

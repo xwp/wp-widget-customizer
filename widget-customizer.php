@@ -82,6 +82,8 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
+		add_action( 'update_option_sidebars_widgets', array( __CLASS__, 'refresh_trashed_widgets' ) );
+
 		foreach ( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
 			$widgets = array();
 			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
@@ -164,6 +166,16 @@ class Widget_Customizer {
 	}
 
 	/**
+	 *
+	 * @action update_option_sidebars_widgets
+	 */
+	static function refresh_trashed_widgets() {
+		global $sidebars_widgets;
+		$sidebars_widgets = wp_get_sidebars_widgets(); // Update global for retrieve_widgets()
+		retrieve_widgets();
+	}
+
+	/**
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
@@ -190,6 +202,10 @@ class Widget_Customizer {
 			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'i18n' => array(
+				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customzier' ),
+				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar', 'tooltip on btn a widget to the inactive widgets sidebar', 'widget-customzier' ),
+			),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer',
