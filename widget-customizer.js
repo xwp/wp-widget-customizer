@@ -6,7 +6,8 @@ var WidgetCustomizer = (function ($) {
 	var self = {
 		update_widget_ajax_action: null,
 		update_widget_nonce_value: null,
-		update_widget_nonce_post_key: null
+		update_widget_nonce_post_key: null,
+		i18n: {}
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -113,8 +114,13 @@ var WidgetCustomizer = (function ($) {
 		 */
 		setupDeleteControl: function(){
 			var control = this;
-			
-			control.control_section.on( 'click', 'a.widget-control-remove', function(e){
+
+			var remove_btn = control.control_section.find( 'a.widget-control-remove' );
+
+			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
+			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
+
+			remove_btn.on( 'click', function(e){
 				e.preventDefault();
 				$(this).parents('.customize-control').slideToggle(function(){
 					this.remove();

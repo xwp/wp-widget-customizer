@@ -201,6 +201,10 @@ class Widget_Customizer {
 			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'i18n' => array(
+				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customzier' ),
+				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar', 'tooltip on btn a widget to the inactive widgets sidebar', 'widget-customzier' ),
+			),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer',
