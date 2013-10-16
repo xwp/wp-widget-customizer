@@ -81,6 +81,8 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
+		add_action( 'update_option_sidebars_widgets', array( __CLASS__, 'refresh_trashed_widgets' ) );
+
 		foreach ( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
 			$widgets = array();
 			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
@@ -160,6 +162,16 @@ class Widget_Customizer {
 				$wp_customize->add_control( $control );
 			}
 		}
+	}
+
+	/**
+	 *
+	 * @action update_option_sidebars_widgets
+	 */
+	static function refresh_trashed_widgets() {
+		global $sidebars_widgets;
+		$sidebars_widgets = wp_get_sidebars_widgets(); // Update global for retrieve_widgets()
+		retrieve_widgets();
 	}
 
 	/**
