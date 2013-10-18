@@ -206,12 +206,97 @@ class Widget_Customizer {
 				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customzier' ),
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar', 'tooltip on btn a widget to the inactive widgets sidebar', 'widget-customzier' ),
 			),
+			'available_widgets' => self::get_available_widgets(),
 		);
+
 		$wp_scripts->add_data(
 			'widget-customizer',
 			'data',
 			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode( $exports ) )
 		);
+	}
+
+	/**
+	 * @see wp_list_widgets()
+	 * @return array
+	 */
+	static function get_available_widgets() {
+		global $wp_registered_widgets, $wp_registered_widget_controls;
+		require_once ABSPATH . '/wp-admin/includes/widgets.php'; // for next_widget_id_number()
+
+		$available_widgets = array();
+
+		$sort = $wp_registered_widgets;
+		usort( $sort, array( __CLASS__, '_sort_name_callback' ) );
+		$done = array();
+
+		foreach ( $sort as $widget ) {
+			if ( in_array( $widget['callback'], $done, true ) ) { // We already showed this multi-widget
+				continue;
+			}
+
+			$sidebar = is_active_widget( $widget['callback'], $widget['id'], false, false );
+			$done[]  = $widget['callback'];
+
+			if ( ! isset( $widget['params'][0] ) ) {
+				$widget['params'][0] = array();
+			}
+
+			$available_widget = $widget;
+			unset( $available_widget['callback'] ); // not serializable to JSON
+
+			$args = array(
+				'widget_id' => $widget['id'],
+				'widget_name' => $widget['name'],
+				'_display' => 'template',
+			);
+
+			$is_multi_widget = (
+				isset( $wp_registered_widget_controls[$widget['id']]['id_base'] )
+				&&
+				isset( $widget['params'][0]['number'] )
+			);
+			$is_hidden = false;
+			if ( $is_multi_widget ) {
+				$id_base = $wp_registered_widget_controls[$widget['id']]['id_base'];
+				$args['_temp_id']   = "$id_base-__i__";
+				$args['_multi_num'] = next_widget_id_number( $id_base );
+				$args['_add']       = 'multi';
+			}
+			else {
+				$args['_add'] = 'single';
+				if ( $sidebar ) {
+					$is_hidden = true;
+				}
+			}
+
+			$list_widget_controls_args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );
+			ob_start();
+			call_user_func_array( 'wp_widget_control', $list_widget_controls_args );
+			$control_tpl = ob_get_clean();
+
+			$available_widget = array_merge(
+				$available_widget,
+				array(
+					'temp_id' => isset( $args['_temp_id'] ) ? $args['_temp_id'] : null,
+					'is_multi' => $is_multi_widget,
+					'control_tpl' => $control_tpl,
+					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
+					'is_hidden' => $is_hidden,
+				)
+			);
+			$available_widgets[] = $available_widget;
+		}
+		return $available_widgets;
+	}
+
+	/**
+	 * Replace with inline closure once on PHP 5.3:
+	 * sort( $array, function ( $a, $b ) { return strnatcasecmp( $a['name'], $b['name'] ); } );
+	 * @access private
+	 */
+	static function _sort_name_callback( $a, $b ) {
+		return strnatcasecmp( $a['name'], $b['name'] );
 	}
 
 	/**

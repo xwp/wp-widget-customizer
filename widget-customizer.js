@@ -125,6 +125,7 @@ var WidgetCustomizer = (function ($) {
 				$(this).parents('.customize-control').slideToggle(function(){
 					this.remove();
 					control.updatePreview();
+					// @todo If removed widget was single (not a multi widget) then we now need to make any single widget available for adding
 				});
 				return false;
 			});
