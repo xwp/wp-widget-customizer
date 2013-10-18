@@ -190,10 +190,11 @@ class Widget_Customizer {
 		wp_enqueue_script(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.js' ),
-			array( 'jquery', 'customize-controls' ),
+			array( 'jquery', 'backbone', 'customize-controls' ),
 			self::get_version(),
 			true
 		);
+
 
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;

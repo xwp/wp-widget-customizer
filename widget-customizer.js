@@ -1,4 +1,4 @@
-/*global wp, jQuery, WidgetCustomizer_exports, console, alert */
+/*global wp, Backbone, jQuery, WidgetCustomizer_exports, console, alert */
 var WidgetCustomizer = (function ($) {
 	'use strict';
 
@@ -7,9 +7,31 @@ var WidgetCustomizer = (function ($) {
 		update_widget_ajax_action: null,
 		update_widget_nonce_value: null,
 		update_widget_nonce_post_key: null,
-		i18n: {}
+		i18n: {},
+		available_widgets: [] // @todo Needs to be a Backbone collection
 	};
 	$.extend(self, WidgetCustomizer_exports);
+
+	/**
+	 * Set up model
+	 */
+	var Widget = self.Widget = Backbone.Model.extend({
+		id: null,
+		temp_id: null,
+		classname: null,
+		control_tpl: null,
+		description: null,
+		is_hidden: null,
+		is_multi: null,
+		multi_number: null,
+		name: null,
+		params: []
+		// @todo methods for adding and removing instances, and logic if ! is_multi
+	});
+	var WidgetLibrary = self.WidgetLibrary = Backbone.Collection.extend({
+		model: Widget
+	});
+	self.available_widgets = new WidgetLibrary(self.available_widgets);
 
 	/**
 	 * Sidebar Widgets control
@@ -25,9 +47,8 @@ var WidgetCustomizer = (function ($) {
 			control.control_section = control.container.closest( '.control-section' );
 			control.section_content = control.container.closest( '.accordion-section-content' );
 			control.setupSortable();
-			// @todo Set up control for adding new widgets (via a dropdown, and with jQuery Chosen)
-			// @todo Set up control for deleting widgets (add a delete link to each widget form control)
-			control.setupDeleteControl();
+			control.setupAddition();
+			control.setupDeletion();
 			// @link https://github.com/x-team/wp-widget-customizer/issues/3
 		},
 		
@@ -108,11 +129,35 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 		},
-		
+
+		/**
+		 *
+		 */
+		setupAddition: function () {
+			var control = this;
+			control.populateAvailableWidgets();
+			self.available_widgets.on('change', function () {
+				control.populateAvailableWidgets();
+			});
+		},
+
+		/**
+		 *
+		 */
+		populateAvailableWidgets: function() {
+			var control = this;
+			var select = control.container.find('.available-widgets');
+			select.find('option:not(:first-child)').remove();
+			self.available_widgets.each(function (widget) {
+				var option = new Option(widget.get('name'), widget.get('id'));
+				select.append(option);
+			});
+		},
+
 		/**
 		 * Listed for clicks on the .widget-control-remove link
 		 */
-		setupDeleteControl: function(){
+		setupDeletion: function(){
 			var control = this;
 
 			var remove_btn = control.control_section.find( 'a.widget-control-remove' );
