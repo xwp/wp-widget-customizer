@@ -8,7 +8,7 @@ var WidgetCustomizer = (function ($) {
 		update_widget_nonce_value: null,
 		update_widget_nonce_post_key: null,
 		i18n: {},
-		available_widgets: [] // @todo Needs to be a Backbone collection
+		available_widgets: []
 	};
 	$.extend(self, WidgetCustomizer_exports);
 

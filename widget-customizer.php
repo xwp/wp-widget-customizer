@@ -92,6 +92,10 @@ class Widget_Customizer {
 			if ( ! isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) || 'wp_inactive_widgets' === $sidebar_id ) {
 				continue;
 			}
+
+			/**
+			 * Add section to contain control
+			 */
 			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 			$section_args = array(
 				'title' => sprintf(
@@ -107,15 +111,7 @@ class Widget_Customizer {
 			 * Add control for managing widgets in sidebar
 			 */
 			$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
-			$wp_customize->add_setting(
-				$setting_id,
-				array(
-					'type' => 'option',
-					'capability' => 'edit_theme_options',
-					'transport' => 'refresh',
-					// @todo add support for postMessage for some widgets; will need to use Ajax
-				)
-			);
+			$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
 			$control = new Sidebar_Widgets_WP_Customize_Control(
 				$wp_customize,
 				$setting_id,
@@ -139,16 +135,7 @@ class Widget_Customizer {
 				preg_match( '/^(.*)-([0-9]+)$/', $widget_id, $matches ); // see private _get_widget_id_base()
 				$setting_id = sprintf( 'widget_%s[%s]', $matches[1], $matches[2] );
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
-
-				$wp_customize->add_setting(
-					$setting_id,
-					array(
-						'type' => 'option',
-						'capability' => 'edit_theme_options',
-						'transport' => 'refresh',
-						// @todo add support for postMessage for some widgets; will need to use Ajax
-					)
-				);
+				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
 				$control = new Widget_Form_WP_Customize_Control(
 					$wp_customize,
 					$setting_id,
@@ -215,6 +202,22 @@ class Widget_Customizer {
 			'data',
 			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode( $exports ) )
 		);
+	}
+
+	/**
+	 * @param string $id
+	 * @param array  [$overrides]
+	 * @return array
+	 */
+	static function get_setting_args( $id, $overrides = array() ) {
+		$args = array(
+			'type' => 'option',
+			'capability' => 'edit_theme_options',
+			'transport' => 'refresh',
+		);
+		$args = array_merge( $args, $overrides );
+		$args = apply_filters( 'widget_customizer_setting_args', $args, $id );
+		return $args;
 	}
 
 	/**
