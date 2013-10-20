@@ -84,70 +84,74 @@ class Widget_Customizer {
 
 		add_action( 'update_option_sidebars_widgets', array( __CLASS__, 'refresh_trashed_widgets' ) );
 
-		foreach ( $GLOBALS['wp_registered_sidebars'] as $sidebar_id => $sidebar ) {
-			$widgets = array();
-			if ( ! empty( $GLOBALS['sidebars_widgets'][$sidebar_id] ) ) {
-				$widgets = $GLOBALS['sidebars_widgets'][$sidebar_id];
+		foreach ( wp_get_sidebars_widgets() as $sidebar_id => $sidebar_widget_ids ) {
+			if ( empty( $sidebar_widget_ids ) ) {
+				$sidebar_widget_ids = array();
 			}
-			if ( ! isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) || 'wp_inactive_widgets' === $sidebar_id ) {
-				continue;
-			}
+			$is_active_sidebar = ( isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) && 'wp_inactive_widgets' !== $sidebar_id );
 
 			/**
-			 * Add section to contain control
+			 * Add section to contain controls
 			 */
 			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
-			$section_args = array(
-				'title' => sprintf(
-					__( 'Sidebar: %s', 'widget-customizer' ),
-					$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
-				),
-				'description' => $sidebar['description'],
-			);
-			$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
-			$wp_customize->add_section( $section_id, $section_args );
+			if ( $is_active_sidebar ) {
+				$section_args = array(
+					'title' => sprintf(
+						__( 'Sidebar: %s', 'widget-customizer' ),
+						$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
+					),
+					'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
+				);
+				$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
+				$wp_customize->add_section( $section_id, $section_args );
 
-			/**
-			 * Add control for managing widgets in sidebar
-			 */
-			$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
-			$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
-			$control = new Sidebar_Widgets_WP_Customize_Control(
-				$wp_customize,
-				$setting_id,
-				array(
-					'section' => $section_id,
-					'sidebar_id' => $sidebar_id,
-					'priority' => 10 - 1,
-				)
-			);
-			$wp_customize->add_control( $control );
-
-			/**
-			 * Add controls for each widget in the sidebar
-			 */
-			foreach ( $widgets as $i => $widget_id ) {
-				// Skip widgets persisting in DB which have been deactivated in code
-				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
-					continue;
-				}
-
-				preg_match( '/^(.*)-([0-9]+)$/', $widget_id, $matches ); // see private _get_widget_id_base()
-				$setting_id = sprintf( 'widget_%s[%s]', $matches[1], $matches[2] );
-				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
+				/**
+				 * Add setting for managing the sidebar's widgets
+				 */
+				$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
 				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
-				$control = new Widget_Form_WP_Customize_Control(
+				$control = new Sidebar_Widgets_WP_Customize_Control(
 					$wp_customize,
 					$setting_id,
 					array(
-						'label' => $registered_widget['name'],
 						'section' => $section_id,
 						'sidebar_id' => $sidebar_id,
-						'widget_id' => $widget_id,
-						'priority' => 10 + $i,
+						'priority' => 10 - 1,
 					)
 				);
 				$wp_customize->add_control( $control );
+			}
+
+			/**
+			 * Add setting for each widget, and a control for each active widget (located in a sidebar)
+			 */
+			foreach ( $sidebar_widget_ids as $i => $widget_id ) {
+				assert( isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) );
+
+				preg_match( '/^(.*)-([0-9]+)$/', $widget_id, $matches ); // see private _get_widget_id_base()
+				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
+
+				$setting_id = sprintf( 'widget_%s[%s]', $matches[1], $matches[2] );
+				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
+
+				/**
+				 * Add control for widget if it is active
+				 */
+				if ( $is_active_sidebar ) {
+					assert( false !== is_active_widget( $registered_widget['callback'], $registered_widget['id'], false, false ) );
+					$control = new Widget_Form_WP_Customize_Control(
+						$wp_customize,
+						$setting_id,
+						array(
+							'label' => $registered_widget['name'],
+							'section' => $section_id,
+							'sidebar_id' => $sidebar_id,
+							'widget_id' => $widget_id,
+							'priority' => 10 + $i,
+						)
+					);
+					$wp_customize->add_control( $control );
+				}
 			}
 		}
 	}
@@ -279,6 +283,7 @@ class Widget_Customizer {
 			call_user_func_array( 'wp_widget_control', $list_widget_controls_args );
 			$control_tpl = ob_get_clean();
 
+			// The properties here are mapped to the Backbone Widget model
 			$available_widget = array_merge(
 				$available_widget,
 				array(
