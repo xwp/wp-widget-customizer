@@ -451,8 +451,20 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$id_base   = $_POST['id_base'];
-			$widget_id = $_POST['widget-id'];
+			$id_base      = $_POST['id_base'];
+			$widget_id    = $_POST['widget-id'];
+			$multi_number = ! empty( $_POST['multi_number'] ) ? (int) $_POST['multi_number'] : 0;
+			$settings     = isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ? $_POST['widget-' . $id_base] : false;
+
+			// Incoming is a new widget
+			if ( $settings && preg_match( '/__i__|%i%/', key( $settings ) ) ) {
+				if ( ! $multi_number ) {
+					throw new Widget_Customizer_Exception( $generic_error );
+				}
+
+				$_POST['widget-' . $id_base] = array( $multi_number => array_shift( $settings ) );
+				$widget_id = $id_base . '-' . $multi_number;
+			}
 
 			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 
@@ -496,6 +508,10 @@ class Widget_Customizer {
 					}
 					break;
 				}
+			}
+
+			if ( ! empty( $_POST['add_new'] ) ) {
+				// @todo Do we need to bail?
 			}
 
 			/**
