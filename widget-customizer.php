@@ -127,11 +127,8 @@ class Widget_Customizer {
 			 */
 			foreach ( $sidebar_widget_ids as $i => $widget_id ) {
 				assert( isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) );
-
-				preg_match( '/^(.*)-([0-9]+)$/', $widget_id, $matches ); // see private _get_widget_id_base()
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
-
-				$setting_id = sprintf( 'widget_%s[%s]', $matches[1], $matches[2] );
+				$setting_id = self::get_setting_id( $widget_id );
 				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
 
 				/**
@@ -154,6 +151,19 @@ class Widget_Customizer {
 				}
 			}
 		}
+	}
+
+	/**
+	 * @param string $widget_id
+	 * @return string
+	 */
+	static function get_setting_id( $widget_id ) {
+		preg_match( '/^(.*?)(?:-([0-9]+))?$/', $widget_id, $matches ); // see private _get_widget_id_base()
+		$setting_id = sprintf( 'widget_%s', $matches[1] );
+		if ( isset( $matches[2] ) ) {
+			$setting_id .= sprintf( '[%d]', $matches[2] );
+		}
+		return $setting_id;
 	}
 
 	/**
@@ -427,6 +437,7 @@ class Widget_Customizer {
 	/**
 	 * Most code here copied from wp_ajax_save_widget()
 	 * @see wp_ajax_save_widget
+	 * @todo Reuse wp_ajax_save_widget now that we have option transactions?
 	 * @action wp_ajax_update_widget
 	 */
 	static function wp_ajax_update_widget() {
@@ -434,6 +445,7 @@ class Widget_Customizer {
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
+		self::begin_option_transaction();
 		try {
 			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
@@ -451,10 +463,12 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$id_base      = $_POST['id_base'];
-			$widget_id    = $_POST['widget-id'];
-			$multi_number = ! empty( $_POST['multi_number'] ) ? (int) $_POST['multi_number'] : 0;
-			$settings     = isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ? $_POST['widget-' . $id_base] : false;
+			$id_base       = $_POST['id_base'];
+			$widget_id     = $_POST['widget-id'];
+			$widget_number = ! empty( $_POST['widget_number'] ) ? (int) $_POST['widget_number'] : false;
+			$multi_number  = ! empty( $_POST['multi_number'] ) ? (int) $_POST['multi_number'] : 0;
+			$settings      = isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ? $_POST['widget-' . $id_base] : false;
+			$option_name   = 'widget_' . $id_base;
 
 			// Incoming is a new widget
 			if ( $settings && preg_match( '/__i__|%i%/', key( $settings ) ) ) {
@@ -466,72 +480,62 @@ class Widget_Customizer {
 				$widget_id = $id_base . '-' . $multi_number;
 			}
 
-			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
+			/**
+			 * Perform the widget update
+			 */
+			if ( ! empty( $_POST['json_instance_override'] ) ) {
+				$instance_override = json_decode( stripslashes( $_POST['json_instance_override'] ), true );
+				$option = get_option( $option_name );
+				if ( ! empty( $widget_number ) ) {
+					$option[$widget_number] = $instance_override;
+				}
+				else {
+					$option = $instance_override;
+				}
+				update_option( $option_name, $option );
+			}
+			else {
+				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 
-				if ( $name === $id_base ) {
+					if ( $name === $id_base ) {
+						if ( ! is_callable( $control['callback'] ) ) {
+							continue;
+						}
 
-					if ( ! is_callable( $control['callback'] ) ) {
+						ob_start();
+						call_user_func_array( $control['callback'], $control['params'] );
+						ob_end_clean();
 						break;
 					}
-
-					$widget_obj    = $control['callback'][0]; // @todo There must be a better way to obtain the widget object
-					$all_instances = $widget_obj->get_settings();
-
-					$settings = array();
-					if ( isset( $_POST['widget-' . $widget_obj->id_base] ) && is_array( $_POST['widget-' . $widget_obj->id_base] ) ) {
-						$settings = $_POST['widget-' . $widget_obj->id_base];
-					} elseif ( isset($_POST['id_base']) && $_POST['id_base'] == $widget_obj->id_base ) {
-						$num = $_POST['multi_number'] ? (int) $_POST['multi_number'] : (int) $_POST['widget_number'];
-						$settings = array( $num => array() );
-					}
-
-					foreach ( $settings as $number => $new_instance ) {
-						if ( ! empty( $_POST['json_instance_override'] ) ) {
-							$new_instance = json_decode( stripslashes( $_POST['json_instance_override'] ), true );
-						}
-						else {
-							$new_instance = stripslashes_deep( $new_instance );
-						}
-						$widget_obj->_set( $number );
-
-						$old_instance = isset($all_instances[$number]) ? $all_instances[$number] : array();
-
-						$instance = $widget_obj->update( $new_instance, $old_instance );
-
-						// filters the widget's settings before saving, return false to cancel saving (keep the old settings if updating)
-						$instance = apply_filters( 'widget_update_callback', $instance, $new_instance, $old_instance, $widget_obj );
-						if ( false !== $instance ) {
-							$all_instances[$number] = $instance;
-						}
-
-						break; // run only once
-					}
-					break;
 				}
 			}
 
-			if ( ! empty( $_POST['add_new'] ) ) {
-				// @todo Do we need to bail?
-			}
-
 			/**
-			 * Invoke the form callback with the previewed instance supplied (closures would be nice here!)
+			 * Obtain the widget control
 			 */
 			ob_start();
-			if ( $form = $wp_registered_widget_controls[$widget_id] ) {
-				self::$_current_widget_instance = $instance;
-				$filter = array( __CLASS__, '_widget_form_callback' );;
-				add_filter( 'widget_form_callback', $filter, 1 );
-
+			$form = $wp_registered_widget_controls[$widget_id];
+			if ( $form ) {
 				call_user_func_array( $form['callback'], $form['params'] );
-
-				remove_filter( 'widget_form_callback', $filter, 1 );
 			}
 			$form = ob_get_clean();
 
+			/**
+			 * Obtain the widget instance
+			 */
+			$option = get_option( $option_name );
+			if ( $widget_number ) {
+				$instance = $option[$widget_number];
+			}
+			else {
+				$instance = $option;
+			}
+
+			self::rollback_option_transaction();
 			wp_send_json_success( compact( 'form', 'instance' ) );
 		}
 		catch( Exception $e ) {
+			self::rollback_option_transaction();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
 			}
@@ -543,13 +547,56 @@ class Widget_Customizer {
 		}
 	}
 
+	protected static $transaction_cached_options = array();
+	protected static $transaction_option_operations = array();
+
 	/**
-	 * @filter widget_form_callback
-	 * @todo Once PHP 5.3 is the minimum requirement, we can use a delicious closure for this ugliness
+	 * Start keeping track of changes to options, and cache their new values
 	 */
-	static function _widget_form_callback( $instance ) {
-		$instance = self::$_current_widget_instance;
-		return $instance;
+	static function begin_option_transaction() {
+		add_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
+		add_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
+	}
+
+	/**
+	 * @action updated_option
+	 * @param string $option_name
+	 * @param mixed $old_value
+	 * @param mixed $new_value
+	 */
+	static function capture_updated_option( $option_name, $old_value, $new_value ) {
+		self::$transaction_cached_options[$option_name] = $new_value;
+		$operation = 'update';
+		self::$transaction_option_operations[] = compact( 'operation', 'option_name', 'old_value', 'new_value' );
+	}
+
+	/**
+	 * @action added_option
+	 * @param $option_name
+	 * @param $new_value
+	 */
+	static function capture_added_option( $option_name, $new_value ) {
+		self::$transaction_cached_options[$option_name] = $new_value;
+		$operation = 'add';
+		self::$transaction_options[] = compact( 'operation', 'option_name', 'new_value' );
+	}
+
+	/**
+	 * Undo any changes to the options since begin_option_transaction() was called
+	 */
+	static function rollback_option_transaction() {
+		remove_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
+		remove_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
+
+		while ( 0 !== count( self::$transaction_option_operations ) ) {
+			$option_operation = array_pop( self::$transaction_option_operations );
+			if ( 'add' === $option_operation['operation'] ) {
+				delete_option( $option_operation['option_name'] );
+			}
+			else {
+				update_option( $option_operation['option_name'], $option_operation['old_value'] );
+			}
+		}
 	}
 
 	/**
