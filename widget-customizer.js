@@ -21,7 +21,7 @@ var WidgetCustomizer = (function ($) {
 		classname: null,
 		control_tpl: null,
 		description: null,
-		is_hidden: null,
+		is_disabled: null,
 		is_multi: null,
 		multi_number: null,
 		name: null,
@@ -139,6 +139,47 @@ var WidgetCustomizer = (function ($) {
 			self.available_widgets.on('change', function () {
 				control.populateAvailableWidgets();
 			});
+
+			var select = control.container.find('.available-widgets');
+			select.on( 'change', function () {
+				var widget_id = $(this).val();
+				this.selectedIndex = 0; // "Add widget..."
+				control.addWidget( widget_id );
+			});
+		},
+
+		/**
+		 * @param {string} widget_id
+		 */
+		addWidget: function ( widget_id ) {
+			var widget = self.available_widgets.findWhere({id: widget_id});
+			if ( ! widget ) {
+				throw new Error( 'Widget unexpectedly not found.' );
+			}
+			var control_html = widget.get('control_tpl');
+			var multi_number = widget.get('multi_number');
+
+			if ( widget.get( 'is_multi' ) ) {
+				multi_number += 1;
+				control_html = control_html.replace(/<[^<>]+>/g, function (m) {
+					return m.replace( /__i__|%i%/g, multi_number );
+				});
+				widget.set( 'multi_number', multi_number );
+			}
+			else {
+				widget.set( 'is_disabled', true );
+			}
+
+			var customize_control = $('<li></li>');
+			customize_control.addClass( 'customize-control' );
+			customize_control.addClass( 'customize-control-' + 'widget_form' );
+			// '<li id="customize-control-widget_recent-comments-2" class="customize-control customize-control-widget_form">'
+			customize_control.append( $(control_html) );
+			var control_id = customize_control.find( 'input[name="widget-id"]' ).val();
+			customize_control.attr( 'id', 'customize-control-widget_' + control_id.replace( /\]/g, '' ).replace( /\[/g, '-' ) );
+
+			// @todo
+
 		},
 
 		/**
@@ -150,6 +191,7 @@ var WidgetCustomizer = (function ($) {
 			select.find('option:not(:first-child)').remove();
 			self.available_widgets.each(function (widget) {
 				var option = new Option(widget.get('name'), widget.get('id'));
+				option.disabled = widget.get( 'is_disabled' );
 				select.append(option);
 			});
 		},

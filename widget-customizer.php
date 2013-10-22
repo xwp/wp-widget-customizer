@@ -269,12 +269,12 @@ class Widget_Customizer {
 				'_display' => 'template',
 			);
 
+			$is_disabled     = false;
 			$is_multi_widget = (
 				isset( $wp_registered_widget_controls[$widget['id']]['id_base'] )
 				&&
 				isset( $widget['params'][0]['number'] )
 			);
-			$is_hidden = false;
 			if ( $is_multi_widget ) {
 				$id_base = $wp_registered_widget_controls[$widget['id']]['id_base'];
 				$args['_temp_id']   = "$id_base-__i__";
@@ -284,7 +284,7 @@ class Widget_Customizer {
 			else {
 				$args['_add'] = 'single';
 				if ( $sidebar ) {
-					$is_hidden = true;
+					$is_disabled = true;
 				}
 			}
 
@@ -301,7 +301,7 @@ class Widget_Customizer {
 					'is_multi' => $is_multi_widget,
 					'control_tpl' => $control_tpl,
 					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
-					'is_hidden' => $is_hidden,
+					'is_disabled' => $is_disabled,
 				)
 			);
 			$available_widgets[] = $available_widget;
@@ -547,7 +547,7 @@ class Widget_Customizer {
 		}
 	}
 
-	protected static $transaction_cached_options = array();
+	protected static $transaction_cached_options    = array();
 	protected static $transaction_option_operations = array();
 
 	/**
