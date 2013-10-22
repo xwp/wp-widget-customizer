@@ -155,24 +155,17 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
-		 * Listed for clicks on the .widget-control-remove link
+		 * Listen for clicks on the .widget-control-remove link
 		 */
 		setupDeletion: function(){
 			var control = this;
-
-			var remove_btn = control.control_section.find( 'a.widget-control-remove' );
-
-			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
-			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
-
-			remove_btn.on( 'click', function(e){
+			control.control_section.on( 'click', '.widget-control-remove', function (e) {
 				e.preventDefault();
-				$(this).parents('.customize-control').slideToggle(function(){
-					this.remove();
+				$(this).closest('.customize-control').slideUp(function (){
+					$(this).remove();
 					control.updatePreview();
 					// @todo If removed widget was single (not a multi widget) then we now need to make any single widget available for adding
 				});
-				return false;
 			});
 		}
 
@@ -203,6 +196,10 @@ var WidgetCustomizer = (function ($) {
 				e.preventDefault();
 				control.collapseForm();
 			} );
+
+			var remove_btn = control.container.find( 'a.widget-control-remove' );
+			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
+			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
 
 			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
 				if ( 13 === e.which ){
