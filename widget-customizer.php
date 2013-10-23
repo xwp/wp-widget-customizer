@@ -463,19 +463,22 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$id_base       = $_POST['id_base'];
-			$widget_id     = $_POST['widget-id'];
-			$widget_number = ! empty( $_POST['widget_number'] ) ? (int) $_POST['widget_number'] : false;
-			$multi_number  = ! empty( $_POST['multi_number'] ) ? (int) $_POST['multi_number'] : 0;
-			$settings      = isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ? $_POST['widget-' . $id_base] : false;
+			$id_base       = filter_input( INPUT_POST, 'id_base' );
+			$widget_id     = filter_input( INPUT_POST, 'widget-id' );
+			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
+			$multi_number  = filter_input( INPUT_POST, 'multi_number', FILTER_VALIDATE_INT );
 			$option_name   = 'widget_' . $id_base;
+
+			$settings = false;
+			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ) {
+				$settings = $_POST['widget-' . $id_base]; // Not using filter_input here because widget control looks at $_POST
+			}
 
 			// Incoming is a new widget
 			if ( $settings && preg_match( '/__i__|%i%/', key( $settings ) ) ) {
 				if ( ! $multi_number ) {
 					throw new Widget_Customizer_Exception( $generic_error );
 				}
-
 				$_POST['widget-' . $id_base] = array( $multi_number => array_shift( $settings ) );
 				$widget_id = $id_base . '-' . $multi_number;
 			}
@@ -483,8 +486,8 @@ class Widget_Customizer {
 			/**
 			 * Perform the widget update
 			 */
-			if ( ! empty( $_POST['json_instance_override'] ) ) {
-				$instance_override = json_decode( stripslashes( $_POST['json_instance_override'] ), true );
+			if ( isset( $_POST['json_instance_override'] ) ) {
+				$instance_override = json_decode( filter_input( INPUT_POST, 'json_instance_override' ), true );
 				$option = get_option( $option_name );
 				if ( ! empty( $widget_number ) ) {
 					$option[$widget_number] = $instance_override;
@@ -507,6 +510,18 @@ class Widget_Customizer {
 						ob_end_clean();
 						break;
 					}
+				}
+			}
+
+			/**
+			 * Make sure the expected option was updated
+			 */
+			if ( ! empty( self::$transaction_cached_options ) ) {
+				if ( count( self::$transaction_cached_options ) > 1 ) {
+					throw new Widget_Customizer_Exception( 'Widget unexpectedly updated more than one option.' );
+				}
+				if ( key( self::$transaction_cached_options ) !== $option_name ) {
+					throw new Widget_Customizer_Exception( 'Widget updated unexpected option.' );
 				}
 			}
 
