@@ -25,6 +25,7 @@ var WidgetCustomizer = (function ($) {
 		is_multi: null,
 		multi_number: null,
 		name: null,
+		transport: 'refresh',
 		params: []
 		// @todo methods for adding and removing instances, and logic if ! is_multi
 	});

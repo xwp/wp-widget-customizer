@@ -293,6 +293,7 @@ class Widget_Customizer {
 			call_user_func_array( 'wp_widget_control', $list_widget_controls_args );
 			$control_tpl = ob_get_clean();
 
+			$setting_args = self::get_setting_args( self::get_setting_id( $widget['id'] ) );
 			// The properties here are mapped to the Backbone Widget model
 			$available_widget = array_merge(
 				$available_widget,
@@ -302,6 +303,7 @@ class Widget_Customizer {
 					'control_tpl' => $control_tpl,
 					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
 					'is_disabled' => $is_disabled,
+					'transport' => $setting_args['transport'],
 				)
 			);
 			$available_widgets[] = $available_widget;
