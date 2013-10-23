@@ -303,6 +303,7 @@ class Widget_Customizer {
 					'control_tpl' => $control_tpl,
 					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
 					'is_disabled' => $is_disabled,
+					'id_base' => $id_base,
 					'transport' => $setting_args['transport'],
 				)
 			);
@@ -506,7 +507,6 @@ class Widget_Customizer {
 						if ( ! is_callable( $control['callback'] ) ) {
 							continue;
 						}
-
 						ob_start();
 						call_user_func_array( $control['callback'], $control['params'] );
 						ob_end_clean();

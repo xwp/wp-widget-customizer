@@ -25,6 +25,7 @@ var WidgetCustomizer = (function ($) {
 		is_multi: null,
 		multi_number: null,
 		name: null,
+		id_base: null,
 		transport: 'refresh',
 		params: []
 		// @todo methods for adding and removing instances, and logic if ! is_multi
@@ -153,6 +154,7 @@ var WidgetCustomizer = (function ($) {
 		 * @param {string} widget_id
 		 */
 		addWidget: function ( widget_id ) {
+			var control = this;
 			var widget = self.available_widgets.findWhere({id: widget_id});
 			if ( ! widget ) {
 				throw new Error( 'Widget unexpectedly not found.' );
@@ -170,17 +172,46 @@ var WidgetCustomizer = (function ($) {
 			else {
 				widget.set( 'is_disabled', true );
 			}
+			var customize_control_type = 'widget_form';
 
 			var customize_control = $('<li></li>');
 			customize_control.addClass( 'customize-control' );
-			customize_control.addClass( 'customize-control-' + 'widget_form' );
-			// '<li id="customize-control-widget_recent-comments-2" class="customize-control customize-control-widget_form">'
+			customize_control.addClass( 'customize-control-' + customize_control_type );
 			customize_control.append( $(control_html) );
-			var control_id = customize_control.find( 'input[name="widget-id"]' ).val();
-			customize_control.attr( 'id', 'customize-control-widget_' + control_id.replace( /\]/g, '' ).replace( /\[/g, '-' ) );
+			customize_control.hide();
+			widget_id = customize_control.find('[name="widget-id"]' ).val();
 
-			// @todo
+			var setting_id = 'widget_' + widget.get('id_base');
+			if ( widget.get( 'is_multi' ) ) {
+				setting_id += '[' + multi_number + ']';
+			}
+			customize_control.attr( 'id', 'customize-control-' + setting_id.replace( /\]/g, '' ).replace( /\[/g, '-' ) );
 
+			this.container.after( customize_control );
+
+			wp.customize.create( setting_id, setting_id, {}, {
+				transport: widget.get( 'transport' ),
+				previewer: control.setting.previewer
+			} );
+
+			var Constructor = wp.customize.controlConstructor[customize_control_type];
+			var widget_form_control = new Constructor( setting_id, {
+				params: {
+					settings: {
+						'default': setting_id
+					},
+					sidebar_id: control.sidebar_id,
+					widget_id: widget_id,
+					type: customize_control_type
+				},
+				previewer: control.setting.previewer
+			} );
+			wp.customize.control.add( setting_id, widget_form_control );
+
+			customize_control.slideDown(function () {
+				widget_form_control.expandForm();
+				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
+			});
 		},
 
 		/**
