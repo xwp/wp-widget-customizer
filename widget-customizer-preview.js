@@ -57,7 +57,7 @@ var WidgetCustomizerPreview = (function ($) {
 			$(selector).attr( 'title', self.i18n.widget_tooltip );
 
 			$(document).on( 'mouseenter', selector, function () {
-				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
+				var control = parent.WidgetCustomizer.getWidgetFormControlForWidget( $(this).prop('id') );
 				if ( control ) {
 					control.highlightSectionAndControl();
 				}
@@ -65,7 +65,7 @@ var WidgetCustomizerPreview = (function ($) {
 
 			// @todo click can interfere with interacting with the widget in the preview window; better to make a EDIT link overlay appear when hovering over the widget?
 			$(document).on( 'click', selector, function () {
-				var control = parent.WidgetCustomizer.getControlInstanceForWidget( $(this).prop('id') );
+				var control = parent.WidgetCustomizer.getWidgetFormControlForWidget( $(this).prop('id') );
 				if ( control ) {
 					control.expandControlSection();
 					control.expandForm();

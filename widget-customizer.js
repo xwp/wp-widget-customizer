@@ -1,4 +1,4 @@
-/*global wp, Backbone, jQuery, WidgetCustomizer_exports, console, alert */
+/*global wp, Backbone, _, jQuery, WidgetCustomizer_exports, console, alert */
 var WidgetCustomizer = (function ($) {
 	'use strict';
 
@@ -28,7 +28,6 @@ var WidgetCustomizer = (function ($) {
 		id_base: null,
 		transport: 'refresh',
 		params: []
-		// @todo methods for adding and removing instances, and logic if ! is_multi
 	});
 	var WidgetLibrary = self.WidgetLibrary = Backbone.Collection.extend({
 		model: Widget
@@ -50,13 +49,12 @@ var WidgetCustomizer = (function ($) {
 			control.section_content = control.container.closest( '.accordion-section-content' );
 			control.setupSortable();
 			control.setupAddition();
-			control.setupDeletion();
-			// @link https://github.com/x-team/wp-widget-customizer/issues/3
 		},
 		
 		/**
 		 * Update the preview window based on the current widgets, possibly having just be reordered, 
 		 * added to or removed from.
+		 * @todo This is should not be used too much. We need to rely on the model to drive the UI, not the other way around.
 		 */
 		updatePreview: function(){
 			var control = this;
@@ -81,38 +79,48 @@ var WidgetCustomizer = (function ($) {
 				axis: 'y',
 				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
-					control.updatePreview();
+					control.updatePreview(); // @todo we can inline the logic here because otherwise the widgets should get reordered via setting the model anyway
 				}
 			});
 
 			/**
 			 * Update ordering of widget control forms when the setting is updated
 			 */
-			control.setting.bind( function( to ) {
-				var controls = control.section_content.find('> .customize-control-widget_form');
-
-				// Build up index
-				var widget_positions = {};
-				$.each( to, function ( i, widget_id ) {
-					widget_positions[widget_id] = i;
-				});
-				controls.each( function () {
-					var widget_id = $(this).find('input[name="widget-id"]').val();
-					$(this).data('widget-id', widget_id);
-				});
+			control.setting.bind( function( widget_ids ) {
+				var widget_form_controls = _( widget_ids ).map( function ( widget_id ) {
+					var widget_form_control = self.getWidgetFormControlForWidget( widget_id );
+					if ( ! widget_form_control ) {
+						// @todo Need to hydrate a control here!
+						// @todo Either create a widget_form control linked to existing setting, or add a new widget
+						// @todo Most of the logic from addWidget() should go in here
+					}
+					return widget_form_control;
+				} );
 
 				// Sort widget controls to their new positions
-				controls.sort(function ( a, b ) {
-					var a_widget_id = $(a).data('widget-id');
-					var b_widget_id = $(b).data('widget-id');
-					if ( widget_positions[a_widget_id] === widget_positions[b_widget_id] ) {
+				widget_form_controls.sort(function ( a, b ) {
+					var a_index = widget_ids.indexOf( a.params.widget_id );
+					var b_index = widget_ids.indexOf( b.params.widget_id );
+					if ( a_index === b_index ) {
 						return 0;
 					}
-					return widget_positions[a_widget_id] < widget_positions[b_widget_id] ? -1 : 1;
+					return a_index < b_index ? -1 : 1;
 				});
 
 				// Append the controls to put them in the right order
-				control.section_content.append( controls );
+				var final_control_containers = _( widget_form_controls ).map( function( widget_form_controls ) {
+					return widget_form_controls.container[0];
+				} );
+
+				// Resort widget form controls
+				control.section_content.append( final_control_containers );
+
+				// Delete any widget form control containers that are gone
+				control.section_content.find( '> .customize-control-widget_form' ).each( function () {
+					if ( -1 === final_control_containers.indexOf( this ) ) {
+						$(this).remove();
+					}
+				});
 			});
 
 			/**
@@ -236,23 +244,7 @@ var WidgetCustomizer = (function ($) {
 				option.disabled = widget.get( 'is_disabled' );
 				select.append(option);
 			});
-		},
-
-		/**
-		 * Listen for clicks on the .widget-control-remove link
-		 */
-		setupDeletion: function(){
-			var control = this;
-			control.control_section.on( 'click', '.widget-control-remove', function (e) {
-				e.preventDefault();
-				$(this).closest('.customize-control').slideUp(function (){
-					$(this).remove();
-					control.updatePreview();
-					// @todo If removed widget was single (not a multi widget) then we now need to make any single widget available for adding
-				});
-			});
 		}
-
 	});
 
 	/**
@@ -279,6 +271,24 @@ var WidgetCustomizer = (function ($) {
 			control.container.find( '.widget-control-close' ).on( 'click', function (e) {
 				e.preventDefault();
 				control.collapseForm();
+			} );
+
+			control.container.find( '.widget-control-remove' ).on( 'click', function (e) {
+				e.preventDefault();
+				control.container.slideUp( function() {
+					var sidebars_widgets_control = self.getSidebarWidgetControlContainingWidget( control.params.widget_id );
+					if ( ! sidebars_widgets_control ) {
+						throw new Error( 'Unable to find sidebars_widgets_control' );
+					}
+					var sidebar_widget_ids = sidebars_widgets_control.setting().slice();
+					var i = sidebar_widget_ids.indexOf( control.params.widget_id );
+					if ( -1 === i ) {
+						throw new Error( 'Widget is not in sidebar' );
+					}
+					sidebar_widget_ids.splice( i, 1 );
+					sidebars_widgets_control.setting( sidebar_widget_ids );
+					// @todo When removing a widget from sidebars_widgets_control.setting(), it should automatically remove the widget form control from the sidebar
+				});
 			} );
 
 			var remove_btn = control.container.find( 'a.widget-control-remove' );
@@ -443,6 +453,7 @@ var WidgetCustomizer = (function ($) {
 		scrollPreviewWidgetIntoView: function () {
 			var control = this;
 			var widget_el = control.getPreviewWidgetElement();
+			// @todo scrollIntoView() provides a robust but very poor experience. Animation is needed. See https://github.com/x-team/wp-widget-customizer/issues/16
 			if ( widget_el.length ) {
 				widget_el[0].scrollIntoView( false );
 			}
@@ -489,7 +500,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			// Highlight whenever hovering or clicking over the form
-			control.container.on('mouseenter click', function () {
+			control.container.on( 'mouseenter click', function () {
 				control.highlightPreviewWidget();
 			});
 
@@ -500,7 +511,7 @@ var WidgetCustomizer = (function ($) {
 			});
 
 			// Highlight when the widget form is expanded
-			control.container.on('expand', function () {
+			control.container.on( 'expand', function () {
 				control.scrollPreviewWidgetIntoView();
 			});
 
@@ -508,19 +519,35 @@ var WidgetCustomizer = (function ($) {
 	});
 
 	/**
-	 * Given a widget_id for a widget appearing in the preview.
+	 * Given a widget control, find the sidebar widgets control that contains it.
 	 * @param {string} widget_id
-	 * @return {null|object}
+	 * @return {object|null}
 	 */
-	self.getControlInstanceForWidget = function ( widget_id ) {
-		var widget_control = null;
-		wp.customize.control.each(function ( control ) {
-			if ( control.params.type === 'widget_form' && control.params.widget_id === widget_id ) {
-				widget_control = control;
-				// @todo How do we break?
+	self.getSidebarWidgetControlContainingWidget = function ( widget_id ) {
+		var found_control = null;
+		// @todo wp.customize.control needs the _.find method
+		wp.customize.control.each( function ( control ) {
+			if ( control.params.type === 'sidebar_widgets' && -1 !== control.setting().indexOf( widget_id ) ) {
+				found_control = control;
 			}
 		});
-		return widget_control;
+		return found_control;
+	};
+
+	/**
+	 * Given a widget_id for a widget appearing in the preview, get the widget form control associated with it
+	 * @param {string} widget_id
+	 * @return {object|null}
+	 */
+	self.getWidgetFormControlForWidget = function ( widget_id ) {
+		var found_control = null;
+		// @todo wp.customize.control needs the _.find method
+		wp.customize.control.each( function ( control ) {
+			if ( control.params.type === 'widget_form' && control.params.widget_id === widget_id ) {
+				found_control = control;
+			}
+		});
+		return found_control;
 	};
 
 	return self;
