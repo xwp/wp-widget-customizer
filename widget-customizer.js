@@ -178,6 +178,10 @@ var WidgetCustomizer = (function ($) {
 			customize_control.addClass( 'customize-control' );
 			customize_control.addClass( 'customize-control-' + customize_control_type );
 			customize_control.append( $(control_html) );
+			if ( widget.get( 'is_multi' ) ) {
+				customize_control.find( 'input[name="widget_number"]' ).val( multi_number );
+				customize_control.find( 'input[name="multi_number"]' ).val( multi_number );
+			}
 			customize_control.hide();
 			widget_id = customize_control.find('[name="widget-id"]' ).val();
 
@@ -208,10 +212,16 @@ var WidgetCustomizer = (function ($) {
 			} );
 			wp.customize.control.add( setting_id, widget_form_control );
 
+			var sidebar_widgets = control.setting();
+			sidebar_widgets.unshift( widget_id );
+			control.setting( sidebar_widgets );
+
 			customize_control.slideDown(function () {
 				widget_form_control.expandForm();
 				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
 			});
+
+			widget_form_control.updateWidget();
 		},
 
 		/**

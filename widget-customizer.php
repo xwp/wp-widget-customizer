@@ -34,6 +34,7 @@ class Widget_Customizer {
 
 	static function setup() {
 		self::load_textdomain();
+		add_action( 'after_setup_theme', array( __CLASS__, 'preview_new_widgets' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
@@ -73,6 +74,90 @@ class Widget_Customizer {
 	 */
 	static function get_version() {
 		return self::get_plugin_meta( 'Version' );
+	}
+
+	/**
+	 * Since the widgets get registered (widgets_init) before the customizer settings are set up (customize_register),
+	 * we have to filter the options similarly to how the setting previewer will filter the options later.
+	 * @action after_setup_theme
+	 */
+	static function preview_new_widgets() {
+		global $wp_customize;
+		$is_preview     = ( ! empty( $wp_customize ) && ! is_admin() && 'on' === filter_input( INPUT_POST, 'wp_customize' ) );
+		$is_ajax_update = ( defined( 'DOING_AJAX' ) && DOING_AJAX && self::UPDATE_WIDGET_AJAX_ACTION === filter_input( INPUT_POST, 'action' ) );
+
+		if ( ! $is_preview && ! $is_ajax_update ) {
+			return;
+		}
+
+		if ( $is_ajax_update ) {
+			$customized    = array();
+			$id_base       = filter_input( INPUT_POST, 'id_base' );
+			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
+			$option_name   = 'widget_' . $id_base;
+			if ( false !== $widget_number ) {
+				$option_name .= '[' . $widget_number . ']';
+			}
+			$customized[$option_name] = array(); // @todo do we need to supply the incoming instance?
+		}
+		else {
+			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
+		}
+
+		$self = __CLASS__;
+		foreach ( $customized as $setting_id => $value ) {
+			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
+				$sidebar_id = $matches[1];
+				add_filter( 'sidebars_widgets', function ( $sidebars_widgets ) use ( $sidebar_id, $value, $self ) {
+					if ( $self::in_option_transaction() ) {
+						return $sidebars_widgets;
+					}
+					if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
+						$sidebars_widgets[$sidebar_id] = array();
+					}
+					$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
+					return $sidebars_widgets;
+				} );
+			}
+			else if ( preg_match( '/^widget_(.+?)(?:\[(\d+)\])?$/', $setting_id, $matches ) ) {
+				$option_name   = 'widget_' . $matches[1];
+				$widget_number = isset( $matches[2] ) ? intval( $matches[2] ) : false;
+				$instance = get_option( $option_name );
+
+				if ( false === $widget_number ) {
+					if ( false === $instance ) {
+						add_filter( 'option_' . $option_name, function ( $value ) use ( $option_name, $self ) {
+							if ( $self::in_option_transaction() ) {
+								return $value;
+							}
+							if ( empty( $value ) ) {
+								$value = array();
+							}
+							return $value;
+						} );
+					}
+				}
+				else {
+					if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
+						add_filter( 'option_' . $option_name, function ( $value ) use ( $widget_number, $option_name, $self ) {
+							if ( $self::in_option_transaction() ) {
+								return $value;
+							}
+							if ( empty( $value ) ) {
+								$value = array( '_multiwidget' => 1 );
+							}
+							if ( ! isset( $value[$widget_number] ) ) {
+								$value[$widget_number] = array();
+							}
+							return $value;
+						} );
+					}
+				}
+			}
+		}
+
+		// @todo Filters should be removed after customize_register
+
 	}
 
 	/**
@@ -564,13 +649,24 @@ class Widget_Customizer {
 		}
 	}
 
+	/**
+	 * Option transactions
+	 * @todo Move this into a separate library
+	 */
+
 	protected static $transaction_cached_options    = array();
 	protected static $transaction_option_operations = array();
+	protected static $_in_option_transaction = false;
+
+	static function in_option_transaction() {
+		return self::$_in_option_transaction;
+	}
 
 	/**
 	 * Start keeping track of changes to options, and cache their new values
 	 */
 	static function begin_option_transaction() {
+		self::$_in_option_transaction = true;
 		add_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
 		add_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
 	}
@@ -614,6 +710,7 @@ class Widget_Customizer {
 				update_option( $option_operation['option_name'], $option_operation['old_value'] );
 			}
 		}
+		self::$_in_option_transaction = false;
 	}
 
 	/**
