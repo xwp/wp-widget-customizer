@@ -50,20 +50,6 @@ var WidgetCustomizer = (function ($) {
 			control.setupSortable();
 			control.setupAddition();
 		},
-		
-		/**
-		 * Update the preview window based on the current widgets, possibly having just be reordered, 
-		 * added to or removed from.
-		 * @todo This is should not be used too much. We need to rely on the model to drive the UI, not the other way around.
-		 */
-		updatePreview: function(){
-			var control = this;
-			var widget_container_ids = control.section_content.sortable('toArray');
-			var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-				return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-			});
-			control.setting( widget_ids );
-		},
 
 		/**
 		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
@@ -79,7 +65,11 @@ var WidgetCustomizer = (function ($) {
 				axis: 'y',
 				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
-					control.updatePreview(); // @todo we can inline the logic here because otherwise the widgets should get reordered via setting the model anyway
+					var widget_container_ids = control.section_content.sortable('toArray');
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+					});
+					control.setting( widget_ids );
 				}
 			});
 
@@ -207,12 +197,7 @@ var WidgetCustomizer = (function ($) {
 				widget.set( 'is_disabled', true ); // Prevent single widget from being added again now
 			}
 
-			// @todo Either create a widget_form control linked to existing setting, or add a new widget
-			// @todo Check if widget is multi, and if widget_number is empty, then need to increment multi_number and use it
-			// @todo Check to see if widget_id corresponds to an existing setting, and if so, do not increament multi_number
-
 			var customize_control_type = 'widget_form';
-
 			var customize_control = $('<li></li>');
 			customize_control.addClass( 'customize-control' );
 			customize_control.addClass( 'customize-control-' + customize_control_type );
