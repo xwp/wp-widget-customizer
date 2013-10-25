@@ -235,6 +235,7 @@ class Widget_Customizer {
 							'section' => $section_id,
 							'sidebar_id' => $sidebar_id,
 							'widget_id' => $widget_id,
+							'widget_id_base' => $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'],
 							'priority' => 10 + $i,
 						)
 					);
@@ -377,6 +378,7 @@ class Widget_Customizer {
 				if ( $sidebar ) {
 					$is_disabled = true;
 				}
+				$id_base = $widget['id'];
 			}
 
 			$list_widget_controls_args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );

@@ -75,6 +75,7 @@ var WidgetCustomizer = (function ($) {
 
 			/**
 			 * Update ordering of widget control forms when the setting is updated
+			 * @todo This is not relevant to sortable now but is general, and should go up to ready()
 			 */
 			control.setting.bind( function( new_widget_ids, old_widget_ids ) {
 
@@ -109,10 +110,19 @@ var WidgetCustomizer = (function ($) {
 				// Delete any widget form controls for removed widgets
 				_( removed_widget_ids ).each( function ( removed_widget_id ) {
 					var removed_control = self.getWidgetFormControlForWidget( removed_widget_id );
-					if ( removed_control ) {
-						wp.customize.control.remove( removed_control.id );
-						removed_control.container.remove();
+					if ( ! removed_control ) {
+						return;
 					}
+					wp.customize.control.remove( removed_control.id );
+
+					removed_control.container.remove();
+
+					// Make old single widget available for adding again
+					var widget = self.available_widgets.findWhere({ id_base: removed_control.params.widget_id_base });
+					if ( widget && ! widget.get( 'is_multi' ) ) {
+						widget.set( 'is_disabled', false );
+					}
+
 				} );
 			});
 
@@ -235,6 +245,7 @@ var WidgetCustomizer = (function ($) {
 					},
 					sidebar_id: control.sidebar_id,
 					widget_id: widget_id,
+					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type
 				},
 				previewer: control.setting.previewer
@@ -326,7 +337,6 @@ var WidgetCustomizer = (function ($) {
 					}
 					sidebar_widget_ids.splice( i, 1 );
 					sidebars_widgets_control.setting( sidebar_widget_ids );
-					// @todo When removing a widget from sidebars_widgets_control.setting(), it should automatically remove the widget form control from the sidebar
 				});
 			} );
 
