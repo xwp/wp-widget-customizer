@@ -255,7 +255,7 @@ var WidgetCustomizer = (function ($) {
 			wp.customize.control.add( setting_id, widget_form_control );
 
 			// @todo make sure it has been removed from all other menus?
-			var sidebar_widgets = control.setting();
+			var sidebar_widgets = control.setting().slice();
 			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
 				sidebar_widgets.unshift( widget_id );
 				control.setting( sidebar_widgets );
