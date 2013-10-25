@@ -592,6 +592,21 @@ class Widget_Customizer {
 					$option = $instance_override;
 				}
 				update_option( $option_name, $option );
+
+				// Delete other $_POST fields to prevent old single widgets from obeying override
+				$preserved_keys = array(
+					'widget-id',
+					'id_base',
+					'widget-width',
+					'widget-height',
+					'widget_number',
+					'multi_number',
+					'add_new',
+					'action',
+				);
+				foreach ( array_diff( array_keys( $_POST ), $preserved_keys ) as $deleted_key ) {
+					unset( $_POST[$deleted_key] );
+				}
 			}
 			else {
 				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
