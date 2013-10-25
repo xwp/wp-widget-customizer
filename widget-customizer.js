@@ -86,21 +86,22 @@ var WidgetCustomizer = (function ($) {
 			/**
 			 * Update ordering of widget control forms when the setting is updated
 			 */
-			control.setting.bind( function( widget_ids ) {
-				var widget_form_controls = _( widget_ids ).map( function ( widget_id ) {
+			control.setting.bind( function( new_widget_ids, old_widget_ids ) {
+
+				var removed_widget_ids = _( old_widget_ids ).difference( new_widget_ids );
+
+				var widget_form_controls = _( new_widget_ids ).map( function ( widget_id ) {
 					var widget_form_control = self.getWidgetFormControlForWidget( widget_id );
 					if ( ! widget_form_control ) {
-						// @todo Need to hydrate a control here!
-						// @todo Either create a widget_form control linked to existing setting, or add a new widget
-						// @todo Most of the logic from addWidget() should go in here
+						widget_form_control = control.addWidget( widget_id );
 					}
 					return widget_form_control;
 				} );
 
 				// Sort widget controls to their new positions
 				widget_form_controls.sort(function ( a, b ) {
-					var a_index = widget_ids.indexOf( a.params.widget_id );
-					var b_index = widget_ids.indexOf( b.params.widget_id );
+					var a_index = new_widget_ids.indexOf( a.params.widget_id );
+					var b_index = new_widget_ids.indexOf( b.params.widget_id );
 					if ( a_index === b_index ) {
 						return 0;
 					}
@@ -112,15 +113,17 @@ var WidgetCustomizer = (function ($) {
 					return widget_form_controls.container[0];
 				} );
 
-				// Resort widget form controls
+				// Re-sort widget form controls
 				control.section_content.append( final_control_containers );
 
-				// Delete any widget form control containers that are gone
-				control.section_content.find( '> .customize-control-widget_form' ).each( function () {
-					if ( -1 === final_control_containers.indexOf( this ) ) {
-						$(this).remove();
+				// Delete any widget form controls for removed widgets
+				_( removed_widget_ids ).each( function ( removed_widget_id ) {
+					var removed_control = self.getWidgetFormControlForWidget( removed_widget_id );
+					if ( removed_control ) {
+						wp.customize.control.remove( removed_control.id );
+						removed_control.container.remove();
 					}
-				});
+				} );
 			});
 
 			/**
@@ -154,32 +157,60 @@ var WidgetCustomizer = (function ($) {
 			select.on( 'change', function () {
 				var widget_id = $(this).val();
 				this.selectedIndex = 0; // "Add widget..."
-				control.addWidget( widget_id );
+				var widget = self.available_widgets.findWhere({id: widget_id});
+				if ( ! widget ) {
+					throw new Error( 'Widget unexpectedly not found.' );
+				}
+				control.addWidget( widget.get( 'id_base' ) );
 			});
 		},
 
 		/**
-		 * @param {string} widget_id
+		 * @param {string} widget_id or an id_base for adding a previously non-existing widget
+		 * @returns {object} widget_form control instance
 		 */
 		addWidget: function ( widget_id ) {
 			var control = this;
-			var widget = self.available_widgets.findWhere({id: widget_id});
+			var widget_number = null;
+			var widget_id_base = null;
+			var matches = widget_id.match( /^(.+)-(\d+)$/ );
+			if ( matches ) {
+				widget_id_base = matches[1];
+				widget_number = parseInt( matches[2], 10 );
+			}
+			else {
+				// could be an old single widget, or adding a new widget
+				widget_id_base = widget_id;
+			}
+
+			var widget = self.available_widgets.findWhere({id_base: widget_id_base});
 			if ( ! widget ) {
 				throw new Error( 'Widget unexpectedly not found.' );
 			}
-			var control_html = widget.get('control_tpl');
-			var multi_number = widget.get('multi_number');
+			if ( widget_number && ! widget.get( 'is_multi' ) ) {
+				throw new Error( 'Did not expect a widget number to be supplied for a non-multi widget' );
+			}
 
+			// Set up new multi widget
+			if ( widget.get( 'is_multi' ) && ! widget_number ) {
+				widget.set( 'multi_number', widget.get( 'multi_number' ) + 1 );
+				widget_number = widget.get( 'multi_number' );
+			}
+
+			var control_html = widget.get('control_tpl');
 			if ( widget.get( 'is_multi' ) ) {
-				multi_number += 1;
 				control_html = control_html.replace(/<[^<>]+>/g, function (m) {
-					return m.replace( /__i__|%i%/g, multi_number );
+					return m.replace( /__i__|%i%/g, widget_number );
 				});
-				widget.set( 'multi_number', multi_number );
 			}
 			else {
-				widget.set( 'is_disabled', true );
+				widget.set( 'is_disabled', true ); // Prevent single widget from being added again now
 			}
+
+			// @todo Either create a widget_form control linked to existing setting, or add a new widget
+			// @todo Check if widget is multi, and if widget_number is empty, then need to increment multi_number and use it
+			// @todo Check to see if widget_id corresponds to an existing setting, and if so, do not increament multi_number
+
 			var customize_control_type = 'widget_form';
 
 			var customize_control = $('<li></li>');
@@ -187,24 +218,29 @@ var WidgetCustomizer = (function ($) {
 			customize_control.addClass( 'customize-control-' + customize_control_type );
 			customize_control.append( $(control_html) );
 			if ( widget.get( 'is_multi' ) ) {
-				customize_control.find( 'input[name="widget_number"]' ).val( multi_number );
-				customize_control.find( 'input[name="multi_number"]' ).val( multi_number );
+				customize_control.find( 'input[name="widget_number"]' ).val( widget_number );
+				customize_control.find( 'input[name="multi_number"]' ).val( widget_number );
 			}
+			customize_control.find( 'input[name="id_base"]' ).val( widget_id_base );
 			customize_control.hide();
 			widget_id = customize_control.find('[name="widget-id"]' ).val();
 
 			var setting_id = 'widget_' + widget.get('id_base');
 			if ( widget.get( 'is_multi' ) ) {
-				setting_id += '[' + multi_number + ']';
+				setting_id += '[' + widget_number + ']';
 			}
 			customize_control.attr( 'id', 'customize-control-' + setting_id.replace( /\]/g, '' ).replace( /\[/g, '-' ) );
 
-			this.container.after( customize_control );
+			control.container.after( customize_control );
 
-			wp.customize.create( setting_id, setting_id, {}, {
-				transport: widget.get( 'transport' ),
-				previewer: control.setting.previewer
-			} );
+			// Only create setting if it doesn't already exist (if we're adding a pre-existing inactive widget)
+			var is_existing_widget = wp.customize.has( setting_id );
+			if ( ! is_existing_widget ) {
+				wp.customize.create( setting_id, setting_id, {}, {
+					transport: widget.get( 'transport' ),
+					previewer: control.setting.previewer
+				} );
+			}
 
 			var Constructor = wp.customize.controlConstructor[customize_control_type];
 			var widget_form_control = new Constructor( setting_id, {
@@ -220,16 +256,31 @@ var WidgetCustomizer = (function ($) {
 			} );
 			wp.customize.control.add( setting_id, widget_form_control );
 
+			// @todo make sure it has been removed from all other menus?
 			var sidebar_widgets = control.setting();
-			sidebar_widgets.unshift( widget_id );
-			control.setting( sidebar_widgets );
+			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
+				sidebar_widgets.unshift( widget_id );
+				control.setting( sidebar_widgets );
+			}
+
+			var form_autofocus = function () {
+				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
+			};
 
 			customize_control.slideDown(function () {
 				widget_form_control.expandForm();
-				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
+
+				if ( is_existing_widget ) {
+					widget_form_control.updateWidget( widget_form_control.setting(), function () {
+						form_autofocus();
+					} );
+				}
+				else {
+					form_autofocus();
+				}
 			});
 
-			widget_form_control.updateWidget();
+			return widget_form_control;
 		},
 
 		/**
@@ -259,8 +310,11 @@ var WidgetCustomizer = (function ($) {
 		ready: function() {
 			var control = this;
 
-			control.setting.bind( function( to ) {
-				control.updateWidget( to );
+			control.suppress_update = false;
+			control.setting.bind( function( to, from ) {
+				if ( ! _( from ).isEqual( to ) && ! control.suppress_update ) {
+					control.updateWidget( to );
+				}
 			});
 
 			control.container.find( '.widget-control-save' ).on( 'click', function (e) {
@@ -312,8 +366,9 @@ var WidgetCustomizer = (function ($) {
 
 		/**
 		 * @param {object} [instance_override]  When the model changes, the instance is sent this way
+		 * @param {function} [success_callback]  Function which is called when the request finishes
 		 */
-		updateWidget: function ( instance_override ) {
+		updateWidget: function ( instance_override, success_callback ) {
 			var control = this;
 			var data = control.container.find(':input').serialize();
 
@@ -332,8 +387,14 @@ var WidgetCustomizer = (function ($) {
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {
 					control.container.find( '.widget-content' ).html( r.data.form );
-					if ( ! instance_override ) {
+
+					if ( ! instance_override ) { // @todo why?
+						control.suppress_update = true; // We already updated it with r.data.form above
 						control.setting( r.data.instance );
+						control.suppress_update = false;
+					}
+					if ( success_callback ) {
+						success_callback.call( null, control );
 					}
 				}
 				else {

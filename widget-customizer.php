@@ -84,13 +84,21 @@ class Widget_Customizer {
 	static function preview_new_widgets() {
 		global $wp_customize;
 		$is_preview     = ( ! empty( $wp_customize ) && ! is_admin() && 'on' === filter_input( INPUT_POST, 'wp_customize' ) );
-		$is_ajax_update = ( defined( 'DOING_AJAX' ) && DOING_AJAX && self::UPDATE_WIDGET_AJAX_ACTION === filter_input( INPUT_POST, 'action' ) );
+		$is_ajax_update = (
+			( defined( 'DOING_AJAX' ) && DOING_AJAX )
+			&&
+			in_array( filter_input( INPUT_POST, 'action' ), array( 'customize_save', self::UPDATE_WIDGET_AJAX_ACTION ) )
+		);
+		// @todo Nonce checks?
 
 		if ( ! $is_preview && ! $is_ajax_update ) {
 			return;
 		}
 
-		if ( $is_ajax_update ) {
+		if ( isset( $_POST['customized'] ) ) {
+			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
+		}
+		else {
 			$customized    = array();
 			$id_base       = filter_input( INPUT_POST, 'id_base' );
 			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
@@ -100,10 +108,8 @@ class Widget_Customizer {
 			}
 			$customized[$option_name] = array(); // @todo do we need to supply the incoming instance?
 		}
-		else {
-			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
-		}
 
+		// @todo Refactor all of this to eliminate PHP 5.3 dependencies
 		$self = __CLASS__;
 		foreach ( $customized as $setting_id => $value ) {
 			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
