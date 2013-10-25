@@ -31,6 +31,7 @@
 class Widget_Customizer {
 	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
+	protected static $options_transaction;
 
 	static function setup() {
 		self::load_textdomain();
@@ -115,7 +116,7 @@ class Widget_Customizer {
 			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
 				$sidebar_id = $matches[1];
 				add_filter( 'sidebars_widgets', function ( $sidebars_widgets ) use ( $sidebar_id, $value, $self ) {
-					if ( $self::in_option_transaction() ) {
+					if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
 						return $sidebars_widgets;
 					}
 					if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
@@ -133,7 +134,7 @@ class Widget_Customizer {
 				if ( false === $widget_number ) {
 					if ( false === $instance ) {
 						add_filter( 'option_' . $option_name, function ( $value ) use ( $option_name, $self ) {
-							if ( $self::in_option_transaction() ) {
+							if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
 								return $value;
 							}
 							if ( empty( $value ) ) {
@@ -146,7 +147,8 @@ class Widget_Customizer {
 				else {
 					if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
 						add_filter( 'option_' . $option_name, function ( $value ) use ( $widget_number, $option_name, $self ) {
-							if ( $self::in_option_transaction() ) {
+
+							if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
 								return $value;
 							}
 							if ( empty( $value ) ) {
@@ -538,10 +540,12 @@ class Widget_Customizer {
 	 */
 	static function wp_ajax_update_widget() {
 		global $wp_registered_widget_controls, $wp_registered_widget_updates;
+		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
-		self::begin_option_transaction();
+		self::$options_transaction = new Options_Transaction();
+		self::$options_transaction->start();
 		try {
 			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
@@ -626,11 +630,11 @@ class Widget_Customizer {
 			/**
 			 * Make sure the expected option was updated
 			 */
-			if ( ! empty( self::$transaction_cached_options ) ) {
-				if ( count( self::$transaction_cached_options ) > 1 ) {
+			if ( 0 !== self::$options_transaction->count() ) {
+				if ( count( self::$options_transaction->options ) > 1 ) {
 					throw new Widget_Customizer_Exception( 'Widget unexpectedly updated more than one option.' );
 				}
-				if ( key( self::$transaction_cached_options ) !== $option_name ) {
+				if ( key( self::$options_transaction->options ) !== $option_name ) {
 					throw new Widget_Customizer_Exception( 'Widget updated unexpected option.' );
 				}
 			}
@@ -656,11 +660,11 @@ class Widget_Customizer {
 				$instance = $option;
 			}
 
-			self::rollback_option_transaction();
+			self::$options_transaction->rollback();
 			wp_send_json_success( compact( 'form', 'instance' ) );
 		}
 		catch( Exception $e ) {
-			self::rollback_option_transaction();
+			self::$options_transaction->rollback();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
 			}
@@ -670,70 +674,6 @@ class Widget_Customizer {
 			}
 			wp_send_json_error( compact( 'message' ) );
 		}
-	}
-
-	/**
-	 * Option transactions
-	 * @todo Move this into a separate library
-	 */
-
-	protected static $transaction_cached_options    = array();
-	protected static $transaction_option_operations = array();
-	protected static $_in_option_transaction = false;
-
-	static function in_option_transaction() {
-		return self::$_in_option_transaction;
-	}
-
-	/**
-	 * Start keeping track of changes to options, and cache their new values
-	 */
-	static function begin_option_transaction() {
-		self::$_in_option_transaction = true;
-		add_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
-		add_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
-	}
-
-	/**
-	 * @action updated_option
-	 * @param string $option_name
-	 * @param mixed $old_value
-	 * @param mixed $new_value
-	 */
-	static function capture_updated_option( $option_name, $old_value, $new_value ) {
-		self::$transaction_cached_options[$option_name] = $new_value;
-		$operation = 'update';
-		self::$transaction_option_operations[] = compact( 'operation', 'option_name', 'old_value', 'new_value' );
-	}
-
-	/**
-	 * @action added_option
-	 * @param $option_name
-	 * @param $new_value
-	 */
-	static function capture_added_option( $option_name, $new_value ) {
-		self::$transaction_cached_options[$option_name] = $new_value;
-		$operation = 'add';
-		self::$transaction_options[] = compact( 'operation', 'option_name', 'new_value' );
-	}
-
-	/**
-	 * Undo any changes to the options since begin_option_transaction() was called
-	 */
-	static function rollback_option_transaction() {
-		remove_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
-		remove_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
-
-		while ( 0 !== count( self::$transaction_option_operations ) ) {
-			$option_operation = array_pop( self::$transaction_option_operations );
-			if ( 'add' === $option_operation['operation'] ) {
-				delete_option( $option_operation['option_name'] );
-			}
-			else {
-				update_option( $option_operation['option_name'], $option_operation['old_value'] );
-			}
-		}
-		self::$_in_option_transaction = false;
 	}
 
 	/**
@@ -749,8 +689,6 @@ class Widget_Customizer {
 			return $base_dir;
 		}
 	}
-
-	static protected $_current_widget_instance;
 
 	/**
 	 * Adds Message to Widgets Admin Page to guide user to Widget Customizer
