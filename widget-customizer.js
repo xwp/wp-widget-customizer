@@ -47,38 +47,17 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.control_section = control.container.closest( '.control-section' );
 			control.section_content = control.container.closest( '.accordion-section-content' );
+			control.setupModel();
 			control.setupSortable();
 			control.setupAddition();
 		},
 
 		/**
-		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 * Update ordering of widget control forms when the setting is updated
 		 */
-		setupSortable: function () {
+		setupModel: function() {
 			var control = this;
-
-			/**
-			 * Update widget order setting when controls are re-ordered
-			 */
-			control.section_content.sortable({
-				items: '> .customize-control-widget_form',
-				axis: 'y',
-				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
-				update: function () {
-					var widget_container_ids = control.section_content.sortable('toArray');
-					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					});
-					control.setting( widget_ids );
-				}
-			});
-
-			/**
-			 * Update ordering of widget control forms when the setting is updated
-			 * @todo This is not relevant to sortable now but is general, and should go up to ready()
-			 */
 			control.setting.bind( function( new_widget_ids, old_widget_ids ) {
-
 				var removed_widget_ids = _( old_widget_ids ).difference( new_widget_ids );
 
 				var widget_form_controls = _( new_widget_ids ).map( function ( widget_id ) {
@@ -124,6 +103,29 @@ var WidgetCustomizer = (function ($) {
 					}
 
 				} );
+			});
+		},
+
+		/**
+		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 */
+		setupSortable: function () {
+			var control = this;
+
+			/**
+			 * Update widget order setting when controls are re-ordered
+			 */
+			control.section_content.sortable({
+				items: '> .customize-control-widget_form',
+				axis: 'y',
+				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
+				update: function () {
+					var widget_container_ids = control.section_content.sortable('toArray');
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+					});
+					control.setting( widget_ids );
+				}
 			});
 
 			/**
