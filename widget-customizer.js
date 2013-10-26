@@ -344,17 +344,23 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
-			control.container.find( '.widget-control-save' ).on( 'click', function (e) {
+			var save_btn = control.container.find( '.widget-control-save' );
+			save_btn.val( self.i18n.save_btn_label );
+			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
+			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
+			save_btn.on( 'click', function (e) {
 				e.preventDefault();
 				control.updateWidget();
 			});
 
-			control.container.find( '.widget-control-close' ).on( 'click', function (e) {
+			var close_btn = control.container.find( '.widget-control-close' );
+			close_btn.on( 'click', function (e) {
 				e.preventDefault();
 				control.collapseForm();
 			} );
 
-			control.container.find( '.widget-control-remove' ).on( 'click', function (e) {
+			var remove_btn = control.container.find( 'a.widget-control-remove' );
+			remove_btn.on( 'click', function (e) {
 				e.preventDefault();
 				control.container.slideUp( function() {
 					var sidebars_widgets_control = self.getSidebarWidgetControlContainingWidget( control.params.widget_id );
@@ -370,8 +376,6 @@ var WidgetCustomizer = (function ($) {
 					sidebars_widgets_control.setting( sidebar_widget_ids );
 				});
 			} );
-
-			var remove_btn = control.container.find( 'a.widget-control-remove' );
 			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
 			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
 

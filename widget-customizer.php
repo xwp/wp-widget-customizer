@@ -326,8 +326,10 @@ class Widget_Customizer {
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 			'i18n' => array(
-				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customzier' ),
-				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar', 'tooltip on btn a widget to the inactive widgets sidebar', 'widget-customzier' ),
+				'save_btn_label' => _x( 'Update', 'button to save changes to a widget', 'widget-customizer' ),
+				'save_btn_tooltip' => _x( 'Save and preview changes before publishing them.', 'tooltip on the widget save button', 'widget-customizer' ),
+				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customizer' ),
+				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
 			),
 			'available_widgets' => self::get_available_widgets(),
 		);
