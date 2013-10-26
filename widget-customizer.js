@@ -93,15 +93,18 @@ var WidgetCustomizer = (function ($) {
 						return;
 					}
 					wp.customize.control.remove( removed_control.id );
-
 					removed_control.container.remove();
+
+					// Move widget to inactive widgets sidebar
+					var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
+					inactive_widgets.push( removed_widget_id );
+					wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
 
 					// Make old single widget available for adding again
 					var widget = self.available_widgets.findWhere({ id_base: removed_control.params.widget_id_base });
 					if ( widget && ! widget.get( 'is_multi' ) ) {
 						widget.set( 'is_disabled', false );
 					}
-
 				} );
 			});
 		},
@@ -261,12 +264,28 @@ var WidgetCustomizer = (function ($) {
 			} );
 			wp.customize.control.add( setting_id, widget_form_control );
 
-			// @todo make sure it has been removed from all other menus?
+			// Add widget to this sidebar
 			var sidebar_widgets = control.setting().slice();
 			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
 				sidebar_widgets.unshift( widget_id );
 				control.setting( sidebar_widgets );
 			}
+
+			// Make sure widget is removed from the other sidebars
+			wp.customize.each( function ( other_setting ) {
+				if ( other_setting.id === control.setting.id ) {
+					return;
+				}
+				if ( 0 !== other_setting.id.indexOf( 'sidebars_widgets[' ) ) {
+					return;
+				}
+				var other_sidebar_widgets = other_setting().slice();
+				var i = other_sidebar_widgets.indexOf( widget_id );
+				if ( -1 !== i ) {
+					other_sidebar_widgets.splice( i );
+					other_setting( other_sidebar_widgets );
+				}
+			} );
 
 			var form_autofocus = function () {
 				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
