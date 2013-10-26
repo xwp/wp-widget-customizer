@@ -167,16 +167,16 @@ class Widget_Customizer {
 			// Single widget
 			if ( false === $widget_number ) {
 				if ( false === $instance && empty( $value ) ) {
-					$value = array();
+					$instance = array();
 				}
 			}
 			// Multi widget
 			else if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
-				if ( empty( $value ) ) {
-					$value = array( '_multiwidget' => 1 );
+				if ( empty( $instance ) ) {
+					$instance = array( '_multiwidget' => 1 );
 				}
-				if ( ! isset( $value[$widget_number] ) ) {
-					$value[$widget_number] = array();
+				if ( ! isset( $instance[$widget_number] ) ) {
+					$instance[$widget_number] = array();
 				}
 			}
 		}
