@@ -35,7 +35,7 @@ class Widget_Customizer {
 
 	static function setup() {
 		self::load_textdomain();
-		add_action( 'after_setup_theme', array( __CLASS__, 'preview_new_widgets' ) );
+		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
@@ -77,12 +77,15 @@ class Widget_Customizer {
 		return self::get_plugin_meta( 'Version' );
 	}
 
+	protected static $_customized;
+	protected static $_prepreview_added_filters = array();
+
 	/**
 	 * Since the widgets get registered (widgets_init) before the customizer settings are set up (customize_register),
 	 * we have to filter the options similarly to how the setting previewer will filter the options later.
 	 * @action after_setup_theme
 	 */
-	static function preview_new_widgets() {
+	static function setup_widget_addition_previews() {
 		global $wp_customize;
 		$is_preview     = ( ! empty( $wp_customize ) && ! is_admin() && 'on' === filter_input( INPUT_POST, 'wp_customize' ) );
 		$is_ajax_update = (
@@ -107,65 +110,77 @@ class Widget_Customizer {
 			if ( false !== $widget_number ) {
 				$option_name .= '[' . $widget_number . ']';
 			}
-			$customized[$option_name] = array(); // @todo do we need to supply the incoming instance?
+			$customized[$option_name] = array();
 		}
 
-		// @todo Refactor all of this to eliminate PHP 5.3 dependencies
-		$self = __CLASS__;
+		$hook     = 'sidebars_widgets';
+		$function = array( __CLASS__, 'prepreview_added_sidebars_widgets' );
+		add_filter( $hook, $function );
+		self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+
 		foreach ( $customized as $setting_id => $value ) {
+			if ( preg_match( '/^(widget_.+?)(\[(\d+)\])?$/', $setting_id, $matches ) ) {
+				$hook     = sprintf( 'option_%s', $matches[1] );
+				$body     = sprintf( 'return %s::prepreview_added_widget_instance( $value, %s );', __CLASS__, var_export( $setting_id, true ) );
+				$function = create_function( '$value', $body );
+				add_filter( $hook, $function );
+				self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+			}
+		}
+
+		self::$_customized = $customized;
+	}
+
+	/**
+	 * Ensure that newly-added widgets will appear in the widgets_sidebars.
+	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
+	 * which is too late for the widgets to be set up properly.
+	 * @param array $sidebars_widgets
+	 * @return array
+	 */
+	static function prepreview_added_sidebars_widgets( $sidebars_widgets ) {
+		foreach ( self::$_customized as $setting_id => $value ) {
 			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
 				$sidebar_id = $matches[1];
-				add_filter( 'sidebars_widgets', function ( $sidebars_widgets ) use ( $sidebar_id, $value, $self ) {
-					if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
-						return $sidebars_widgets;
-					}
-					if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
-						$sidebars_widgets[$sidebar_id] = array();
-					}
-					$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
-					return $sidebars_widgets;
-				} );
-			}
-			else if ( preg_match( '/^widget_(.+?)(?:\[(\d+)\])?$/', $setting_id, $matches ) ) {
-				$option_name   = 'widget_' . $matches[1];
-				$widget_number = isset( $matches[2] ) ? intval( $matches[2] ) : false;
-				$instance = get_option( $option_name );
-
-				if ( false === $widget_number ) {
-					if ( false === $instance ) {
-						add_filter( 'option_' . $option_name, function ( $value ) use ( $option_name, $self ) {
-							if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
-								return $value;
-							}
-							if ( empty( $value ) ) {
-								$value = array();
-							}
-							return $value;
-						} );
-					}
+				if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
+					$sidebars_widgets[$sidebar_id] = array();
 				}
-				else {
-					if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
-						add_filter( 'option_' . $option_name, function ( $value ) use ( $widget_number, $option_name, $self ) {
+				$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
+			}
+		}
+		return $sidebars_widgets;
+	}
 
-							if ( ! empty( $self::$options_transaction ) && $self::$options_transaction->is_current() ) {
-								return $value;
-							}
-							if ( empty( $value ) ) {
-								$value = array( '_multiwidget' => 1 );
-							}
-							if ( ! isset( $value[$widget_number] ) ) {
-								$value[$widget_number] = array();
-							}
-							return $value;
-						} );
-					}
+	/**
+	 * Ensure that newly-added widgets will have empty instances so that they will be recognized.
+	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
+	 * which is too late for the widgets to be set up properly.
+	 * @param array $instance
+	 * @param string $setting_id
+	 * @return array
+	 */
+	static function prepreview_added_widget_instance( $instance, $setting_id ) {
+		if ( isset( self::$_customized[$setting_id] ) ) {
+			assert( preg_match( '/^(widget_(.+?))(?:\[(\d+)\])?$/', $setting_id, $matches ) );
+			$widget_number = isset( $matches[3] ) ? intval( $matches[3] ) : false;
+
+			// Single widget
+			if ( false === $widget_number ) {
+				if ( false === $instance && empty( $value ) ) {
+					$value = array();
+				}
+			}
+			// Multi widget
+			else if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
+				if ( empty( $value ) ) {
+					$value = array( '_multiwidget' => 1 );
+				}
+				if ( ! isset( $value[$widget_number] ) ) {
+					$value[$widget_number] = array();
 				}
 			}
 		}
-
-		// @todo Filters should be removed after customize_register
-
+		return $instance;
 	}
 
 	/**
@@ -248,6 +263,12 @@ class Widget_Customizer {
 				}
 			}
 		}
+
+		// Remove prepreview filters which are now unnecessary since settings have been set up
+		foreach ( self::$_prepreview_added_filters as $prepreview_added_filter ) {
+			remove_filter( $prepreview_added_filter['hook'], $prepreview_added_filter['function'] );
+		}
+		self::$_prepreview_added_filters = array();
 	}
 
 	/**
