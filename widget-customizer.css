@@ -44,3 +44,8 @@
 	outline: none;
 	box-shadow: 0 0 3px #CE0000;
 }
+
+/* MP6-compat */
+#customize-theme-controls .accordion-section-content .widget {
+	color: black;
+}
