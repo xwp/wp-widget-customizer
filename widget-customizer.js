@@ -92,6 +92,12 @@ var WidgetCustomizer = (function ($) {
 					if ( ! removed_control ) {
 						return;
 					}
+
+					// Detect if widget dragged to another sidebar and abort
+					if ( ! $.contains( control.section_content, removed_control.container ) ) {
+						return;
+					}
+
 					wp.customize.control.remove( removed_control.id );
 					removed_control.container.remove();
 
