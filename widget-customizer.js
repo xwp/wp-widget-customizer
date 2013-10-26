@@ -47,37 +47,17 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.control_section = control.container.closest( '.control-section' );
 			control.section_content = control.container.closest( '.accordion-section-content' );
+			control.setupModel();
 			control.setupSortable();
 			control.setupAddition();
 		},
 
 		/**
-		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 * Update ordering of widget control forms when the setting is updated
 		 */
-		setupSortable: function () {
+		setupModel: function() {
 			var control = this;
-
-			/**
-			 * Update widget order setting when controls are re-ordered
-			 */
-			control.section_content.sortable({
-				items: '> .customize-control-widget_form',
-				axis: 'y',
-				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
-				update: function () {
-					var widget_container_ids = control.section_content.sortable('toArray');
-					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					});
-					control.setting( widget_ids );
-				}
-			});
-
-			/**
-			 * Update ordering of widget control forms when the setting is updated
-			 */
 			control.setting.bind( function( new_widget_ids, old_widget_ids ) {
-
 				var removed_widget_ids = _( old_widget_ids ).difference( new_widget_ids );
 
 				var widget_form_controls = _( new_widget_ids ).map( function ( widget_id ) {
@@ -106,14 +86,60 @@ var WidgetCustomizer = (function ($) {
 				// Re-sort widget form controls
 				control.section_content.append( final_control_containers );
 
+				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
+				_( widget_form_controls ).each( function ( widget_form_control ) {
+					widget_form_control.params.sidebar_id = control.params.sidebar_id;
+				} );
+
 				// Delete any widget form controls for removed widgets
 				_( removed_widget_ids ).each( function ( removed_widget_id ) {
 					var removed_control = self.getWidgetFormControlForWidget( removed_widget_id );
-					if ( removed_control ) {
-						wp.customize.control.remove( removed_control.id );
-						removed_control.container.remove();
+					if ( ! removed_control ) {
+						return;
+					}
+
+					// Detect if widget dragged to another sidebar and abort
+					if ( ! $.contains( control.section_content[0], removed_control.container[0] ) ) {
+						return;
+					}
+
+					wp.customize.control.remove( removed_control.id );
+					removed_control.container.remove();
+
+					// Move widget to inactive widgets sidebar
+					var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
+					inactive_widgets.push( removed_widget_id );
+					wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
+
+					// Make old single widget available for adding again
+					var widget = self.available_widgets.findWhere({ id_base: removed_control.params.widget_id_base });
+					if ( widget && ! widget.get( 'is_multi' ) ) {
+						widget.set( 'is_disabled', false );
 					}
 				} );
+			});
+		},
+
+		/**
+		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 */
+		setupSortable: function () {
+			var control = this;
+
+			/**
+			 * Update widget order setting when controls are re-ordered
+			 */
+			control.section_content.sortable({
+				items: '> .customize-control-widget_form',
+				axis: 'y',
+				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
+				update: function () {
+					var widget_container_ids = control.section_content.sortable('toArray');
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
+					});
+					control.setting( widget_ids );
+				}
 			});
 
 			/**
@@ -206,9 +232,8 @@ var WidgetCustomizer = (function ($) {
 				customize_control.find( 'input[name="widget_number"]' ).val( widget_number );
 				customize_control.find( 'input[name="multi_number"]' ).val( widget_number );
 			}
-			customize_control.find( 'input[name="id_base"]' ).val( widget_id_base );
-			customize_control.hide();
 			widget_id = customize_control.find('[name="widget-id"]' ).val();
+			customize_control.hide(); // to be slid-down below
 
 			var setting_id = 'widget_' + widget.get('id_base');
 			if ( widget.get( 'is_multi' ) ) {
@@ -235,18 +260,35 @@ var WidgetCustomizer = (function ($) {
 					},
 					sidebar_id: control.sidebar_id,
 					widget_id: widget_id,
+					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type
 				},
 				previewer: control.setting.previewer
 			} );
 			wp.customize.control.add( setting_id, widget_form_control );
 
-			// @todo make sure it has been removed from all other menus?
-			var sidebar_widgets = control.setting();
+			// Add widget to this sidebar
+			var sidebar_widgets = control.setting().slice();
 			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
 				sidebar_widgets.unshift( widget_id );
 				control.setting( sidebar_widgets );
 			}
+
+			// Make sure widget is removed from the other sidebars
+			wp.customize.each( function ( other_setting ) {
+				if ( other_setting.id === control.setting.id ) {
+					return;
+				}
+				if ( 0 !== other_setting.id.indexOf( 'sidebars_widgets[' ) ) {
+					return;
+				}
+				var other_sidebar_widgets = other_setting().slice();
+				var i = other_sidebar_widgets.indexOf( widget_id );
+				if ( -1 !== i ) {
+					other_sidebar_widgets.splice( i );
+					other_setting( other_sidebar_widgets );
+				}
+			} );
 
 			var form_autofocus = function () {
 				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
@@ -326,7 +368,6 @@ var WidgetCustomizer = (function ($) {
 					}
 					sidebar_widget_ids.splice( i, 1 );
 					sidebars_widgets_control.setting( sidebar_widget_ids );
-					// @todo When removing a widget from sidebars_widgets_control.setting(), it should automatically remove the widget form control from the sidebar
 				});
 			} );
 

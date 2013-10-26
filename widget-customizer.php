@@ -31,10 +31,11 @@
 class Widget_Customizer {
 	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
+	protected static $options_transaction;
 
 	static function setup() {
 		self::load_textdomain();
-		add_action( 'after_setup_theme', array( __CLASS__, 'preview_new_widgets' ) );
+		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
@@ -76,28 +77,44 @@ class Widget_Customizer {
 		return self::get_plugin_meta( 'Version' );
 	}
 
+	protected static $_customized;
+	protected static $_prepreview_added_filters = array();
+
 	/**
 	 * Since the widgets get registered (widgets_init) before the customizer settings are set up (customize_register),
 	 * we have to filter the options similarly to how the setting previewer will filter the options later.
 	 * @action after_setup_theme
 	 */
-	static function preview_new_widgets() {
+	static function setup_widget_addition_previews() {
 		global $wp_customize;
-		$is_preview     = ( ! empty( $wp_customize ) && ! is_admin() && 'on' === filter_input( INPUT_POST, 'wp_customize' ) );
+		$is_customize_preview = (
+			( ! empty( $wp_customize ) )
+			&&
+			( ! is_admin() )
+			&&
+			( 'on' === filter_input( INPUT_POST, 'wp_customize' ) )
+			&&
+			check_ajax_referer( 'preview-customize_' . $wp_customize->get_stylesheet(), 'nonce', false )
+		);
+
 		$is_ajax_update = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
 			in_array( filter_input( INPUT_POST, 'action' ), array( 'customize_save', self::UPDATE_WIDGET_AJAX_ACTION ) )
+			&&
+			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
-		// @todo Nonce checks?
 
-		if ( ! $is_preview && ! $is_ajax_update ) {
+		$is_valid_request = ( $is_ajax_update || $is_customize_preview );
+		if ( ! $is_valid_request ) {
 			return;
 		}
 
+		// Input from customizer preview
 		if ( isset( $_POST['customized'] ) ) {
 			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
 		}
+		// Input from ajax widget update request
 		else {
 			$customized    = array();
 			$id_base       = filter_input( INPUT_POST, 'id_base' );
@@ -106,64 +123,77 @@ class Widget_Customizer {
 			if ( false !== $widget_number ) {
 				$option_name .= '[' . $widget_number . ']';
 			}
-			$customized[$option_name] = array(); // @todo do we need to supply the incoming instance?
+			$customized[$option_name] = array();
 		}
 
-		// @todo Refactor all of this to eliminate PHP 5.3 dependencies
-		$self = __CLASS__;
+		$hook     = 'sidebars_widgets';
+		$function = array( __CLASS__, 'prepreview_added_sidebars_widgets' );
+		add_filter( $hook, $function );
+		self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+
 		foreach ( $customized as $setting_id => $value ) {
+			if ( preg_match( '/^(widget_.+?)(\[(\d+)\])?$/', $setting_id, $matches ) ) {
+				$hook     = sprintf( 'option_%s', $matches[1] );
+				$body     = sprintf( 'return %s::prepreview_added_widget_instance( $value, %s );', __CLASS__, var_export( $setting_id, true ) );
+				$function = create_function( '$value', $body );
+				add_filter( $hook, $function );
+				self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+			}
+		}
+
+		self::$_customized = $customized;
+	}
+
+	/**
+	 * Ensure that newly-added widgets will appear in the widgets_sidebars.
+	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
+	 * which is too late for the widgets to be set up properly.
+	 * @param array $sidebars_widgets
+	 * @return array
+	 */
+	static function prepreview_added_sidebars_widgets( $sidebars_widgets ) {
+		foreach ( self::$_customized as $setting_id => $value ) {
 			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
 				$sidebar_id = $matches[1];
-				add_filter( 'sidebars_widgets', function ( $sidebars_widgets ) use ( $sidebar_id, $value, $self ) {
-					if ( $self::in_option_transaction() ) {
-						return $sidebars_widgets;
-					}
-					if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
-						$sidebars_widgets[$sidebar_id] = array();
-					}
-					$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
-					return $sidebars_widgets;
-				} );
-			}
-			else if ( preg_match( '/^widget_(.+?)(?:\[(\d+)\])?$/', $setting_id, $matches ) ) {
-				$option_name   = 'widget_' . $matches[1];
-				$widget_number = isset( $matches[2] ) ? intval( $matches[2] ) : false;
-				$instance = get_option( $option_name );
-
-				if ( false === $widget_number ) {
-					if ( false === $instance ) {
-						add_filter( 'option_' . $option_name, function ( $value ) use ( $option_name, $self ) {
-							if ( $self::in_option_transaction() ) {
-								return $value;
-							}
-							if ( empty( $value ) ) {
-								$value = array();
-							}
-							return $value;
-						} );
-					}
+				if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
+					$sidebars_widgets[$sidebar_id] = array();
 				}
-				else {
-					if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
-						add_filter( 'option_' . $option_name, function ( $value ) use ( $widget_number, $option_name, $self ) {
-							if ( $self::in_option_transaction() ) {
-								return $value;
-							}
-							if ( empty( $value ) ) {
-								$value = array( '_multiwidget' => 1 );
-							}
-							if ( ! isset( $value[$widget_number] ) ) {
-								$value[$widget_number] = array();
-							}
-							return $value;
-						} );
-					}
+				$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
+			}
+		}
+		return $sidebars_widgets;
+	}
+
+	/**
+	 * Ensure that newly-added widgets will have empty instances so that they will be recognized.
+	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
+	 * which is too late for the widgets to be set up properly.
+	 * @param array $instance
+	 * @param string $setting_id
+	 * @return array
+	 */
+	static function prepreview_added_widget_instance( $instance, $setting_id ) {
+		if ( isset( self::$_customized[$setting_id] ) ) {
+			assert( preg_match( '/^(widget_(.+?))(?:\[(\d+)\])?$/', $setting_id, $matches ) );
+			$widget_number = isset( $matches[3] ) ? intval( $matches[3] ) : false;
+
+			// Single widget
+			if ( false === $widget_number ) {
+				if ( false === $instance && empty( $value ) ) {
+					$instance = array();
+				}
+			}
+			// Multi widget
+			else if ( false === $instance || ! isset( $instance[$widget_number] ) ) {
+				if ( empty( $instance ) ) {
+					$instance = array( '_multiwidget' => 1 );
+				}
+				if ( ! isset( $instance[$widget_number] ) ) {
+					$instance[$widget_number] = array();
 				}
 			}
 		}
-
-		// @todo Filters should be removed after customize_register
-
+		return $instance;
 	}
 
 	/**
@@ -173,44 +203,47 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
-		add_action( 'update_option_sidebars_widgets', array( __CLASS__, 'refresh_trashed_widgets' ) );
-
 		foreach ( wp_get_sidebars_widgets() as $sidebar_id => $sidebar_widget_ids ) {
 			if ( empty( $sidebar_widget_ids ) ) {
 				$sidebar_widget_ids = array();
 			}
-			$is_active_sidebar = ( isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) && 'wp_inactive_widgets' !== $sidebar_id );
+			$is_registered_sidebar = isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] );
+			$is_inactive_widgets   = ( 'wp_inactive_widgets' === $sidebar_id );
+			$is_active_sidebar     = ( $is_registered_sidebar  && ! $is_inactive_widgets );
 
 			/**
-			 * Add section to contain controls
+			 * Add setting for managing the sidebar's widgets
 			 */
-			$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
-			if ( $is_active_sidebar ) {
-				$section_args = array(
-					'title' => sprintf(
-						__( 'Sidebar: %s', 'widget-customizer' ),
-						$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
-					),
-					'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
-				);
-				$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
-				$wp_customize->add_section( $section_id, $section_args );
-
-				/**
-				 * Add setting for managing the sidebar's widgets
-				 */
+			if ( $is_registered_sidebar || $is_inactive_widgets ) {
 				$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
 				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
-				$control = new Sidebar_Widgets_WP_Customize_Control(
-					$wp_customize,
-					$setting_id,
-					array(
-						'section' => $section_id,
-						'sidebar_id' => $sidebar_id,
-						'priority' => 10 - 1,
-					)
-				);
-				$wp_customize->add_control( $control );
+
+				/**
+				 * Add section to contain controls
+				 */
+				$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
+				if ( $is_active_sidebar ) {
+					$section_args = array(
+						'title' => sprintf(
+							__( 'Sidebar: %s', 'widget-customizer' ),
+							$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
+						),
+						'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
+					);
+					$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
+					$wp_customize->add_section( $section_id, $section_args );
+
+					$control = new Sidebar_Widgets_WP_Customize_Control(
+						$wp_customize,
+						$setting_id,
+						array(
+							'section' => $section_id,
+							'sidebar_id' => $sidebar_id,
+							'priority' => 10 - 1,
+						)
+					);
+					$wp_customize->add_control( $control );
+				}
 			}
 
 			/**
@@ -235,6 +268,7 @@ class Widget_Customizer {
 							'section' => $section_id,
 							'sidebar_id' => $sidebar_id,
 							'widget_id' => $widget_id,
+							'widget_id_base' => $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'],
 							'priority' => 10 + $i,
 						)
 					);
@@ -242,6 +276,12 @@ class Widget_Customizer {
 				}
 			}
 		}
+
+		// Remove prepreview filters which are now unnecessary since settings have been set up
+		foreach ( self::$_prepreview_added_filters as $prepreview_added_filter ) {
+			remove_filter( $prepreview_added_filter['hook'], $prepreview_added_filter['function'] );
+		}
+		self::$_prepreview_added_filters = array();
 	}
 
 	/**
@@ -255,16 +295,6 @@ class Widget_Customizer {
 			$setting_id .= sprintf( '[%d]', $matches[2] );
 		}
 		return $setting_id;
-	}
-
-	/**
-	 *
-	 * @action update_option_sidebars_widgets
-	 */
-	static function refresh_trashed_widgets() {
-		global $sidebars_widgets;
-		$sidebars_widgets = wp_get_sidebars_widgets(); // Update global for retrieve_widgets()
-		retrieve_widgets();
 	}
 
 	/**
@@ -374,9 +404,10 @@ class Widget_Customizer {
 			}
 			else {
 				$args['_add'] = 'single';
-				if ( $sidebar ) {
+				if ( $sidebar && 'wp_inactive_widgets' !== $sidebar ) {
 					$is_disabled = true;
 				}
+				$id_base = $widget['id'];
 			}
 
 			$list_widget_controls_args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );
@@ -536,10 +567,12 @@ class Widget_Customizer {
 	 */
 	static function wp_ajax_update_widget() {
 		global $wp_registered_widget_controls, $wp_registered_widget_updates;
+		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
-		self::begin_option_transaction();
+		self::$options_transaction = new Options_Transaction();
+		self::$options_transaction->start();
 		try {
 			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
@@ -563,18 +596,8 @@ class Widget_Customizer {
 			$multi_number  = filter_input( INPUT_POST, 'multi_number', FILTER_VALIDATE_INT );
 			$option_name   = 'widget_' . $id_base;
 
-			$settings = false;
-			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ) {
-				$settings = $_POST['widget-' . $id_base]; // Not using filter_input here because widget control looks at $_POST
-			}
-
-			// Incoming is a new widget
-			if ( $settings && preg_match( '/__i__|%i%/', key( $settings ) ) ) {
-				if ( ! $multi_number ) {
-					throw new Widget_Customizer_Exception( $generic_error );
-				}
-				$_POST['widget-' . $id_base] = array( $multi_number => array_shift( $settings ) );
-				$widget_id = $id_base . '-' . $multi_number;
+			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) && preg_match( '/__i__|%i%/', key( $_POST['widget-' . $id_base] ) ) ) {
+				throw new Widget_Customizer_Exception( 'Cannot pass widget templates to create new instances; apply template vars in JS' );
 			}
 
 			/**
@@ -590,10 +613,24 @@ class Widget_Customizer {
 					$option = $instance_override;
 				}
 				update_option( $option_name, $option );
+
+				// Delete other $_POST fields to prevent old single widgets from obeying override
+				$preserved_keys = array(
+					'widget-id',
+					'id_base',
+					'widget-width',
+					'widget-height',
+					'widget_number',
+					'multi_number',
+					'add_new',
+					'action',
+				);
+				foreach ( array_diff( array_keys( $_POST ), $preserved_keys ) as $deleted_key ) {
+					unset( $_POST[$deleted_key] );
+				}
 			}
 			else {
 				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
-
 					if ( $name === $id_base ) {
 						if ( ! is_callable( $control['callback'] ) ) {
 							continue;
@@ -609,11 +646,11 @@ class Widget_Customizer {
 			/**
 			 * Make sure the expected option was updated
 			 */
-			if ( ! empty( self::$transaction_cached_options ) ) {
-				if ( count( self::$transaction_cached_options ) > 1 ) {
+			if ( 0 !== self::$options_transaction->count() ) {
+				if ( count( self::$options_transaction->options ) > 1 ) {
 					throw new Widget_Customizer_Exception( 'Widget unexpectedly updated more than one option.' );
 				}
-				if ( key( self::$transaction_cached_options ) !== $option_name ) {
+				if ( key( self::$options_transaction->options ) !== $option_name ) {
 					throw new Widget_Customizer_Exception( 'Widget updated unexpected option.' );
 				}
 			}
@@ -639,11 +676,11 @@ class Widget_Customizer {
 				$instance = $option;
 			}
 
-			self::rollback_option_transaction();
+			self::$options_transaction->rollback();
 			wp_send_json_success( compact( 'form', 'instance' ) );
 		}
 		catch( Exception $e ) {
-			self::rollback_option_transaction();
+			self::$options_transaction->rollback();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
 			}
@@ -653,70 +690,6 @@ class Widget_Customizer {
 			}
 			wp_send_json_error( compact( 'message' ) );
 		}
-	}
-
-	/**
-	 * Option transactions
-	 * @todo Move this into a separate library
-	 */
-
-	protected static $transaction_cached_options    = array();
-	protected static $transaction_option_operations = array();
-	protected static $_in_option_transaction = false;
-
-	static function in_option_transaction() {
-		return self::$_in_option_transaction;
-	}
-
-	/**
-	 * Start keeping track of changes to options, and cache their new values
-	 */
-	static function begin_option_transaction() {
-		self::$_in_option_transaction = true;
-		add_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
-		add_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
-	}
-
-	/**
-	 * @action updated_option
-	 * @param string $option_name
-	 * @param mixed $old_value
-	 * @param mixed $new_value
-	 */
-	static function capture_updated_option( $option_name, $old_value, $new_value ) {
-		self::$transaction_cached_options[$option_name] = $new_value;
-		$operation = 'update';
-		self::$transaction_option_operations[] = compact( 'operation', 'option_name', 'old_value', 'new_value' );
-	}
-
-	/**
-	 * @action added_option
-	 * @param $option_name
-	 * @param $new_value
-	 */
-	static function capture_added_option( $option_name, $new_value ) {
-		self::$transaction_cached_options[$option_name] = $new_value;
-		$operation = 'add';
-		self::$transaction_options[] = compact( 'operation', 'option_name', 'new_value' );
-	}
-
-	/**
-	 * Undo any changes to the options since begin_option_transaction() was called
-	 */
-	static function rollback_option_transaction() {
-		remove_action( 'updated_option', array( __CLASS__, 'capture_updated_option' ), 10, 3 );
-		remove_action( 'added_option', array( __CLASS__, 'capture_added_option' ), 10, 2 );
-
-		while ( 0 !== count( self::$transaction_option_operations ) ) {
-			$option_operation = array_pop( self::$transaction_option_operations );
-			if ( 'add' === $option_operation['operation'] ) {
-				delete_option( $option_operation['option_name'] );
-			}
-			else {
-				update_option( $option_operation['option_name'], $option_operation['old_value'] );
-			}
-		}
-		self::$_in_option_transaction = false;
 	}
 
 	/**
@@ -732,8 +705,6 @@ class Widget_Customizer {
 			return $base_dir;
 		}
 	}
-
-	static protected $_current_widget_instance;
 
 	/**
 	 * Adds Message to Widgets Admin Page to guide user to Widget Customizer
