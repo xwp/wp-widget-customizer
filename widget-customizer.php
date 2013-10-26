@@ -87,21 +87,34 @@ class Widget_Customizer {
 	 */
 	static function setup_widget_addition_previews() {
 		global $wp_customize;
-		$is_preview     = ( ! empty( $wp_customize ) && ! is_admin() && 'on' === filter_input( INPUT_POST, 'wp_customize' ) );
+		$is_customize_preview = (
+			( ! empty( $wp_customize ) )
+			&&
+			( ! is_admin() )
+			&&
+			( 'on' === filter_input( INPUT_POST, 'wp_customize' ) )
+			&&
+			check_ajax_referer( 'preview-customize_' . $wp_customize->get_stylesheet(), 'nonce', false )
+		);
+
 		$is_ajax_update = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
 			in_array( filter_input( INPUT_POST, 'action' ), array( 'customize_save', self::UPDATE_WIDGET_AJAX_ACTION ) )
+			&&
+			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
-		// @todo Nonce checks?
 
-		if ( ! $is_preview && ! $is_ajax_update ) {
+		$is_valid_request = ( $is_ajax_update || $is_customize_preview );
+		if ( ! $is_valid_request ) {
 			return;
 		}
 
+		// Input from customizer preview
 		if ( isset( $_POST['customized'] ) ) {
 			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
 		}
+		// Input from ajax widget update request
 		else {
 			$customized    = array();
 			$id_base       = filter_input( INPUT_POST, 'id_base' );
