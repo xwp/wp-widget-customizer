@@ -52,7 +52,7 @@ class Test_Widget_Customizer extends WP_UnitTestCase {
 	public function test_setup_actions() {
 		// Makes sure all registered actions are invoked in expected hooks
 
-		$this->assertGreaterThan( 0, has_action( 'after_setup_theme', array( 'Widget_Customizer', 'preview_new_widgets' ) ), 'preview_new_widgets method is not properly invoked during after_setup_theme' );
+		$this->assertGreaterThan( 0, has_action( 'after_setup_theme', array( 'Widget_Customizer', 'setup_widget_addition_previews' ) ), 'preview_new_widgets method is not properly invoked during after_setup_theme' );
 
 		$this->assertGreaterThan( 0, has_action( 'customize_register', array( 'Widget_Customizer', 'customize_register' ) ), 'customize_register method is not properly invoked during customize_register' );
 
@@ -94,8 +94,6 @@ class Test_Widget_Customizer extends WP_UnitTestCase {
 		);
 
 		$this->assertTrue( $expected_classes_loaded, 'Sidebar_Widgets_WP_Customize_Control and Widget_Form_WP_Customize_Control are not loaded properly' );
-
-		$this->assertGreaterThan( 0, has_action( 'update_option_sidebars_widgets', array( 'Widget_Customizer', 'refresh_trashed_widgets' ) ), 'refresh_trashed_widgets method is not invoked properly during update_option_sidebars_widgets' );
 
 		// @todo Puts more assertions
 	}

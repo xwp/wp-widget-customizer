@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<ruleset name="Mentionable plugin">
+	<description>We want all WordPress standards but we want to exclude the tests directory</description>
+
+	<exclude-pattern>/tests/*</exclude-pattern>
+
+	<rule ref="WordPress" />
+</ruleset>
