@@ -569,18 +569,8 @@ class Widget_Customizer {
 			$multi_number  = filter_input( INPUT_POST, 'multi_number', FILTER_VALIDATE_INT );
 			$option_name   = 'widget_' . $id_base;
 
-			$settings = false;
-			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) ) {
-				$settings = $_POST['widget-' . $id_base]; // Not using filter_input here because widget control looks at $_POST
-			}
-
-			// Incoming is a new widget
-			if ( $settings && preg_match( '/__i__|%i%/', key( $settings ) ) ) {
-				if ( ! $multi_number ) {
-					throw new Widget_Customizer_Exception( $generic_error );
-				}
-				$_POST['widget-' . $id_base] = array( $multi_number => array_shift( $settings ) );
-				$widget_id = $id_base . '-' . $multi_number;
+			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) && preg_match( '/__i__|%i%/', key( $_POST['widget-' . $id_base] ) ) ) {
+				throw new Widget_Customizer_Exception( 'Cannot pass widget templates to create new instances; apply template vars in JS' );
 			}
 
 			/**
@@ -613,8 +603,20 @@ class Widget_Customizer {
 				}
 			}
 			else {
-				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
+				// Fix up failure for RSS widget to properly convert temp_id (id_base-__i__), as the __i__
+				// gets casted to an int and so it comes out always id_base-0
+				$is_post_malformed = (
+					isset( $_POST['widget-' . $id_base] )
+					&& is_array( $_POST['widget-' . $id_base] )
+					&& isset( $_POST['widget-' . $id_base][0] )
+					&& ! isset( $_POST['widget-' . $id_base][$widget_number] )
+				);
+				if ( $is_post_malformed ) {
+					$_POST['widget-' . $id_base][$widget_number] = $_POST['widget-' . $id_base][0];
+					unset( $_POST['widget-' . $id_base][0] );
+				}
 
+				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 					if ( $name === $id_base ) {
 						if ( ! is_callable( $control['callback'] ) ) {
 							continue;
