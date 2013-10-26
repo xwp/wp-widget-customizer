@@ -617,19 +617,6 @@ class Widget_Customizer {
 				}
 			}
 			else {
-				// Fix up failure for RSS widget to properly convert temp_id (id_base-__i__), as the __i__
-				// gets casted to an int and so it comes out always id_base-0
-				$is_post_malformed = (
-					isset( $_POST['widget-' . $id_base] )
-					&& is_array( $_POST['widget-' . $id_base] )
-					&& isset( $_POST['widget-' . $id_base][0] )
-					&& ! isset( $_POST['widget-' . $id_base][$widget_number] )
-				);
-				if ( $is_post_malformed ) {
-					$_POST['widget-' . $id_base][$widget_number] = $_POST['widget-' . $id_base][0];
-					unset( $_POST['widget-' . $id_base][0] );
-				}
-
 				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 					if ( $name === $id_base ) {
 						if ( ! is_callable( $control['callback'] ) ) {

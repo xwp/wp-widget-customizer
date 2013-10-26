@@ -232,15 +232,7 @@ var WidgetCustomizer = (function ($) {
 				customize_control.find( 'input[name="widget_number"]' ).val( widget_number );
 				customize_control.find( 'input[name="multi_number"]' ).val( widget_number );
 			}
-
-			// We have to manually set this because the RSS widget will fail to output a proper template,
-			// so the __i__ replacement below will fail (it outputs 'rss-0')
-			if ( widget.get( 'is_multi' ) ) {
-				widget_id = widget_id_base + '-' + widget_number;
-			}
-			customize_control.find('[name="widget-id"]' ).val( widget_id );
-
-			customize_control.find( 'input[name="id_base"]' ).val( widget_id_base );
+			widget_id = customize_control.find('[name="widget-id"]' ).val();
 			customize_control.hide(); // to be slid-down below
 
 			var setting_id = 'widget_' + widget.get('id_base');
