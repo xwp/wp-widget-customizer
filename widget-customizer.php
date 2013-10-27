@@ -134,7 +134,7 @@ class Widget_Customizer {
 			$customized[$option_name] = array();
 		}
 
-		$hook     = 'sidebars_widgets';
+		$hook     = 'option_sidebars_widgets';
 		$function = array( __CLASS__, 'prepreview_added_sidebars_widgets' );
 		add_filter( $hook, $function );
 		self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
