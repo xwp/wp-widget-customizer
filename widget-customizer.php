@@ -97,15 +97,23 @@ class Widget_Customizer {
 			check_ajax_referer( 'preview-customize_' . $wp_customize->get_stylesheet(), 'nonce', false )
 		);
 
-		$is_ajax_update = (
+		$is_ajax_widget_update = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
-			in_array( filter_input( INPUT_POST, 'action' ), array( 'customize_save', self::UPDATE_WIDGET_AJAX_ACTION ) )
+			filter_input( INPUT_POST, 'action' ) === self::UPDATE_WIDGET_AJAX_ACTION
 			&&
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
 
-		$is_valid_request = ( $is_ajax_update || $is_customize_preview );
+		$is_ajax_customize_save = (
+			( defined( 'DOING_AJAX' ) && DOING_AJAX )
+			&&
+			filter_input( INPUT_POST, 'action' ) === 'customize_save'
+			&&
+			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
+		);
+
+		$is_valid_request = ( $is_ajax_widget_update || $is_customize_preview || $is_ajax_customize_save );
 		if ( ! $is_valid_request ) {
 			return;
 		}
