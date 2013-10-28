@@ -1,4 +1,4 @@
-.customize-control-sidebar_widgets {
+.customize-control-sidebar_widgets label {
 	display: none;
 }
 .customize-control-sidebar_widgets .hide-if-js {
@@ -20,6 +20,13 @@
 
 .customize-control-widget_form .widget {
 	margin-bottom: 0;
+
+	/**
+	 * Prevent plugins (e.g. Widget Visibility in Jetpack) from forcing widget forms
+	 * to be wide and so overflow the customizer panel
+	 */
+	left: auto !important;
+	max-width: 100%;
 }
 
 .customize-control-widget_form .widget .widget-top {
@@ -43,4 +50,9 @@
 	border-radius: 2 px;
 	outline: none;
 	box-shadow: 0 0 3px #CE0000;
+}
+
+/* MP6-compat */
+#customize-theme-controls .accordion-section-content .widget {
+	color: black;
 }
