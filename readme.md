@@ -35,25 +35,29 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Screenshots ##
 
-### Before changes
+### Before any changes have been made; widgets appear in sections corresponding to their assigned sidebars
 
-![Before changes](assets/screenshot-1.png)
+![Before any changes have been made; widgets appear in sections corresponding to their assigned sidebars](assets/screenshot-1.png)
 
-### After change, before save
+### After a change is made, the widget's Update button is pressed to then see changes in preview and so changes can be published
 
-![After change, before save](assets/screenshot-2.png)
+![After a change is made, the widget's Update button is pressed to then see changes in preview and so changes can be published](assets/screenshot-2.png)
 
-### Widgets forms are collapsable (as of 0.4) with in-widget-title, same as on wp-admin/widgets.php
+### Widgets can be added in sidebar sections; widgets get added to the top, and can be dragged into the desired location
 
-![Widgets forms are collapsable (as of 0.4) with in-widget-title, same as on wp-admin/widgets.php](assets/screenshot-3.png)
+![Widgets can be added in sidebar sections; widgets get added to the top, and can be dragged into the desired location](assets/screenshot-3.png)
 
 ### Widgets can be trashed while in customizer, causing them to be moved to the Inactive Widgets sidebar
 
 ![Widgets can be trashed while in customizer, causing them to be moved to the Inactive Widgets sidebar](assets/screenshot-4.png)
 
+### Widgets are be rearranged by drag-and-drop, and widgets can be assigned to other sidebars by dragging them over
+
+![Widgets are be rearranged by drag-and-drop, and widgets can be assigned to other sidebars by dragging them over](assets/screenshot-5.png)
+
 ### I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
-![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-5.jpg)
+![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-6.jpg)
 
 ## Changelog ##
 

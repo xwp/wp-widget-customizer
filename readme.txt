@@ -31,11 +31,12 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 == Screenshots ==
 
-1. Before changes
-2. After change, before save
-3. Widgets forms are collapsable (as of 0.4) with in-widget-title, same as on wp-admin/widgets.php
+1. Before any changes have been made; widgets appear in sections corresponding to their assigned sidebars
+2. After a change is made, the widget's Update button is pressed to then see changes in preview and so changes can be published
+3. Widgets can be added in sidebar sections; widgets get added to the top, and can be dragged into the desired location
 4. Widgets can be trashed while in customizer, causing them to be moved to the Inactive Widgets sidebar
-5. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
+5. Widgets are be rearranged by drag-and-drop, and widgets can be assigned to other sidebars by dragging them over
+6. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
 == Changelog ==
 
