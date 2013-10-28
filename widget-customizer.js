@@ -222,7 +222,7 @@ var WidgetCustomizer = (function ($) {
 				widget_number = widget.get( 'multi_number' );
 			}
 
-			var control_html = widget.get('control_tpl');
+			var control_html = $( '#widget-tpl-' + widget.get('id') ).html();
 			if ( widget.get( 'is_multi' ) ) {
 				control_html = control_html.replace(/<[^<>]+>/g, function (m) {
 					return m.replace( /__i__|%i%/g, widget_number );

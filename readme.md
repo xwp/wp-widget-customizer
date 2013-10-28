@@ -61,6 +61,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Changelog ##
 
+### 0.9.1 ###
+* Render widget control templates into DOM for plugins to manipulate. The Jetpack Widget Visibility module expects the widget templates to be rendered into the DOM as hidden elements so that it can inject the "Visibility" button in the proper place. So we have to move the templates from the model and into the DOM for compat. Props [westonruter](http://profiles.wordpress.org/westonruter/)
+
 ### 0.9 ###
 * Add support for adding new widgets in the customizer. Widgets can now be added, reordered, modified, and deleted all in the customizer preview, without impacting any visitor to the site until you hit **Save & Publish**. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#3](https://github.com/x-team/wp-widget-customizer/issues/3).
 * Widgets in the customizer are now all properly model-driven, meaning that changes to the settings will trigger changes to the controls. This ensures that the [Settings Revisions](wordpress.org/plugins/settings-revisions/) can work as expected, even allowing you to restore previously trashed widgets and restore previous widget orderings and sidebar placements. Props [westonruter](http://profiles.wordpress.org/westonruter/).

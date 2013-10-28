@@ -40,6 +40,7 @@ class Widget_Customizer {
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
+		add_action( 'customize_controls_print_footer_scripts', array( __CLASS__, 'output_widget_control_templates' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'widgets_admin_page', array( __CLASS__, 'widget_customizer_link' ) );
 
@@ -337,6 +338,13 @@ class Widget_Customizer {
 			true
 		);
 
+		// Export available widgets with control_tpl removed from model since plugins
+		// (e.g. Jetpack Widget Visibility) need templates to be in the DOM
+		$available_widgets = array();
+		foreach ( self::get_available_widgets() as $available_widget ) {
+			unset( $available_widget['control_tpl'] );
+			$available_widgets[] = $available_widget;
+		}
 
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
@@ -351,7 +359,7 @@ class Widget_Customizer {
 				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customizer' ),
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
 			),
-			'available_widgets' => self::get_available_widgets(),
+			'available_widgets' => $available_widgets,
 		);
 
 		$wp_scripts->add_data(
@@ -359,6 +367,22 @@ class Widget_Customizer {
 			'data',
 			sprintf( 'var WidgetCustomizer_exports = %s;', json_encode( $exports ) )
 		);
+	}
+
+	/**
+	 * Render the widget form control templates into the DOM so that plugin scripts can manipulate them
+	 * @action customize_controls_print_footer_scripts
+	 */
+	static function output_widget_control_templates() {
+		?>
+		<div id="widget-customizer-control-templates" hidden>
+			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
+				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
+					<?php echo $available_widget['control_tpl']; // xss ok ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<?php
 	}
 
 	/**
@@ -382,10 +406,13 @@ class Widget_Customizer {
 	 * @return array
 	 */
 	static function get_available_widgets() {
+		static $available_widgets = array();
+		if ( ! empty( $available_widgets ) ) {
+			return $available_widgets;
+		}
+
 		global $wp_registered_widgets, $wp_registered_widget_controls;
 		require_once ABSPATH . '/wp-admin/includes/widgets.php'; // for next_widget_id_number()
-
-		$available_widgets = array();
 
 		$sort = $wp_registered_widgets;
 		usort( $sort, array( __CLASS__, '_sort_name_callback' ) );
