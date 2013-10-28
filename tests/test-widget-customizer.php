@@ -78,7 +78,7 @@ class Test_Widget_Customizer extends WP_UnitTestCase {
 	public function test_plugin_meta() {
 		$this->assertEquals( 'widget-customizer', Widget_Customizer::get_plugin_meta( 'TextDomain' ), 'Unexpected TextDomain value of plugin data' );
 		$this->assertEquals( '/languages', Widget_Customizer::get_plugin_meta( 'DomainPath' ), 'Unexpected DomainPath value of plugin data' );
-		$this->assertEquals( '0.8', Widget_Customizer::get_plugin_meta( 'Version' ), 'Unexpected Version value plugin data' );
+		$this->assertEquals( 'Widget Customizer', Widget_Customizer::get_plugin_meta( 'Name' ), 'Unexpected Version value plugin data' );
 	}
 
 	public function test_preview_new_widgets() {
