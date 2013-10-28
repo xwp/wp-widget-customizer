@@ -36,6 +36,7 @@ class Widget_Customizer {
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
+		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
@@ -205,6 +206,17 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Make sure that all widgets get loaded into customizer; these actions are also done in the wp_ajax_save_widget()
+	 * @see wp_ajax_save_widget()
+	 * @action customize_controls_init
+	 */
+	static function customize_controls_init() {
+		do_action( 'load-widgets.php' );
+		do_action( 'widgets.php' );
+		do_action( 'sidebar_admin_setup' );
+	}
+
+	/**
 	 * @action customize_register
 	 */
 	static function customize_register( $wp_customize ) {
@@ -320,7 +332,7 @@ class Widget_Customizer {
 		wp_enqueue_script(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.js' ),
-			array( 'jquery', 'backbone', 'customize-controls' ),
+			array( 'jquery', 'backbone', 'wp-util', 'customize-controls' ),
 			self::get_version(),
 			true
 		);
