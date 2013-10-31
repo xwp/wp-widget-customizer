@@ -130,24 +130,42 @@ class Widget_Customizer {
 			$id_base       = filter_input( INPUT_POST, 'id_base' );
 			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
 			$option_name   = 'widget_' . $id_base;
+			$customized[$option_name] = array();
 			if ( false !== $widget_number ) {
 				$option_name .= '[' . $widget_number . ']';
+				$customized[$option_name][$widget_number] = array();
 			}
-			$customized[$option_name] = array();
 		}
 
-		$hook     = 'option_sidebars_widgets';
 		$function = array( __CLASS__, 'prepreview_added_sidebars_widgets' );
+
+		$hook = 'option_sidebars_widgets';
+		add_filter( $hook, $function );
+		self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+
+		$hook = 'default_option_sidebars_widgets';
 		add_filter( $hook, $function );
 		self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
 
 		foreach ( $customized as $setting_id => $value ) {
 			if ( preg_match( '/^(widget_.+?)(\[(\d+)\])?$/', $setting_id, $matches ) ) {
-				$hook     = sprintf( 'option_%s', $matches[1] );
 				$body     = sprintf( 'return %s::prepreview_added_widget_instance( $value, %s );', __CLASS__, var_export( $setting_id, true ) );
 				$function = create_function( '$value', $body );
+				$option   = $matches[1];
+
+				$hook = sprintf( 'option_%s', $option );
 				add_filter( $hook, $function );
 				self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+
+				$hook = sprintf( 'default_option_%s', $option );
+				add_filter( $hook, $function );
+				self::$_prepreview_added_filters[] = compact( 'hook', 'function' );
+
+				/**
+				 * Make sure the option is registered so that the update_option won't fail due to
+				 * the filters providing a default value, which causes the update_option() to get confused.
+				 */
+				add_option( $option, array() );
 			}
 		}
 
