@@ -242,7 +242,13 @@ class Widget_Customizer {
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
-		foreach ( wp_get_sidebars_widgets() as $sidebar_id => $sidebar_widget_ids ) {
+		$sidebars_widgets = array_merge(
+			array( 'wp_inactive_widgets' => array() ),
+			array_fill_keys( array_keys( $GLOBALS['wp_registered_sidebars'] ), array() ),
+			wp_get_sidebars_widgets()
+		);
+
+		foreach ( $sidebars_widgets as $sidebar_id => $sidebar_widget_ids ) {
 			if ( empty( $sidebar_widget_ids ) ) {
 				$sidebar_widget_ids = array();
 			}
@@ -413,6 +419,7 @@ class Widget_Customizer {
 			'type' => 'option',
 			'capability' => 'edit_theme_options',
 			'transport' => 'refresh',
+			'default' => array(),
 		);
 		$args = array_merge( $args, $overrides );
 		$args = apply_filters( 'widget_customizer_setting_args', $args, $id );
