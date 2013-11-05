@@ -485,9 +485,7 @@ class Widget_Customizer {
 			}
 
 			$list_widget_controls_args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );
-			ob_start();
-			call_user_func_array( 'wp_widget_control', $list_widget_controls_args );
-			$control_tpl = ob_get_clean();
+			$control_tpl = self::get_widget_control( $list_widget_controls_args );
 
 			$setting_args = self::get_setting_args( self::get_setting_id( $widget['id'] ) );
 			// The properties here are mapped to the Backbone Widget model
@@ -515,6 +513,26 @@ class Widget_Customizer {
 	 */
 	static function _sort_name_callback( $a, $b ) {
 		return strnatcasecmp( $a['name'], $b['name'] );
+	}
+
+	/**
+	 * Invoke wp_widget_control() but capture the output buffer and transform the markup
+	 * so that it can be used in the customizer.
+	 *
+	 * @see wp_widget_control()
+	 * @param array $args
+	 * @return string
+	 */
+	static function get_widget_control( $args ) {
+		ob_start();
+		call_user_func_array( 'wp_widget_control', $args );
+		$replacements = array(
+			'<form action="" method="post">' => '<div class="form">',
+			'</form>' => '</div><!-- .form -->',
+		);
+		$control_tpl = ob_get_clean();
+		$control_tpl = str_replace( array_keys( $replacements ), array_values( $replacements ), $control_tpl );
+		return $control_tpl;
 	}
 
 	/**
