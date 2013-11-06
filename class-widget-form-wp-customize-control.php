@@ -30,9 +30,8 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 			'widget_id' => $widget['id'],
 			'widget_name' => $widget['name'],
 		);
-
 		$args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );
-
-		call_user_func_array( 'wp_widget_control', $args );
+		$control = Widget_Customizer::get_widget_control( $args );
+		echo $control; // xss ok
 	}
 }

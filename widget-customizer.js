@@ -389,8 +389,15 @@ var WidgetCustomizer = (function ($) {
 			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
 
 			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
-				if ( 13 === e.which ){
-					this.click();
+				if ( 13 === e.which ){ // Enter
+					control.toggleForm();
+				}
+			});
+
+			control.container.find( '.widget-content' ).on( 'keydown', 'input', function(e) {
+				if ( 13 === e.which ){ // Enter
+					control.updateWidget();
+					e.preventDefault();
 				}
 			});
 
