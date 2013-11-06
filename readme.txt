@@ -40,7 +40,7 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 == Changelog ==
 
-= 0.9.3 -
+= 0.9.3 =
  * Fix HTML markup breaking customizer "Collapse" link position.
  * Trigger widget update when hitting enter in control input. Fixes [#47](https://github.com/x-team/wp-widget-customizer/issues/47).
 
