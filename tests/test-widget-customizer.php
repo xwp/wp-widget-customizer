@@ -17,8 +17,9 @@ class Test_Widget_Customizer extends WP_UnitTestCase {
 		$user->add_cap( 'edit_theme_options' );
 
 		// Pretending in customize page.
-		if ( ! isset( $_REQUEST['wp_customize'] ) )
+		if ( ! isset( $_REQUEST['wp_customize'] ) ) {
 			$_REQUEST['wp_customize'] = 'on';
+		}
 
 		if ( ! class_exists( 'WP_Customize_Manager' ) )
 			require_once ABSPATH . WPINC . '/class-wp-customize-manager.php';

@@ -73,7 +73,8 @@ class Options_Transaction {
 	 */
 	function _capture_pre_deleted_option( $option_name ) {
 		global $wpdb;
-		$autoload = $wpdb->get_var( $wpdb->prepare( "SELECT autoload FROM $wpdb->options WHERE option_name = %s", $option_name ) );
+
+		$autoload = $wpdb->get_var( $wpdb->prepare( "SELECT autoload FROM $wpdb->options WHERE option_name = %s", $option_name ) ); // db call ok; no-cache ok
 		$this->_pending_delete_option_autoload = $autoload;
 		$this->_pending_delete_option_value    = get_option( $option_name );
 	}
