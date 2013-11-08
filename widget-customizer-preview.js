@@ -1,4 +1,5 @@
-/*global wp, jQuery, WidgetCustomizerPreview_exports */
+/*global jQuery, WidgetCustomizerPreview_exports */
+/*exported WidgetCustomizerPreview */
 var WidgetCustomizerPreview = (function ($) {
 	'use strict';
 

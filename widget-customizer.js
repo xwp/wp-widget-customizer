@@ -1,4 +1,5 @@
-/*global wp, Backbone, _, jQuery, WidgetCustomizer_exports, console, alert */
+/*global wp, Backbone, _, jQuery, WidgetCustomizer_exports, alert */
+/*exported WidgetCustomizer */
 var WidgetCustomizer = (function ($) {
 	'use strict';
 
@@ -157,7 +158,7 @@ var WidgetCustomizer = (function ($) {
 			 */
 			control.control_section.find( '.accordion-section-title').droppable({
 				accept: '.customize-control-widget_form',
-				over: function ( event, ui ) {
+				over: function () {
 					if ( ! control.control_section.hasClass('open') ) {
 						control.control_section.addClass('open');
 						control.section_content.toggle(false).slideToggle(150, function () {
