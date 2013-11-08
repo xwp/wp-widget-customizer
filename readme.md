@@ -4,7 +4,7 @@
 ![Banner](assets/banner-1544x500.png)
 Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
 
-**Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [johnregan3](http://profiles.wordpress.org/johnregan3), [akeda](http://profiles.wordpress.org/akeda), [topquarky](http://profiles.wordpress.org/topquarky), [bobbravo2](http://profiles.wordpress.org/bobbravo2), [ricardocorreia](http://profiles.wordpress.org/ricardocorreia)  
+**Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [johnregan3](http://profiles.wordpress.org/johnregan3), [akeda](http://profiles.wordpress.org/akeda), [topher1kenobe](http://profiles.wordpress.org/topher1kenobe), [topquarky](http://profiles.wordpress.org/topquarky), [bobbravo2](http://profiles.wordpress.org/bobbravo2), [ricardocorreia](http://profiles.wordpress.org/ricardocorreia)  
 **Tags:** [customizer](http://wordpress.org/plugins/tags/customizer), [widgets](http://wordpress.org/plugins/tags/widgets), [sidebars](http://wordpress.org/plugins/tags/sidebars), [preview](http://wordpress.org/plugins/tags/preview)  
 **Requires at least:** 3.6  
 **Tested up to:** 3.7.1  
@@ -62,6 +62,10 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 ![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-6.jpg)
 
 ## Changelog ##
+
+### 0.9.4 ###
+* Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
+ * Apply some jshint fixes and update plugin dev library
 
 ### 0.9.3 ###
 * Fix HTML markup breaking customizer "Collapse" link position.

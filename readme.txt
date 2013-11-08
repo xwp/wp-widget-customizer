@@ -1,5 +1,5 @@
 === Widget Customizer ===
-Contributors:      X-team, westonruter, johnregan3, akeda, topquarky, bobbravo2, ricardocorreia
+Contributors:      X-team, westonruter, johnregan3, akeda, topher1kenobe, topquarky, bobbravo2, ricardocorreia
 Tags:              customizer, widgets, sidebars, preview
 Requires at least: 3.6
 Tested up to:      3.7.1
@@ -41,6 +41,10 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 6. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
 == Changelog ==
+
+= 0.9.4 =
+ * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
+ * Apply some jshint fixes and update plugin dev library
 
 = 0.9.3 =
  * Fix HTML markup breaking customizer "Collapse" link position.
