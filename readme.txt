@@ -25,6 +25,8 @@ Customizer control sections for sidebars will be shown or hidden dynamically whe
 
 No longer do you have to edit your widgets blind!
 
+[youtube http://www.youtube.com/watch?v=D1GHc5OGWEQ]
+
 And here's an **awesome bonus**: since the widgets are registered as settings in the customizer, if you also have the [Settings Revisions](http://wordpress.org/plugins/settings-revisions/) plugin also activated, the widgets will then get versioned! Each time you save your changes, the current instance of each widget will be saved in a revision, and you can restore a previous widget state by rolling back the settings revision.
 
 **Development of this plugin is done [on GitHub](https://github.com/x-team/wp-widget-customizer). Pull requests welcome. Please see [issues](https://github.com/x-team/wp-widget-customizer/issues) reported there before going to the plugin forum.**
