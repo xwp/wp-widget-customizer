@@ -32,6 +32,20 @@ class Widget_Customizer {
 	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 	protected static $options_transaction;
+	protected static $core_widget_base_ids = array(
+		'archives',
+		'calendar',
+		'categories',
+		'meta',
+		'nav_menu',
+		'pages',
+		'recent-comments',
+		'recent-posts',
+		'rss',
+		'search',
+		'tag_cloud',
+		'text',
+	);
 
 	static function setup() {
 		self::load_textdomain();
@@ -298,7 +312,10 @@ class Widget_Customizer {
 				assert( isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) );
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
 				$setting_id = self::get_setting_id( $widget_id );
-				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
+				$setting_args = self::get_setting_args( $setting_id );
+				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
+				$setting_args['transport'] = self::get_widget_setting_transport( $id_base );
+				$wp_customize->add_setting( $setting_id, $setting_args );
 
 				/**
 				 * Add control for widget if it is active
@@ -313,7 +330,7 @@ class Widget_Customizer {
 							'section' => $section_id,
 							'sidebar_id' => $sidebar_id,
 							'widget_id' => $widget_id,
-							'widget_id_base' => $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'],
+							'widget_id_base' => $id_base,
 							'priority' => 10 + $i,
 						)
 					);
@@ -427,6 +444,20 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * @param string $id_base
+	 * @return string
+	 */
+	static function get_widget_setting_transport( $id_base ) {
+		$transport = 'refresh';
+		if ( in_array( $id_base, self::$core_widget_base_ids ) ) {
+			$transport = 'postMessage';
+		}
+		$transport = apply_filters( 'customizer_widget_transport', $transport, $id_base );
+		$transport = apply_filters( "customizer_widget_transport_{$id_base}", $transport );
+		return $transport;
+	}
+
+	/**
 	 * @see wp_list_widgets()
 	 * @return array
 	 */
@@ -487,7 +518,6 @@ class Widget_Customizer {
 			$list_widget_controls_args = wp_list_widget_controls_dynamic_sidebar( array( 0 => $args, 1 => $widget['params'][0] ) );
 			$control_tpl = self::get_widget_control( $list_widget_controls_args );
 
-			$setting_args = self::get_setting_args( self::get_setting_id( $widget['id'] ) );
 			// The properties here are mapped to the Backbone Widget model
 			$available_widget = array_merge(
 				$available_widget,
@@ -498,7 +528,7 @@ class Widget_Customizer {
 					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
 					'is_disabled' => $is_disabled,
 					'id_base' => $id_base,
-					'transport' => $setting_args['transport'],
+					'transport' => self::get_widget_setting_transport( $id_base ),
 				)
 			);
 			$available_widgets[] = $available_widget;
