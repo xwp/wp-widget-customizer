@@ -1,4 +1,4 @@
-/*global jQuery, WidgetCustomizerPreview_exports */
+/*global jQuery, WidgetCustomizerPreview_exports, _, console */
 /*exported WidgetCustomizerPreview */
 var WidgetCustomizerPreview = (function ($) {
 	'use strict';
@@ -13,6 +13,7 @@ var WidgetCustomizerPreview = (function ($) {
 			this.buildWidgetSelectors();
 			this.toggleSections();
 			this.highlightControls();
+			this.livePreview();
 		},
 
 		/**
@@ -73,6 +74,27 @@ var WidgetCustomizerPreview = (function ($) {
 					control.container.find(':input:visible:first').focus();
 				}
 			});
+		},
+
+		/**
+		 *
+		 */
+		livePreview: function () {
+			$.each( self.initial_widget_setting_ids, function( i, setting_id ) {
+				wp.customize( setting_id, function( value ) {
+					var initial_value = value();
+					var update_count = 0;
+					value.bind( function( to ) {
+						// Workaround for http://core.trac.wordpress.org/ticket/26061;
+						// once fixed, eliminate initial_value, update_count, and this conditional
+						update_count += 1;
+						if ( 1 === update_count && _.isEqual( initial_value, to ) ) {
+							return;
+						}
+						console.info( 'TODO: AJAX', setting_id, to );
+					} );
+				} );
+			} );
 		}
 	};
 

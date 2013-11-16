@@ -46,6 +46,7 @@ class Widget_Customizer {
 		'tag_cloud',
 		'text',
 	);
+	protected static $initial_widget_setting_ids = array();
 
 	static function setup() {
 		self::load_textdomain();
@@ -316,6 +317,7 @@ class Widget_Customizer {
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
 				$setting_args['transport'] = self::get_widget_setting_transport( $id_base );
 				$wp_customize->add_setting( $setting_id, $setting_args );
+				self::$initial_widget_setting_ids[] = $setting_id;
 
 				/**
 				 * Add control for widget if it is active
@@ -612,6 +614,7 @@ class Widget_Customizer {
 			'i18n' => array(
 				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
 			),
+			'initial_widget_setting_ids' => self::$initial_widget_setting_ids,
 		);
 		$wp_scripts->add_data(
 			'widget-customizer-preview',
@@ -624,7 +627,9 @@ class Widget_Customizer {
 	 * At the very end of the page, at the very end of the wp_footer, communicate the sidebars that appeared on the page
 	 */
 	static function export_preview_data() {
+		global $wp_customize;
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
+
 		?>
 		<script>
 		(function () {
