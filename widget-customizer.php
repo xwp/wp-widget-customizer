@@ -802,7 +802,7 @@ class Widget_Customizer {
 			$rendered_widget = ob_get_clean();
 
 			$options_transaction->rollback();
-			wp_send_json_success( compact( 'rendered_widget' ) );
+			wp_send_json_success( compact( 'rendered_widget', 'sidebar' ) );
 		}
 		catch ( Exception $e ) {
 			$options_transaction->rollback();

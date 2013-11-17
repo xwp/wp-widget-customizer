@@ -119,10 +119,10 @@ var WidgetCustomizerPreview = (function ($) {
 
 						$.post( wp.ajax.settings.url, data, function (r) {
 							// @todo We should tell the preview that synced has happened after the Ajax finishes
-							// @todo Inject into DOM, replacing existing element
 							// @todo Fire jQuery event to indicate that a widget was updated; here widgets can re-initialize them if they support live widgets
 							if ( r.success ) {
-
+								var widget = $( r.data.rendered_widget );
+								$( '#' + widget_id ).replaceWith( widget );
 							}
 							else {
 								var message = 'FAIL';
