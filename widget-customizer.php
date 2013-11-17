@@ -30,8 +30,9 @@
 
 class Widget_Customizer {
 	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
+	const RENDER_WIDGET_AJAX_ACTION    = 'render_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
-	protected static $options_transaction;
+	const RENDER_WIDGET_NONCE_POST_KEY = 'render-sidebar-widgets-nonce';
 	protected static $core_widget_base_ids = array(
 		'archives',
 		'calendar',
@@ -54,6 +55,7 @@ class Widget_Customizer {
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
+		add_action( sprintf( 'wp_ajax_%s', self::RENDER_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_render_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_controls_print_footer_scripts', array( __CLASS__, 'output_widget_control_templates' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
@@ -122,6 +124,14 @@ class Widget_Customizer {
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
 
+		$is_ajax_widget_render = (
+			( defined( 'DOING_AJAX' ) && DOING_AJAX )
+			&&
+			filter_input( INPUT_POST, 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
+			&&
+			check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false )
+		);
+
 		$is_ajax_customize_save = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
@@ -130,7 +140,7 @@ class Widget_Customizer {
 			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
 		);
 
-		$is_valid_request = ( $is_ajax_widget_update || $is_customize_preview || $is_ajax_customize_save );
+		$is_valid_request = ( $is_ajax_widget_update || $is_ajax_widget_render || $is_customize_preview || $is_ajax_customize_save );
 		if ( ! $is_valid_request ) {
 			return;
 		}
@@ -317,7 +327,7 @@ class Widget_Customizer {
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
 				$setting_args['transport'] = self::get_widget_setting_transport( $id_base );
 				$wp_customize->add_setting( $setting_id, $setting_args );
-				self::$initial_widget_setting_ids[] = $setting_id;
+				self::$initial_widget_setting_ids[$widget_id] = $setting_id;
 
 				/**
 				 * Add control for widget if it is active
@@ -596,7 +606,7 @@ class Widget_Customizer {
 		wp_enqueue_script(
 			'widget-customizer-preview',
 			self::get_plugin_path_url( 'widget-customizer-preview.js' ),
-			array( 'jquery', 'customize-preview' ),
+			array( 'jquery', 'wp-util', 'customize-preview' ),
 			self::get_version(),
 			true
 		);
@@ -615,6 +625,9 @@ class Widget_Customizer {
 				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
 			),
 			'initial_widget_setting_ids' => self::$initial_widget_setting_ids,
+			'render_widget_ajax_action' => self::RENDER_WIDGET_AJAX_ACTION,
+			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),
+			'render_widget_nonce_post_key' => self::RENDER_WIDGET_NONCE_POST_KEY,
 		);
 		$wp_scripts->add_data(
 			'widget-customizer-preview',
@@ -688,6 +701,123 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * @see dynamic_sidebar()
+	 * @action wp_ajax_render_widget
+	 */
+	static function wp_ajax_render_widget() {
+		global $wp_registered_widgets, $wp_registered_sidebars;
+		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
+
+		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
+		try {
+			do_action( 'load-widgets.php' );
+			do_action( 'widgets.php' );
+
+			$options_transaction = new Options_Transaction();
+			$options_transaction->start();
+			if ( empty( $_POST['widget_id'] ) ) {
+				throw new Widget_Customizer_Exception( __( 'Missing widget_id param', 'widget-customizer' ) );
+			}
+			if ( empty( $_POST['setting_id'] ) ) {
+				throw new Widget_Customizer_Exception( __( 'Missing setting_id param', 'widget-customizer' ) );
+			}
+			if ( empty( $_POST[self::RENDER_WIDGET_NONCE_POST_KEY] ) ) {
+				throw new Widget_Customizer_Exception( __( 'Missing nonce param', 'widget-customizer' ) );
+			}
+			if ( ! check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false ) ) {
+				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
+			}
+			if ( ! current_user_can( 'edit_theme_options' ) ) {
+				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
+			}
+			$widget_id = wp_unslash( $_POST['widget_id'] );
+			if ( ! isset( $wp_registered_widgets[$widget_id] ) ) {
+				throw new Widget_Customizer_Exception( __( 'Unable to find registered widget', 'widget-customizer' ) );
+			}
+			$widget = $wp_registered_widgets[$widget_id];
+
+			if ( empty( $_POST['instance'] ) ) {
+				throw new Widget_Customizer_Exception( __( 'Missing instance', 'widget-customizer' ) );
+			}
+			$instance = json_decode( wp_unslash( $_POST['instance'] ), true );
+			if ( is_null( $instance ) ) {
+				throw new Widget_Customizer_Exception( __( 'JSON parse error', 'widget-customizer' ) );
+			}
+
+			$setting_id = wp_unslash( $_POST['setting_id'] );
+			if ( ! preg_match( '/^(.+?)(?:\[(\d+)])?$/', $setting_id, $matches ) ) {
+				throw new Widget_Customizer_Exception( __( 'Malformed setting', 'widget-customizer' ) );
+			}
+			$option_name   = $matches[1];
+			$widget_number = ! empty( $matches[2] ) ? intval( $matches[2] ) : null;
+			$option_value  = get_option( $option_name );
+			if ( is_null( $widget_number ) ) {
+				$option_value = $instance;
+			}
+			else {
+				if ( ! is_array( $option_value ) ) {
+					$option_value = array();
+				}
+				$option_value[$widget_number] = $instance;
+			}
+			update_option( $option_name, $option_value );
+
+			$sidebar_id = is_active_widget( $widget['callback'], $widget['id'], false, false );
+			$sidebar    = $wp_registered_sidebars[$sidebar_id];
+			$params     = array_merge(
+				array(
+					array_merge(
+						$sidebar,
+						array(
+							'widget_id' => $widget_id,
+							'widget_name' => $wp_registered_widgets[$widget_id]['name'],
+						)
+					),
+				),
+				(array) $wp_registered_widgets[$widget_id]['params']
+			);
+
+			// Substitute HTML id and class attributes into before_widget
+			$classname_ = '';
+			foreach ( (array) $wp_registered_widgets[$widget_id]['classname'] as $cn ) {
+				if ( is_string( $cn ) ) {
+					$classname_ .= '_' . $cn;
+				}
+				else if ( is_object( $cn ) ) {
+					$classname_ .= '_' . get_class( $cn );
+				}
+			}
+			$classname_ = ltrim( $classname_, '_' );
+
+			$params[0]['before_widget'] = sprintf( $params[0]['before_widget'], $widget_id, $classname_ );
+			$params = apply_filters( 'dynamic_sidebar_params', $params );
+
+			// Render the widget
+			$callback = $wp_registered_widgets[$widget_id]['callback'];
+			ob_start();
+			do_action( 'dynamic_sidebar', $wp_registered_widgets[$widget_id] );
+			if ( is_callable( $callback ) ) {
+				call_user_func_array( $callback, $params );
+			}
+			$rendered_widget = ob_get_clean();
+
+			$options_transaction->rollback();
+			wp_send_json_success( compact( 'rendered_widget' ) );
+		}
+		catch ( Exception $e ) {
+			$options_transaction->rollback();
+			if ( $e instanceof Widget_Customizer_Exception ) {
+				$message = $e->getMessage();
+			}
+			else {
+				error_log( sprintf( '%s in %s: %s', get_class( $e ), __FUNCTION__, $e->getMessage() ) );
+				$message = $generic_error;
+			}
+			wp_send_json_error( compact( 'message' ) );
+		}
+	}
+
+	/**
 	 * Most code here copied from wp_ajax_save_widget()
 	 * @see wp_ajax_save_widget
 	 * @todo Reuse wp_ajax_save_widget now that we have option transactions?
@@ -699,9 +829,9 @@ class Widget_Customizer {
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 
-		self::$options_transaction = new Options_Transaction();
-		self::$options_transaction->start();
 		try {
+			$options_transaction = new Options_Transaction();
+			$options_transaction->start();
 			if ( ! check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false ) ) {
 				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
 			}
@@ -774,11 +904,11 @@ class Widget_Customizer {
 			/**
 			 * Make sure the expected option was updated
 			 */
-			if ( 0 !== self::$options_transaction->count() ) {
-				if ( count( self::$options_transaction->options ) > 1 ) {
+			if ( 0 !== $options_transaction->count() ) {
+				if ( count( $options_transaction->options ) > 1 ) {
 					throw new Widget_Customizer_Exception( 'Widget unexpectedly updated more than one option.' );
 				}
-				if ( key( self::$options_transaction->options ) !== $option_name ) {
+				if ( key( $options_transaction->options ) !== $option_name ) {
 					throw new Widget_Customizer_Exception( 'Widget updated unexpected option.' );
 				}
 			}
@@ -804,11 +934,11 @@ class Widget_Customizer {
 				$instance = $option;
 			}
 
-			self::$options_transaction->rollback();
+			$options_transaction->rollback();
 			wp_send_json_success( compact( 'form', 'instance' ) );
 		}
 		catch( Exception $e ) {
-			self::$options_transaction->rollback();
+			$options_transaction->rollback();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
 			}

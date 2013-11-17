@@ -1,4 +1,4 @@
-/*global jQuery, WidgetCustomizerPreview_exports, _, console */
+/*global jQuery, WidgetCustomizerPreview_exports, _, alert */
 /*exported WidgetCustomizerPreview */
 var WidgetCustomizerPreview = (function ($) {
 	'use strict';
@@ -7,6 +7,9 @@ var WidgetCustomizerPreview = (function ($) {
 		rendered_sidebars: [],
 		registered_sidebars: {},
 		widget_selectors: [],
+		render_widget_ajax_action: null,
+		render_widget_nonce_value: null,
+		render_widget_nonce_post_key: null,
 		i18n: {},
 
 		init: function () {
@@ -80,7 +83,7 @@ var WidgetCustomizerPreview = (function ($) {
 		 *
 		 */
 		livePreview: function () {
-			$.each( self.initial_widget_setting_ids, function( i, setting_id ) {
+			$.each( self.initial_widget_setting_ids, function( widget_id, setting_id ) {
 				wp.customize( setting_id, function( value ) {
 					var initial_value = value();
 					var update_count = 0;
@@ -91,7 +94,44 @@ var WidgetCustomizerPreview = (function ($) {
 						if ( 1 === update_count && _.isEqual( initial_value, to ) ) {
 							return;
 						}
-						console.info( 'TODO: AJAX', setting_id, to );
+
+						var id_base;
+						var widget_number = null;
+						var matches = widget_id.match( /^(.+)-(\d+)$/ );
+						if ( matches ) {
+							id_base = matches[1];
+							widget_number = parseInt( matches[2], 10 );
+						}
+						else {
+							// could be an old single widget, or adding a new widget
+							id_base = widget_id;
+						}
+
+						var data = {
+							action: self.render_widget_ajax_action,
+							id_base: id_base,
+							widget_number: widget_number || '',
+							widget_id: widget_id,
+							setting_id: setting_id,
+							instance: JSON.stringify( to )
+						};
+						data[self.render_widget_nonce_post_key] = self.render_widget_nonce_value;
+
+						$.post( wp.ajax.settings.url, data, function (r) {
+							// @todo We should tell the preview that synced has happened after the Ajax finishes
+							// @todo Inject into DOM, replacing existing element
+							// @todo Fire jQuery event to indicate that a widget was updated; here widgets can re-initialize them if they support live widgets
+							if ( r.success ) {
+
+							}
+							else {
+								var message = 'FAIL';
+								if ( r.data && r.data.message ) {
+									message = r.data.message;
+								}
+								alert( message );
+							}
+						});
 					} );
 				} );
 			} );

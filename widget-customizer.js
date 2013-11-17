@@ -402,6 +402,7 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
+			// @todo For transport=postMessage, the JS in the preview should send back an event so that this class can still be added
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
@@ -420,7 +421,10 @@ var WidgetCustomizer = (function ($) {
 			var data = control.container.find(':input').serialize();
 
 			control.container.addClass( 'widget-form-loading' );
-			control.container.addClass( 'previewer-loading' );
+			if ( 'refresh' === control.setting.transport ) {
+				// @todo The JS in the preview should send back an event so that this class can still be added
+				control.container.addClass( 'previewer-loading' );
+			}
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
 			var params = {};
