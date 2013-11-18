@@ -134,7 +134,22 @@ var WidgetCustomizerPreview = (function ($) {
 								old_widget.remove();
 							}
 							else if ( new_widget.length && ! old_widget.length ) {
-								// @todo Inject widget in the proper place
+								var sidebar_widgets = wp.customize('sidebars_widgets[' + r.data.sidebar_id + ']')();
+								var position = sidebar_widgets.indexOf( widget_id );
+								if ( -1 === position ) {
+									throw new Error( 'Unable to determine new widget position in sidebar' );
+								}
+								if ( sidebar_widgets.length === 1 ) {
+									throw new Error( 'Unexpected postMessage for adding first widget to sidebar; refresh must be used instead.' );
+								}
+								if ( position > 0 ) {
+									var before_widget = $( '#' + sidebar_widgets[ position - 1 ] );
+									before_widget.after( new_widget );
+								}
+								else {
+									var after_widget = $( '#' + sidebar_widgets[ position + 1 ] );
+									after_widget.before( new_widget );
+								}
 							}
 						} );
 					} );

@@ -126,8 +126,8 @@ class Widget_Customizer {
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
 
-		$is_ajax_widget_render = (
-			( defined( 'DOING_AJAX' ) && DOING_AJAX )
+		$is_widget_render = (
+			isset( $_POST[self::RENDER_WIDGET_QUERY_VAR] )
 			&&
 			filter_input( INPUT_POST, 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
 			&&
@@ -142,7 +142,7 @@ class Widget_Customizer {
 			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
 		);
 
-		$is_valid_request = ( $is_ajax_widget_update || $is_ajax_widget_render || $is_customize_preview || $is_ajax_customize_save );
+		$is_valid_request = ( $is_ajax_widget_update || $is_widget_render || $is_customize_preview || $is_ajax_customize_save );
 		if ( ! $is_valid_request ) {
 			return;
 		}
@@ -297,8 +297,10 @@ class Widget_Customizer {
 			 * Add setting for managing the sidebar's widgets
 			 */
 			if ( $is_registered_sidebar || $is_inactive_widgets ) {
-				$setting_id = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
-				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
+				$setting_id   = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
+				$setting_args = self::get_setting_args( $setting_id );
+				$setting_args['transport'] = self::get_sidebar_widgets_setting_transport( $sidebar_id );
+				$wp_customize->add_setting( $setting_id, $setting_args );
 
 				/**
 				 * Add section to contain controls
@@ -478,6 +480,17 @@ class Widget_Customizer {
 		}
 		$transport = apply_filters( 'customizer_widget_transport', $transport, $id_base );
 		$transport = apply_filters( "customizer_widget_transport_{$id_base}", $transport );
+		return $transport;
+	}
+
+	/**
+	 * @param string $sidebar_id
+	 * @return string
+	 */
+	static function get_sidebar_widgets_setting_transport( $sidebar_id ) {
+		$transport = 'postMessage'; // @todo Needs to be theme opt-in
+		$transport = apply_filters( 'customizer_sidebar_widgets_transport', $transport, $sidebar_id );
+		$transport = apply_filters( "customizer_sidebar_widgets_transport_{$sidebar_id}", $transport );
 		return $transport;
 	}
 
