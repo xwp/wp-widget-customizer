@@ -1,4 +1,4 @@
-/*global jQuery, WidgetCustomizerPreview_exports, _, alert */
+/*global jQuery, WidgetCustomizerPreview_exports, _ */
 /*exported WidgetCustomizerPreview */
 var WidgetCustomizerPreview = (function ($) {
 	'use strict';
@@ -108,30 +108,35 @@ var WidgetCustomizerPreview = (function ($) {
 						}
 
 						var data = {
+							widget_customizer_render_widget: 1,
 							action: self.render_widget_ajax_action,
 							id_base: id_base,
-							widget_number: widget_number || '',
+							widget_number: widget_number,
 							widget_id: widget_id,
 							setting_id: setting_id,
 							instance: JSON.stringify( to )
 						};
 						data[self.render_widget_nonce_post_key] = self.render_widget_nonce_value;
 
-						$.post( wp.ajax.settings.url, data, function (r) {
+						$.post( self.request_uri, data, function ( r ) {
+							if ( ! r.success ) {
+								throw new Error( r.data && r.data.message ? r.data.message : 'FAIL' );
+							}
+
 							// @todo We should tell the preview that synced has happened after the Ajax finishes
 							// @todo Fire jQuery event to indicate that a widget was updated; here widgets can re-initialize them if they support live widgets
-							if ( r.success ) {
-								var widget = $( r.data.rendered_widget );
-								$( '#' + widget_id ).replaceWith( widget );
+							var old_widget = $( '#' + widget_id );
+							var new_widget = $( r.data.rendered_widget );
+							if ( new_widget.length && old_widget.length ) {
+								old_widget.replaceWith( new_widget );
 							}
-							else {
-								var message = 'FAIL';
-								if ( r.data && r.data.message ) {
-									message = r.data.message;
-								}
-								alert( message );
+							else if ( ! new_widget.length && old_widget.length ) {
+								old_widget.remove();
 							}
-						});
+							else if ( new_widget.length && ! old_widget.length ) {
+								// @todo Inject widget in the proper place
+							}
+						} );
 					} );
 				} );
 			} );

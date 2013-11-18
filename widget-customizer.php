@@ -33,6 +33,7 @@ class Widget_Customizer {
 	const RENDER_WIDGET_AJAX_ACTION    = 'render_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 	const RENDER_WIDGET_NONCE_POST_KEY = 'render-sidebar-widgets-nonce';
+	const RENDER_WIDGET_QUERY_VAR      = 'widget_customizer_render_widget';
 	protected static $core_widget_base_ids = array(
 		'archives',
 		'calendar',
@@ -55,7 +56,8 @@ class Widget_Customizer {
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
-		add_action( sprintf( 'wp_ajax_%s', self::RENDER_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_render_widget' ) );
+		add_filter( 'query_vars', array( __CLASS__, 'add_render_widget_query_var' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'render_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_controls_print_footer_scripts', array( __CLASS__, 'output_widget_control_templates' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
@@ -258,6 +260,16 @@ class Widget_Customizer {
 		do_action( 'load-widgets.php' );
 		do_action( 'widgets.php' );
 		do_action( 'sidebar_admin_setup' );
+	}
+
+	/**
+	 * @filter query_vars
+	 */
+	static function add_render_widget_query_var( $query_vars ) {
+		if ( ! is_admin() ) {
+			$query_vars[] = self::RENDER_WIDGET_QUERY_VAR;
+		}
+		return $query_vars;
 	}
 
 	/**
@@ -628,6 +640,7 @@ class Widget_Customizer {
 			'render_widget_ajax_action' => self::RENDER_WIDGET_AJAX_ACTION,
 			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),
 			'render_widget_nonce_post_key' => self::RENDER_WIDGET_NONCE_POST_KEY,
+			'request_uri' => wp_unslash( $_SERVER['REQUEST_URI'] ),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer-preview',
@@ -702,9 +715,13 @@ class Widget_Customizer {
 
 	/**
 	 * @see dynamic_sidebar()
-	 * @action wp_ajax_render_widget
+	 * @action template_redirect
 	 */
-	static function wp_ajax_render_widget() {
+	static function render_widget() {
+		if ( ! get_query_var( self::RENDER_WIDGET_QUERY_VAR ) ) {
+			return;
+		}
+
 		global $wp_registered_widgets, $wp_registered_sidebars;
 		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
 
@@ -762,47 +779,53 @@ class Widget_Customizer {
 			}
 			update_option( $option_name, $option_value );
 
+			$rendered_widget = null;
 			$sidebar_id = is_active_widget( $widget['callback'], $widget['id'], false, false );
-			$sidebar    = $wp_registered_sidebars[$sidebar_id];
-			$params     = array_merge(
-				array(
-					array_merge(
-						$sidebar,
-						array(
-							'widget_id' => $widget_id,
-							'widget_name' => $wp_registered_widgets[$widget_id]['name'],
-						)
+
+			if ( $sidebar_id ) {
+				$sidebar = $wp_registered_sidebars[$sidebar_id];
+				$params  = array_merge(
+					array(
+						array_merge(
+							$sidebar,
+							array(
+								'widget_id' => $widget_id,
+								'widget_name' => $widget['name'],
+							)
+						),
 					),
-				),
-				(array) $wp_registered_widgets[$widget_id]['params']
-			);
+					(array) $widget['params']
+				);
 
-			// Substitute HTML id and class attributes into before_widget
-			$classname_ = '';
-			foreach ( (array) $wp_registered_widgets[$widget_id]['classname'] as $cn ) {
-				if ( is_string( $cn ) ) {
-					$classname_ .= '_' . $cn;
+				$callback = $widget['callback'];
+
+				// @todo If the widget is not assigned to a sidebar (e.g. via Widget Visibility, we need to return nothing!
+
+				// Substitute HTML id and class attributes into before_widget
+				$classname_ = '';
+				foreach ( (array) $widget['classname'] as $cn ) {
+					if ( is_string( $cn ) ) {
+						$classname_ .= '_' . $cn;
+					}
+					else if ( is_object( $cn ) ) {
+						$classname_ .= '_' . get_class( $cn );
+					}
 				}
-				else if ( is_object( $cn ) ) {
-					$classname_ .= '_' . get_class( $cn );
+				$classname_ = ltrim( $classname_, '_' );
+
+				$params[0]['before_widget'] = sprintf( $params[0]['before_widget'], $widget_id, $classname_ );
+				$params = apply_filters( 'dynamic_sidebar_params', $params );
+
+				// Render the widget
+				ob_start();
+				do_action( 'dynamic_sidebar', $widget );
+				if ( is_callable( $callback ) ) {
+					call_user_func_array( $callback, $params );
 				}
+				$rendered_widget = ob_get_clean();
 			}
-			$classname_ = ltrim( $classname_, '_' );
-
-			$params[0]['before_widget'] = sprintf( $params[0]['before_widget'], $widget_id, $classname_ );
-			$params = apply_filters( 'dynamic_sidebar_params', $params );
-
-			// Render the widget
-			$callback = $wp_registered_widgets[$widget_id]['callback'];
-			ob_start();
-			do_action( 'dynamic_sidebar', $wp_registered_widgets[$widget_id] );
-			if ( is_callable( $callback ) ) {
-				call_user_func_array( $callback, $params );
-			}
-			$rendered_widget = ob_get_clean();
-
 			$options_transaction->rollback();
-			wp_send_json_success( compact( 'rendered_widget', 'sidebar' ) );
+			wp_send_json_success( compact( 'rendered_widget', 'sidebar_id' ) );
 		}
 		catch ( Exception $e ) {
 			$options_transaction->rollback();
