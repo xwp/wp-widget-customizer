@@ -34,6 +34,7 @@ class Widget_Customizer {
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
 	const RENDER_WIDGET_NONCE_POST_KEY = 'render-sidebar-widgets-nonce';
 	const RENDER_WIDGET_QUERY_VAR      = 'widget_customizer_render_widget';
+
 	protected static $core_widget_base_ids = array(
 		'archives',
 		'calendar',
@@ -48,13 +49,13 @@ class Widget_Customizer {
 		'tag_cloud',
 		'text',
 	);
-	protected static $initial_widget_setting_ids = array();
 
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
-		add_action( 'customize_register', array( __CLASS__, 'customize_register' ) );
+		add_action( 'customize_register', array( __CLASS__, 'schedule_customize_register' ), 1 );
+		add_action( 'wp_loaded', array( __CLASS__, 'remove_prepreview_filters' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_filter( 'query_vars', array( __CLASS__, 'add_render_widget_query_var' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'render_widget' ) );
@@ -63,6 +64,7 @@ class Widget_Customizer {
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
 		add_action( 'widgets_admin_page', array( __CLASS__, 'widget_customizer_link' ) );
 
+		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_rendered_widgets' ) );
 		add_action( 'dynamic_sidebar', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_actions' ) );
 		add_filter( 'temp_is_active_sidebar', array( __CLASS__, 'tally_sidebars_via_is_active_sidebar_calls' ), 10, 2 );
 		add_filter( 'temp_dynamic_sidebar_has_widgets', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_calls' ), 10, 2 );
@@ -252,6 +254,18 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Remove filters added in setup_widget_addition_previews() which ensure that
+	 * widgets are populating the options during widgets_init
+	 * @action wp_loaded
+	 */
+	static function remove_prepreview_filters() {
+		foreach ( self::$_prepreview_added_filters as $prepreview_added_filter ) {
+			remove_filter( $prepreview_added_filter['hook'], $prepreview_added_filter['function'] );
+		}
+		self::$_prepreview_added_filters = array();
+	}
+
+	/**
 	 * Make sure that all widgets get loaded into customizer; these actions are also done in the wp_ajax_save_widget()
 	 * @see wp_ajax_save_widget()
 	 * @action customize_controls_init
@@ -273,9 +287,26 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * When in preview, invoke customize_register for settings after WordPress is
+	 * loaded so that all filters have been initialized (e.g. Widget Visibility)
+	 */
+	static function schedule_customize_register( $wp_customize ) {
+		if ( is_admin() ) { // @todo for some reason, $wp_customize->is_preview() is true here?
+			self::customize_register( $wp_customize );
+		}
+		else {
+			add_action( 'wp', array( __CLASS__, 'customize_register' ) );
+		}
+	}
+
+	/**
 	 * @action customize_register
 	 */
-	static function customize_register( $wp_customize ) {
+	static function customize_register( $wp_customize = null ) {
+		if ( ! ( $wp_customize instanceof WP_Customize_Manager ) ) {
+			$wp_customize = $GLOBALS['wp_customize'];
+		}
+
 		require_once( plugin_dir_path( __FILE__ ) . '/class-widget-form-wp-customize-control.php' );
 		require_once( plugin_dir_path( __FILE__ ) . '/class-sidebar-widgets-wp-customize-control.php' );
 
@@ -341,7 +372,6 @@ class Widget_Customizer {
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
 				$setting_args['transport'] = self::get_widget_setting_transport( $id_base );
 				$wp_customize->add_setting( $setting_id, $setting_args );
-				self::$initial_widget_setting_ids[$widget_id] = $setting_id;
 
 				/**
 				 * Add control for widget if it is active
@@ -364,12 +394,6 @@ class Widget_Customizer {
 				}
 			}
 		}
-
-		// Remove prepreview filters which are now unnecessary since settings have been set up
-		foreach ( self::$_prepreview_added_filters as $prepreview_added_filter ) {
-			remove_filter( $prepreview_added_filter['hook'], $prepreview_added_filter['function'] );
-		}
-		self::$_prepreview_added_filters = array();
 	}
 
 	/**
@@ -649,7 +673,6 @@ class Widget_Customizer {
 			'i18n' => array(
 				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
 			),
-			'initial_widget_setting_ids' => self::$initial_widget_setting_ids,
 			'render_widget_ajax_action' => self::RENDER_WIDGET_AJAX_ACTION,
 			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),
 			'render_widget_nonce_post_key' => self::RENDER_WIDGET_NONCE_POST_KEY,
@@ -666,20 +689,39 @@ class Widget_Customizer {
 	 * At the very end of the page, at the very end of the wp_footer, communicate the sidebars that appeared on the page
 	 */
 	static function export_preview_data() {
-		global $wp_customize;
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
-
 		?>
 		<script>
 		(function () {
 			/*global WidgetCustomizerPreview */
 			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( array_unique( self::$rendered_sidebars ) ) ?>;
+			WidgetCustomizerPreview.rendered_widgets = <?php echo json_encode( self::$rendered_widgets ); ?>;
 		}());
 		</script>
 		<?php
 	}
 
 	static protected $rendered_sidebars = array();
+	static protected $rendered_widgets  = array();
+
+	/**
+	 * Keep track of the widgets that were rendered
+	 * @todo With this in place, do we even need to register the settings while in the customizer preview?
+	 * @action dynamic_sidebar
+	 */
+	static function tally_rendered_widgets( $widget ) {
+		$instance = array();
+		if ( preg_match( '/^(.+?)-(\d+)$/', $widget['id'], $matches ) ) {
+			$option_value = get_option( 'widget_' . $matches[1] );
+			if ( ! empty( $option_value[$matches[2]] ) ) {
+				$instance = $option_value[$matches[2]];
+			}
+		}
+		else {
+			$instance = get_option( 'widget_' . $widget['id'], array() );
+		}
+		self::$rendered_widgets[$widget['id']] = $instance;
+	}
 
 	/**
 	 * This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied

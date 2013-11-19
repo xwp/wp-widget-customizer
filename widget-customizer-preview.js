@@ -5,6 +5,7 @@ var WidgetCustomizerPreview = (function ($) {
 
 	var self = {
 		rendered_sidebars: [],
+		rendered_widgets: [],
 		registered_sidebars: {},
 		widget_selectors: [],
 		render_widget_ajax_action: null,
@@ -83,8 +84,12 @@ var WidgetCustomizerPreview = (function ($) {
 		 *
 		 */
 		livePreview: function () {
-			$.each( self.initial_widget_setting_ids, function( widget_id, setting_id ) {
-				wp.customize( setting_id, function( value ) {
+			var already_bound_widgets = {};
+
+			var bind_widget_setting = function( widget_id ) {
+				var setting_id = widget_id_to_setting_id( widget_id );
+				var binder = function( value ) {
+					already_bound_widgets[widget_id] = true;
 					var initial_value = value();
 					var update_count = 0;
 					value.bind( function( to ) {
@@ -107,15 +112,30 @@ var WidgetCustomizerPreview = (function ($) {
 							id_base = widget_id;
 						}
 
+						var sidebar_id = null;
+						var sidebar_widgets = [];
+						wp.customize.each( function ( setting, setting_id ) {
+							var matches = setting_id.match( /^sidebars_widgets\[(.+)\]/ );
+							if ( matches && setting().indexOf( widget_id ) !== -1 ) {
+								sidebar_id = matches[1];
+								sidebar_widgets = setting();
+							}
+						} );
+						if ( ! sidebar_id ) {
+							throw new Error( 'Widget does not exist in a sidebar.' );
+						}
+
 						var data = {
 							widget_customizer_render_widget: 1,
 							action: self.render_widget_ajax_action,
-							id_base: id_base,
-							widget_number: widget_number,
 							widget_id: widget_id,
 							setting_id: setting_id,
 							instance: JSON.stringify( to )
 						};
+						var customized = {};
+						customized['sidebars_widgets[' + sidebar_id + ']'] = sidebar_widgets;
+						customized[setting_id] = to;
+						data.customized = JSON.stringify(customized);
 						data[self.render_widget_nonce_post_key] = self.render_widget_nonce_value;
 
 						$.post( self.request_uri, data, function ( r ) {
@@ -153,12 +173,79 @@ var WidgetCustomizerPreview = (function ($) {
 							}
 						} );
 					} );
+				};
+				wp.customize( setting_id, binder );
+				already_bound_widgets[setting_id] = binder;
+			};
+
+			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
+				var setting_id = 'sidebars_widgets[' + sidebar_id + ']';
+				wp.customize( setting_id, function( value ) {
+					var initial_value = value();
+					var update_count = 0;
+					value.bind( function( to, from ) {
+						// Workaround for http://core.trac.wordpress.org/ticket/26061;
+						// once fixed, eliminate initial_value, update_count, and this conditional
+						update_count += 1;
+						if ( 1 === update_count && _.isEqual( initial_value, to ) ) {
+							return;
+						}
+
+						// Create settings for newly-created widgets
+						$.each( to, function ( i, widget_id ) {
+							var setting_id = widget_id_to_setting_id( widget_id );
+							if ( ! wp.customize( setting_id ) ) {
+								wp.customize.create( setting_id, {} );
+							}
+							// @todo Is there another way to check if we bound?
+							if ( already_bound_widgets[widget_id] ) {
+								return;
+							}
+							bind_widget_setting( widget_id );
+						} );
+
+						// Remove widgets (their DOM element and their setting) when removed from sidebar
+						$.each( from, function ( i, old_widget_id ) {
+							if ( -1 === to.indexOf( old_widget_id ) ) {
+								var setting_id = widget_id_to_setting_id( old_widget_id );
+								if ( wp.customize.has( setting_id ) ) {
+									wp.customize.remove( setting_id );
+									// @todo WARNING: If a widget is moved to another sidebar, we need to either not do this, or force a refresh when a widget is  moved to another sidebar
+								}
+								$( '#' + old_widget_id ).remove();
+							}
+						} );
+
+						// @todo Sort elements with IDs contained in the array `to`
+					} );
 				} );
+			} );
+
+			$.each( self.rendered_widgets, function ( widget_id ) {
+				if ( ! wp.customize.has( widget_id_to_setting_id( widget_id ) ) ) {
+					// Used to have to do this: wp.customize.create( setting_id, instance );
+					// Now that the settings are registered at the `wp` action, it is late enough
+					// for all filters to be added, e.g. sidebars_widgets for Widget Visibility
+					throw new Error( 'Expected customize to have registerd setting for widget ' + widget_id );
+				}
+				bind_widget_setting( widget_id );
 			} );
 		}
 	};
 
 	$.extend(self, WidgetCustomizerPreview_exports);
+
+	function widget_id_to_setting_id( widget_id ) {
+		var setting_id = null;
+		var matches = widget_id.match(/^(.+?)(?:-(\d+)?)$/);
+		if ( matches ) {
+			setting_id = 'widget_' + matches[1] + '[' + matches[2] + ']';
+		}
+		else {
+			setting_id = 'widget_' + widget_id;
+		}
+		return setting_id;
+	}
 
 	$(function () {
 		self.init();
