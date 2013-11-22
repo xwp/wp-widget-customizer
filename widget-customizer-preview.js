@@ -191,6 +191,12 @@ var WidgetCustomizerPreview = (function ($) {
 							return;
 						}
 
+						// Sort widgets
+						$.each( to, function ( i, widget_id ) {
+							var widget = $( '#' + widget_id );
+							widget.parent().append( widget );
+						} );
+
 						// Create settings for newly-created widgets
 						$.each( to, function ( i, widget_id ) {
 							var setting_id = widget_id_to_setting_id( widget_id );
@@ -215,8 +221,6 @@ var WidgetCustomizerPreview = (function ($) {
 								$( '#' + old_widget_id ).remove();
 							}
 						} );
-
-						// @todo Sort elements with IDs contained in the array `to`
 					} );
 				} );
 			} );
