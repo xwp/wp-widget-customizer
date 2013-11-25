@@ -39,6 +39,7 @@ class Widget_Customizer {
 		'archives',
 		'calendar',
 		'categories',
+		'links',
 		'meta',
 		'nav_menu',
 		'pages',
@@ -55,7 +56,6 @@ class Widget_Customizer {
 		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'schedule_customize_register' ), 1 );
-		add_action( 'wp_loaded', array( __CLASS__, 'remove_prepreview_filters' ) );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
 		add_filter( 'query_vars', array( __CLASS__, 'add_render_widget_query_var' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'render_widget' ) );
@@ -299,6 +299,9 @@ class Widget_Customizer {
 		}
 	}
 
+	static $sidebars_eligible_for_post_message = array();
+	static $widgets_eligible_for_post_message  = array();
+
 	/**
 	 * @action customize_register
 	 */
@@ -316,6 +319,8 @@ class Widget_Customizer {
 			wp_get_sidebars_widgets()
 		);
 
+		$new_setting_ids = array();
+
 		foreach ( $sidebars_widgets as $sidebar_id => $sidebar_widget_ids ) {
 			if ( empty( $sidebar_widget_ids ) ) {
 				$sidebar_widget_ids = array();
@@ -330,8 +335,14 @@ class Widget_Customizer {
 			if ( $is_registered_sidebar || $is_inactive_widgets ) {
 				$setting_id   = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
 				$setting_args = self::get_setting_args( $setting_id );
-				$setting_args['transport'] = self::get_sidebar_widgets_setting_transport( $sidebar_id );
+				if ( $is_inactive_widgets ) {
+					$setting_args['transport'] = 'postMessage'; // prevent refresh since not rendered anyway
+				}
+				else {
+					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
+				}
 				$wp_customize->add_setting( $setting_id, $setting_args );
+				$new_setting_ids[] = $setting_id;
 
 				/**
 				 * Add section to contain controls
@@ -357,6 +368,7 @@ class Widget_Customizer {
 							'priority' => 10 - 1,
 						)
 					);
+					$new_setting_ids[] = $setting_id;
 					$wp_customize->add_control( $control );
 				}
 			}
@@ -370,8 +382,9 @@ class Widget_Customizer {
 				$setting_id = self::get_setting_id( $widget_id );
 				$setting_args = self::get_setting_args( $setting_id );
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
-				$setting_args['transport'] = self::get_widget_setting_transport( $id_base );
+				self::$widgets_eligible_for_post_message[$id_base] = ( 'postMessage' === self::get_widget_setting_transport( $id_base ) );
 				$wp_customize->add_setting( $setting_id, $setting_args );
+				$new_setting_ids[] = $setting_id;
 
 				/**
 				 * Add control for widget if it is active
@@ -394,6 +407,19 @@ class Widget_Customizer {
 				}
 			}
 		}
+
+		/**
+		 * We have to register these settings later than customize_preview_init so that other
+		 * filters have had a chance to run.
+		 * @see self::schedule_customize_register()
+		 */
+		if ( did_action( 'customize_preview_init' ) ) {
+			foreach ( $new_setting_ids as $new_setting_id ) {
+				$wp_customize->get_setting( $new_setting_id )->preview();
+			}
+		}
+
+		self::remove_prepreview_filters();
 	}
 
 	/**
@@ -451,6 +477,9 @@ class Widget_Customizer {
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
 			),
 			'available_widgets' => $available_widgets,
+			'sidebars_eligible_for_post_message' => self::$sidebars_eligible_for_post_message,
+			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
+			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
 
 		$wp_scripts->add_data(
@@ -499,9 +528,10 @@ class Widget_Customizer {
 	 */
 	static function get_widget_setting_transport( $id_base ) {
 		$transport = 'refresh';
-		if ( in_array( $id_base, self::$core_widget_base_ids ) ) {
+		if ( current_theme_supports( 'widget-customizer' ) && in_array( $id_base, self::$core_widget_base_ids ) ) {
 			$transport = 'postMessage';
 		}
+		// Allow widgets to opt-in for postMessage
 		$transport = apply_filters( 'customizer_widget_transport', $transport, $id_base );
 		$transport = apply_filters( "customizer_widget_transport_{$id_base}", $transport );
 		return $transport;
@@ -512,7 +542,10 @@ class Widget_Customizer {
 	 * @return string
 	 */
 	static function get_sidebar_widgets_setting_transport( $sidebar_id ) {
-		$transport = 'postMessage'; // @todo Needs to be theme opt-in
+		$transport = 'refresh';
+		if ( current_theme_supports( 'widget-customizer' ) ) {
+			$transport = 'postMessage';
+		}
 		$transport = apply_filters( 'customizer_sidebar_widgets_transport', $transport, $sidebar_id );
 		$transport = apply_filters( "customizer_sidebar_widgets_transport_{$sidebar_id}", $transport );
 		return $transport;
@@ -677,6 +710,9 @@ class Widget_Customizer {
 			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),
 			'render_widget_nonce_post_key' => self::RENDER_WIDGET_NONCE_POST_KEY,
 			'request_uri' => wp_unslash( $_SERVER['REQUEST_URI'] ),
+			'sidebars_eligible_for_post_message' => self::$sidebars_eligible_for_post_message,
+			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
+			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
 		$wp_scripts->add_data(
 			'widget-customizer-preview',

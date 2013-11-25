@@ -5,7 +5,9 @@ var WidgetCustomizerPreview = (function ($) {
 
 	var self = {
 		rendered_sidebars: [],
-		rendered_widgets: [],
+		sidebars_eligible_for_post_message: {},
+		rendered_widgets: [], // @todo only used once; not really needed as we can just loop over sidebars_widgets
+		widgets_eligible_for_post_message: {},
 		registered_sidebars: {},
 		widget_selectors: [],
 		render_widget_ajax_action: null,
@@ -81,6 +83,53 @@ var WidgetCustomizerPreview = (function ($) {
 		},
 
 		/**
+		 * if the containing sidebar is eligible, and if there are sibling widgets the sidebar currently rendered
+		 * @param {String} sidebar_id
+		 * @return {Boolean}
+		 */
+		sidebarCanLivePreview: function ( sidebar_id ) {
+			if ( ! self.current_theme_supports ) {
+				return false;
+			}
+			if ( ! self.sidebars_eligible_for_post_message[sidebar_id] ) {
+				return false;
+			}
+			var widget_ids = wp.customize( sidebar_id_to_setting_id( sidebar_id ) )();
+			var rendered_widget_ids = _( widget_ids ).filter( function ( widget_id ) {
+				return 0 !== $( '#' + widget_id ).length;
+			} );
+			if ( rendered_widget_ids.length === 0 ) {
+				return false;
+			}
+			return true;
+		},
+
+
+		/**
+		 * We can only know if a sidebar can be live-previewed by letting the preview tell us
+		 * @param {String} sidebar_id
+		 */
+		refreshTransports: function () {
+			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
+				var setting_id = sidebar_id_to_setting_id( sidebar_id );
+				var sidebar_transport = self.sidebarCanLivePreview( sidebar_id ) ? 'postMessage' : 'refresh';
+				parent.wp.customize( setting_id ).transport = sidebar_transport;
+
+				var widget_ids = wp.customize( setting_id )();
+				$.each( widget_ids, function ( i, widget_id ){
+					var setting_id = widget_id_to_setting_id( widget_id );
+					var widget_transport = 'refresh';
+					var id_base = widget_id_to_base( widget_id );
+					if ( self.current_theme_supports && sidebar_transport === 'postMessage' && self.widgets_eligible_for_post_message[id_base] ) {
+						widget_transport = 'postMessage';
+					}
+					parent.wp.customize( setting_id ).transport = widget_transport;
+				} );
+			} );
+		},
+
+
+		/**
 		 *
 		 */
 		livePreview: function () {
@@ -100,16 +149,9 @@ var WidgetCustomizerPreview = (function ($) {
 							return;
 						}
 
-						var id_base;
-						var widget_number = null;
-						var matches = widget_id.match( /^(.+)-(\d+)$/ );
-						if ( matches ) {
-							id_base = matches[1];
-							widget_number = parseInt( matches[2], 10 );
-						}
-						else {
-							// could be an old single widget, or adding a new widget
-							id_base = widget_id;
+						var widget_setting_id = widget_id_to_setting_id( widget_id );
+						if ( parent.wp.customize( widget_setting_id ).transport !== 'postMessage' ) {
+							return;
 						}
 
 						var sidebar_id = null;
@@ -133,7 +175,7 @@ var WidgetCustomizerPreview = (function ($) {
 							instance: JSON.stringify( to )
 						};
 						var customized = {};
-						customized['sidebars_widgets[' + sidebar_id + ']'] = sidebar_widgets;
+						customized[ sidebar_id_to_setting_id( sidebar_id ) ] = sidebar_widgets;
 						customized[setting_id] = to;
 						data.customized = JSON.stringify(customized);
 						data[self.render_widget_nonce_post_key] = self.render_widget_nonce_value;
@@ -154,7 +196,7 @@ var WidgetCustomizerPreview = (function ($) {
 								old_widget.remove();
 							}
 							else if ( new_widget.length && ! old_widget.length ) {
-								var sidebar_widgets = wp.customize('sidebars_widgets[' + r.data.sidebar_id + ']')();
+								var sidebar_widgets = wp.customize( sidebar_id_to_setting_id( r.data.sidebar_id ) )();
 								var position = sidebar_widgets.indexOf( widget_id );
 								if ( -1 === position ) {
 									throw new Error( 'Unable to determine new widget position in sidebar' );
@@ -171,6 +213,7 @@ var WidgetCustomizerPreview = (function ($) {
 									after_widget.before( new_widget );
 								}
 							}
+							self.refreshTransports();
 						} );
 					} );
 				};
@@ -179,7 +222,7 @@ var WidgetCustomizerPreview = (function ($) {
 			};
 
 			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
-				var setting_id = 'sidebars_widgets[' + sidebar_id + ']';
+				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				wp.customize( setting_id, function( value ) {
 					var initial_value = value();
 					var update_count = 0;
@@ -192,6 +235,7 @@ var WidgetCustomizerPreview = (function ($) {
 						}
 
 						// Sort widgets
+						// @todo instead of appending to the parent, we should append relative to the first widget found
 						$.each( to, function ( i, widget_id ) {
 							var widget = $( '#' + widget_id );
 							widget.parent().append( widget );
@@ -219,26 +263,40 @@ var WidgetCustomizerPreview = (function ($) {
 									// @todo WARNING: If a widget is moved to another sidebar, we need to either not do this, or force a refresh when a widget is  moved to another sidebar
 								}
 								$( '#' + old_widget_id ).remove();
+
+								// @todo If the last widget in a sidebar is remmoved, this should trigger a refresh; switch transport and then invoke a preview refresh
 							}
 						} );
+
+						// If a widget was removed so that no widgets remain rendered in sidebar, we need to disable postMessage
+						self.refreshTransports();
 					} );
 				} );
 			} );
 
+			// @todo We don't really need rendered_widgets; we can just loop over all sidebars_widgets, and get all their widget_ids
 			$.each( self.rendered_widgets, function ( widget_id ) {
-				if ( ! wp.customize.has( widget_id_to_setting_id( widget_id ) ) ) {
+				var setting_id = widget_id_to_setting_id( widget_id );
+				if ( ! wp.customize.has( setting_id ) ) {
 					// Used to have to do this: wp.customize.create( setting_id, instance );
 					// Now that the settings are registered at the `wp` action, it is late enough
 					// for all filters to be added, e.g. sidebars_widgets for Widget Visibility
-					throw new Error( 'Expected customize to have registerd setting for widget ' + widget_id );
+					throw new Error( 'Expected customize to have registered setting for widget ' + widget_id );
 				}
 				bind_widget_setting( widget_id );
 			} );
+
+			// Opt-in to LivePreview
+			self.refreshTransports();
 		}
 	};
 
 	$.extend(self, WidgetCustomizerPreview_exports);
 
+	/**
+	 * @param {String} widget_id
+	 * @returns {String}
+	 */
 	function widget_id_to_setting_id( widget_id ) {
 		var setting_id = null;
 		var matches = widget_id.match(/^(.+?)(?:-(\d+)?)$/);
@@ -249,6 +307,41 @@ var WidgetCustomizerPreview = (function ($) {
 			setting_id = 'widget_' + widget_id;
 		}
 		return setting_id;
+	}
+
+	/**
+	 * @param {String} widget_id
+	 * @returns {String}
+	 */
+	function widget_id_to_base( widget_id ) {
+		return widget_id.replace( /-\d+$/, '' );
+	}
+
+	/**
+	 * @param {String} setting_id
+	 * @returns {String|null}
+	 */
+	function setting_id_to_widget_id( setting_id ) {
+		var widget_id = null;
+		var matches = setting_id.match(/^widget_(.+?)(?:\[(\d+)\])$/);
+		if ( ! matches ) {
+			return null;
+		}
+		if ( matches[2] ) {
+			widget_id = matches[1] + '-' + matches[2];
+		}
+		else {
+			widget_id = matches[1];
+		}
+		return widget_id;
+	}
+
+	/**
+	 * @param {String} sidebar_id
+	 * @returns {string}
+	 */
+	function sidebar_id_to_setting_id( sidebar_id ) {
+		return 'sidebars_widgets[' + sidebar_id + ']';
 	}
 
 	$(function () {

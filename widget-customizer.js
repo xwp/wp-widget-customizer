@@ -9,7 +9,10 @@ var WidgetCustomizer = (function ($) {
 		update_widget_nonce_value: null,
 		update_widget_nonce_post_key: null,
 		i18n: {},
-		available_widgets: []
+		available_widgets: [],
+		sidebars_eligible_for_post_message: {},
+		widgets_eligible_for_post_message: {},
+		current_theme_supports: false
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -256,10 +259,16 @@ var WidgetCustomizer = (function ($) {
 			// Only create setting if it doesn't already exist (if we're adding a pre-existing inactive widget)
 			var is_existing_widget = wp.customize.has( setting_id );
 			if ( ! is_existing_widget ) {
-				wp.customize.create( setting_id, setting_id, {}, {
-					transport: widget.get( 'transport' ),
+				var setting_args = {
+					transport: 'refresh', // preview window will opt-in to postMessage if available
 					previewer: control.setting.previewer
-				} );
+				};
+				var sidebar_can_live_preview = self.getPreviewWindow().WidgetCustomizerPreview.sidebarCanLivePreview( control.params.sidebar_id );
+				var widget_can_live_preview = !! self.widgets_eligible_for_post_message[ widget_id_base ];
+				if ( self.current_theme_supports && sidebar_can_live_preview && widget_can_live_preview ) {
+					setting_args.transport = 'postMessage';
+				}
+				wp.customize.create( setting_id, setting_id, {}, setting_args );
 			}
 
 			var Constructor = wp.customize.controlConstructor[customize_control_type];
@@ -660,6 +669,13 @@ var WidgetCustomizer = (function ($) {
 			}
 		});
 		return found_control;
+	};
+
+	/**
+	 * @returns {DOMWindow}
+	 */
+	self.getPreviewWindow = function (){
+		return $( '#customize-preview' ).find( 'iframe' ).prop( 'contentWindow' );
 	};
 
 	return self;
