@@ -108,6 +108,9 @@ div#widgets-right .ui-sortable .widget {
 	top: -2px;
 	transition: all 0.2s;
 }
+#available-widgets .widget {
+	position: static;
+}
 .add-new-widget b {
 	padding-left: 8px;
 }
@@ -144,14 +147,14 @@ div#widgets-right .ui-sortable .widget {
 	padding: 5px 5px 2px 20px;
 }
 
-#available-widgets .widget {
+#available-widgets .widget-tpl {
 	padding: 15px 15px 15px 80px;
 	min-height: 80px;
 	cursor: pointer;
 	border-bottom: 1px solid rgba(0,0,0,0.05);
 	position: relative;
 }
-#available-widgets .widget:hover {
+#available-widgets .widget-tpl:hover {
 	box-shadow: inset 0 1px 0 rgba(0,0,0,0.05);
 	background: rgba(0,0,0,0.05);
 }
@@ -182,7 +185,7 @@ div#widgets-right .ui-sortable .widget {
 	top: 27px;
 	left: 24px;
 }
-#available-widgets .widget:hover .widget-title h4:before {
+#available-widgets .widget-tpl:hover .widget-title h4:before {
 	opacity: 1;
 }
 #available-widgets .widget .widget-description {

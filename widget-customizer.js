@@ -239,7 +239,8 @@ var WidgetCustomizer = (function ($) {
 			var customize_control = $('<li></li>');
 			customize_control.addClass( 'customize-control' );
 			customize_control.addClass( 'customize-control-' + customize_control_type );
-			customize_control.append( $(control_html) );
+			customize_control.append( $( control_html ) );
+			customize_control.find( '> .widget-icon' ).remove();
 			if ( widget.get( 'is_multi' ) ) {
 				customize_control.find( 'input[name="widget_number"]' ).val( widget_number );
 				customize_control.find( 'input[name="multi_number"]' ).val( widget_number );
