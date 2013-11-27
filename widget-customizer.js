@@ -9,7 +9,8 @@ var WidgetCustomizer = (function ($) {
 		update_widget_nonce_value: null,
 		update_widget_nonce_post_key: null,
 		i18n: {},
-		available_widgets: []
+		available_widgets: [],
+		active_sidebar_control: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -181,16 +182,19 @@ var WidgetCustomizer = (function ($) {
 				control.populateAvailableWidgets();
 			});
 
-			var select = control.container.find('.available-widgets');
-			select.on( 'change', function () {
-				var widget_id = $(this).val();
-				this.selectedIndex = 0; // "Add widget..."
-				var widget = self.available_widgets.findWhere({id: widget_id});
-				if ( ! widget ) {
-					throw new Error( 'Widget unexpectedly not found.' );
+			control.container.find( '.add-new-widget' ).on( 'click', function() {
+				// @todo the active_sidebar_control should be set when a sidebar is opened
+				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
+					self.active_sidebar_control = control;
+					$( 'body' ).addClass( 'adding-widget' );
+					$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget', '.widget-title h4' );
+					$( '#available-widgets-filter input' ).focus();
 				}
-				control.addWidget( widget.get( 'id_base' ) );
-			});
+				else {
+					$( 'body' ).removeClass( 'adding-widget' );
+				}
+			} );
+
 		},
 
 		/**
@@ -282,7 +286,7 @@ var WidgetCustomizer = (function ($) {
 			// Add widget to this sidebar
 			var sidebar_widgets = control.setting().slice();
 			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
-				sidebar_widgets.unshift( widget_id );
+				sidebar_widgets.push( widget_id );
 				control.setting( sidebar_widgets );
 			}
 
@@ -659,6 +663,27 @@ var WidgetCustomizer = (function ($) {
 		});
 		return found_control;
 	};
+
+	/**
+	 *
+	 */
+	self.setupAvailableWidgetsPanel = function () {
+
+		$( '#available-widgets .widget-tpl' ).on( 'click', function( event ) {
+			event.stopPropagation();
+			var widget_id = $( this ).data( 'widget-id' );
+			var widget = self.available_widgets.findWhere({id: widget_id});
+			if ( ! widget ) {
+				throw new Error( 'Widget unexpectedly not found.' );
+			}
+			self.active_sidebar_control.addWidget( widget.get( 'id_base' ) );
+			$( 'body' ).removeClass( 'adding-widget' );
+		} );
+	};
+
+	$( function () {
+		self.setupAvailableWidgetsPanel();
+	} );
 
 	return self;
 }( jQuery ));

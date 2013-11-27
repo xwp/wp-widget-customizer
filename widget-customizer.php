@@ -355,9 +355,16 @@ class Widget_Customizer {
 			self::get_version()
 		);
 		wp_enqueue_script(
+			'jquery-livefilter',
+			self::get_plugin_path_url( 'jquery.livefilter.js' ),
+			array( 'jquery' ),
+			self::get_version(),
+			true
+		);
+		wp_enqueue_script(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.js' ),
-			array( 'jquery', 'backbone', 'wp-util', 'customize-controls' ),
+			array( 'jquery', 'jquery-livefilter', 'backbone', 'wp-util', 'customize-controls' ),
 			self::get_version(),
 			true
 		);
@@ -399,9 +406,12 @@ class Widget_Customizer {
 	 */
 	static function output_widget_control_templates() {
 		?>
-		<div id="widget-customizer-control-templates" hidden>
+		<div id="available-widgets">
+			<div id="available-widgets-filter">
+				<input type="search" placeholder="<?php esc_attr_e( 'Find widgets&hellip;', 'widget-customizer' ) ?>">
+			</div>
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
-				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
+				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
 			<?php endforeach; ?>
