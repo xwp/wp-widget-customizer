@@ -72,8 +72,8 @@
 	width: 100%;
 }
 
-.ui-sortable .widget {
-	margin-bottom: 0;
+div#widgets-right .ui-sortable .widget {
+	margin-bottom: 8px;
 }
 
 .add-new-widget {
@@ -81,7 +81,7 @@
 	display: block;
 	clear: both;
 	padding: 13px 20px 10px 20px;
-	margin: 10px -20px -23px -20px;
+	margin: 0px -20px -23px -20px;
 	text-align: right;
 	transition: all 0.2s;
 }
