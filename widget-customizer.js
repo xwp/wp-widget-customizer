@@ -177,10 +177,6 @@ var WidgetCustomizer = (function ($) {
 		 */
 		setupAddition: function () {
 			var control = this;
-			control.populateAvailableWidgets();
-			self.available_widgets.on('change', function () {
-				control.populateAvailableWidgets();
-			});
 
 			control.container.find( '.add-new-widget' ).on( 'click', function() {
 				// @todo the active_sidebar_control should be set when a sidebar is opened
@@ -324,21 +320,8 @@ var WidgetCustomizer = (function ($) {
 			});
 
 			return widget_form_control;
-		},
-
-		/**
-		 *
-		 */
-		populateAvailableWidgets: function() {
-			var control = this;
-			var select = control.container.find('.available-widgets');
-			select.find('option:not(:first-child)').remove();
-			self.available_widgets.each(function (widget) {
-				var option = new Option(widget.get('name'), widget.get('id'));
-				option.disabled = widget.get( 'is_disabled' );
-				select.append(option);
-			});
 		}
+
 	});
 
 	/**
@@ -664,10 +647,23 @@ var WidgetCustomizer = (function ($) {
 		return found_control;
 	};
 
+	$( function () {
+		self.setupAvailableWidgetsPanel();
+	} );
+
 	/**
 	 *
 	 */
 	self.setupAvailableWidgetsPanel = function () {
+
+		var update_available_widgets_list = function () {
+			self.available_widgets.each(function ( widget ) {
+				$( '#widget-tpl-' + widget.id ).toggle( ! widget.get( 'is_disabled' ) );
+			});
+		};
+
+		self.available_widgets.on('change', update_available_widgets_list);
+		update_available_widgets_list();
 
 		$( '#available-widgets .widget-tpl' ).on( 'click', function( event ) {
 			event.stopPropagation();
@@ -680,10 +676,6 @@ var WidgetCustomizer = (function ($) {
 			$( 'body' ).removeClass( 'adding-widget' );
 		} );
 	};
-
-	$( function () {
-		self.setupAvailableWidgetsPanel();
-	} );
 
 	return self;
 }( jQuery ));
