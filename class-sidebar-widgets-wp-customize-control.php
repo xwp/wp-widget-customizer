@@ -17,12 +17,9 @@ class Sidebar_Widgets_WP_Customize_Control extends WP_Customize_Control {
 
 	public function render_content() {
 		?>
-		<label>
-			<span class="customize-control-title"><?php esc_html_e( 'Add widget:', 'widget-customizer' ); ?></span>
-		</label>
-		<select class="widefat available-widgets">
-			<option disabled><?php esc_html_e( 'Add widget...', 'widget-customizer' ) ?></option>
-		</select>
+		<span class="add-new-widget">
+			<b><?php esc_html_e( 'Add a Widget', 'widget-customizer' ) ?></b>
+		</span>
 		<?php
 	}
 }
