@@ -183,7 +183,7 @@ var WidgetCustomizer = (function ($) {
 				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
 					self.active_sidebar_control = control;
 					$( 'body' ).addClass( 'adding-widget' );
-					$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget', '.widget-title h4' );
+					$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget-tpl', '.widget-title h4' );
 					$( '#available-widgets-filter input' ).focus();
 				}
 				else {
