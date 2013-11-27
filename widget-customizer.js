@@ -88,13 +88,15 @@ var WidgetCustomizer = (function ($) {
 					return a_index < b_index ? -1 : 1;
 				});
 
+				var sidebar_widgets_add_control = control.section_content.find( '.customize-control-sidebar_widgets' );
+
 				// Append the controls to put them in the right order
 				var final_control_containers = _( widget_form_controls ).map( function( widget_form_controls ) {
 					return widget_form_controls.container[0];
 				} );
 
 				// Re-sort widget form controls
-				control.section_content.append( final_control_containers );
+				sidebar_widgets_add_control.before( final_control_containers );
 
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {

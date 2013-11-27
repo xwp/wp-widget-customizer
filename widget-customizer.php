@@ -284,7 +284,7 @@ class Widget_Customizer {
 						array(
 							'section' => $section_id,
 							'sidebar_id' => $sidebar_id,
-							'priority' => 10 - 1,
+							'priority' => 9999, // so it appears at the end
 						)
 					);
 					$wp_customize->add_control( $control );
@@ -314,7 +314,7 @@ class Widget_Customizer {
 							'sidebar_id' => $sidebar_id,
 							'widget_id' => $widget_id,
 							'widget_id_base' => $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'],
-							'priority' => 10 + $i,
+							'priority' => $i,
 						)
 					);
 					$wp_customize->add_control( $control );
