@@ -140,6 +140,10 @@ div#widgets-right .ui-sortable .widget {
 	padding: 8px 20px;
 	box-sizing: border-box;
 	z-index: 2;
+	display: none;
+}
+.adding-widget #available-widgets-filter {
+	display: block;
 }
 #available-widgets-filter input {
 	width: 100%;
