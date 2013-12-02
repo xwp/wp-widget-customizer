@@ -306,6 +306,7 @@ class Widget_Customizer {
 	 * @action customize_register
 	 */
 	static function customize_register( $wp_customize = null ) {
+		global $wp_registered_widgets;
 		if ( ! ( $wp_customize instanceof WP_Customize_Manager ) ) {
 			$wp_customize = $GLOBALS['wp_customize'];
 		}
@@ -382,7 +383,6 @@ class Widget_Customizer {
 				$setting_id = self::get_setting_id( $widget_id );
 				$setting_args = self::get_setting_args( $setting_id );
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
-				self::$widgets_eligible_for_post_message[$id_base] = ( 'postMessage' === self::get_widget_setting_transport( $id_base ) );
 				$wp_customize->add_setting( $setting_id, $setting_args );
 				$new_setting_ids[] = $setting_id;
 
@@ -461,6 +461,7 @@ class Widget_Customizer {
 		foreach ( self::get_available_widgets() as $available_widget ) {
 			unset( $available_widget['control_tpl'] );
 			$available_widgets[] = $available_widget;
+			self::$widgets_eligible_for_post_message[$available_widget['id_base']] = ( 'postMessage' === self::get_widget_setting_transport( $available_widget['id_base'] ) );
 		}
 
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
@@ -685,6 +686,8 @@ class Widget_Customizer {
 	 * @action wp_enqueue_scripts
 	 */
 	static function customize_preview_enqueue_deps() {
+		global $wp_registered_widgets, $wp_registered_widget_controls;
+
 		wp_enqueue_script(
 			'widget-customizer-preview',
 			self::get_plugin_path_url( 'widget-customizer-preview.js' ),
@@ -698,6 +701,20 @@ class Widget_Customizer {
 			array(),
 			self::get_version()
 		);
+
+		$all_id_bases = array();
+		foreach ( $wp_registered_widgets as $widget ) {
+			if ( isset( $wp_registered_widget_controls[$widget['id']]['id_base'] ) ) {
+				$all_id_bases[] = $wp_registered_widget_controls[$widget['id']]['id_base'];
+			}
+			else {
+				$all_id_bases[] = $widget['id'];
+			}
+		}
+		$all_id_bases = array_unique( $all_id_bases );
+		foreach ( $all_id_bases as $id_base ) {
+			self::$widgets_eligible_for_post_message[$id_base] = ( 'postMessage' === self::get_widget_setting_transport( $id_base ) );
+		}
 
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;

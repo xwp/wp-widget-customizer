@@ -139,13 +139,12 @@ var WidgetCustomizerPreview = (function ($) {
 				var setting_id = widget_id_to_setting_id( widget_id );
 				var binder = function( value ) {
 					already_bound_widgets[widget_id] = true;
-					var initial_value = value();
 					var update_count = 0;
-					value.bind( function( to ) {
+					value.bind( function( to, from ) {
 						// Workaround for http://core.trac.wordpress.org/ticket/26061;
 						// once fixed, eliminate initial_value, update_count, and this conditional
 						update_count += 1;
-						if ( 1 === update_count && _.isEqual( initial_value, to ) ) {
+						if ( 1 === update_count && _.isEqual( from, to ) ) {
 							return;
 						}
 
@@ -224,13 +223,12 @@ var WidgetCustomizerPreview = (function ($) {
 			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				wp.customize( setting_id, function( value ) {
-					var initial_value = value();
 					var update_count = 0;
 					value.bind( function( to, from ) {
 						// Workaround for http://core.trac.wordpress.org/ticket/26061;
 						// once fixed, eliminate initial_value, update_count, and this conditional
 						update_count += 1;
-						if ( 1 === update_count && _.isEqual( initial_value, to ) ) {
+						if ( 1 === update_count && _.isEqual( from, to ) ) {
 							return;
 						}
 
@@ -244,14 +242,21 @@ var WidgetCustomizerPreview = (function ($) {
 						// Create settings for newly-created widgets
 						$.each( to, function ( i, widget_id ) {
 							var setting_id = widget_id_to_setting_id( widget_id );
-							if ( ! wp.customize( setting_id ) ) {
-								wp.customize.create( setting_id, {} );
+							var setting = wp.customize( setting_id );
+							if ( ! setting ) {
+								setting = wp.customize.create( setting_id, {} );
 							}
+
 							// @todo Is there another way to check if we bound?
-							if ( already_bound_widgets[widget_id] ) {
-								return;
+							if ( ! already_bound_widgets[widget_id] ) {
+								bind_widget_setting( widget_id );
 							}
-							bind_widget_setting( widget_id );
+
+							// Force the callback to fire if this widget is newly-added
+							if ( from.indexOf( widget_id ) === -1 ) {
+								self.refreshTransports();
+								setting.callbacks.fireWith( setting, [ setting(), null ] );
+							}
 						} );
 
 						// Remove widgets (their DOM element and their setting) when removed from sidebar
