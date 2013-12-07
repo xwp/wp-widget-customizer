@@ -13,6 +13,7 @@ var WidgetCustomizerPreview = (function ($) {
 		render_widget_ajax_action: null,
 		render_widget_nonce_value: null,
 		render_widget_nonce_post_key: null,
+		preview: null,
 		i18n: {},
 
 		init: function () {
@@ -193,6 +194,7 @@ var WidgetCustomizerPreview = (function ($) {
 							}
 							else if ( ! new_widget.length && old_widget.length ) {
 								old_widget.remove();
+								// @todo if no more widgets are loaded in this sidebar, refresh preview
 							}
 							else if ( new_widget.length && ! old_widget.length ) {
 								var sidebar_widgets = wp.customize( sidebar_id_to_setting_id( r.data.sidebar_id ) )();
@@ -266,6 +268,7 @@ var WidgetCustomizerPreview = (function ($) {
 								if ( wp.customize.has( setting_id ) ) {
 									wp.customize.remove( setting_id );
 									// @todo WARNING: If a widget is moved to another sidebar, we need to either not do this, or force a refresh when a widget is  moved to another sidebar
+									// @todo if no more widgets are loaded in this sidebar, refresh preview
 								}
 								$( '#' + old_widget_id ).remove();
 
@@ -297,6 +300,17 @@ var WidgetCustomizerPreview = (function ($) {
 	};
 
 	$.extend(self, WidgetCustomizerPreview_exports);
+
+	/**
+	 * Capture the instance of the Preview since it is private
+	 */
+	var OldPreview = wp.customize.Preview;
+	wp.customize.Preview = OldPreview.extend( {
+		initialize: function( params, options ) {
+			self.preview = this;
+			OldPreview.prototype.initialize.call( this, params, options );
+		}
+	} );
 
 	/**
 	 * @param {String} widget_id

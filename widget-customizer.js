@@ -12,7 +12,8 @@ var WidgetCustomizer = (function ($) {
 		available_widgets: [],
 		sidebars_eligible_for_post_message: {},
 		widgets_eligible_for_post_message: {},
-		current_theme_supports: false
+		current_theme_supports: false,
+		previewer: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -111,8 +112,9 @@ var WidgetCustomizer = (function ($) {
 						return;
 					}
 
-					// Detect if widget dragged to another sidebar and abort
+					// Detect if widget control was dragged to another sidebar and abort
 					if ( ! $.contains( control.section_content[0], removed_control.container[0] ) ) {
+						// @todo Trigger refresh?
 						return;
 					}
 
@@ -130,6 +132,8 @@ var WidgetCustomizer = (function ($) {
 						widget.set( 'is_disabled', false );
 					}
 				} );
+
+				// @todo if there was a widget in a sidebar, but it was just removed, we need to refresh the preview window
 			});
 		},
 
@@ -638,6 +642,18 @@ var WidgetCustomizer = (function ($) {
 
 		}
 	});
+
+	/**
+	 * Capture the instance of the Previewer since it is private
+	 */
+	var OldPreviewer = wp.customize.Previewer;
+	wp.customize.Previewer = OldPreviewer.extend( {
+		initialize: function( params, options ) {
+			self.previewer = this;
+			OldPreviewer.prototype.initialize.call( this, params, options );
+			this.bind( 'refresh', this.refresh );
+		}
+	} );
 
 	/**
 	 * Given a widget control, find the sidebar widgets control that contains it.
