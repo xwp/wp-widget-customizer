@@ -347,25 +347,6 @@ var WidgetCustomizerPreview = (function ($) {
 	}
 
 	/**
-	 * @param {String} setting_id
-	 * @returns {String|null}
-	 */
-	function setting_id_to_widget_id( setting_id ) {
-		var widget_id = null;
-		var matches = setting_id.match(/^widget_(.+?)(?:\[(\d+)\])$/);
-		if ( ! matches ) {
-			return null;
-		}
-		if ( matches[2] ) {
-			widget_id = matches[1] + '-' + matches[2];
-		}
-		else {
-			widget_id = matches[1];
-		}
-		return widget_id;
-	}
-
-	/**
 	 * @param {String} sidebar_id
 	 * @returns {string}
 	 */
