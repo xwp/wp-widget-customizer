@@ -199,7 +199,6 @@ var WidgetCustomizerPreview = (function ($) {
 								throw new Error( r.data && r.data.message ? r.data.message : 'FAIL' );
 							}
 
-							// @todo We should tell the preview that synced has happened after the Ajax finishes
 							// @todo Fire jQuery event to indicate that a widget was updated; here widgets can re-initialize them if they support live widgets
 							var old_widget = $( '#' + widget_id );
 							var new_widget = $( r.data.rendered_widget );
@@ -227,6 +226,7 @@ var WidgetCustomizerPreview = (function ($) {
 									after_widget.before( new_widget );
 								}
 							}
+							self.preview.send( 'widget-updated', widget_id );
 							self.refreshTransports();
 						} );
 					} );
