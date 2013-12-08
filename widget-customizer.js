@@ -114,7 +114,6 @@ var WidgetCustomizer = (function ($) {
 
 					// Detect if widget control was dragged to another sidebar and abort
 					if ( ! $.contains( control.section_content[0], removed_control.container[0] ) ) {
-						// @todo Trigger refresh?
 						return;
 					}
 
@@ -132,8 +131,6 @@ var WidgetCustomizer = (function ($) {
 						widget.set( 'is_disabled', false );
 					}
 				} );
-
-				// @todo if there was a widget in a sidebar, but it was just removed, we need to refresh the preview window
 			});
 		},
 

@@ -107,28 +107,42 @@ var WidgetCustomizerPreview = (function ($) {
 
 
 		/**
-		 * We can only know if a sidebar can be live-previewed by letting the preview tell us
+		 * We can only know if a sidebar can be live-previewed by letting the
+		 * preview tell us, so this updates the parent's transports to
+		 * postMessage when it is available. If there is a switch from
+		 * postMessage to refresh, the preview window will request a refresh.
 		 * @param {String} sidebar_id
 		 */
 		refreshTransports: function () {
+			var changed_to_refresh = false;
 			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
+				var setting = parent.wp.customize( setting_id );
 				var sidebar_transport = self.sidebarCanLivePreview( sidebar_id ) ? 'postMessage' : 'refresh';
-				parent.wp.customize( setting_id ).transport = sidebar_transport;
+				if ( 'refresh' === sidebar_transport && 'postMessage' === setting.transport ) {
+					changed_to_refresh = true;
+				}
+				setting.transport = sidebar_transport;
 
 				var widget_ids = wp.customize( setting_id )();
 				$.each( widget_ids, function ( i, widget_id ){
 					var setting_id = widget_id_to_setting_id( widget_id );
+					var setting = parent.wp.customize( setting_id );
 					var widget_transport = 'refresh';
 					var id_base = widget_id_to_base( widget_id );
 					if ( self.current_theme_supports && sidebar_transport === 'postMessage' && self.widgets_eligible_for_post_message[id_base] ) {
 						widget_transport = 'postMessage';
 					}
-					parent.wp.customize( setting_id ).transport = widget_transport;
+					if ( 'refresh' === widget_transport && 'postMessage' === setting.transport ) {
+						changed_to_refresh = true;
+					}
+					setting.transport = widget_transport;
 				} );
 			} );
+			if ( changed_to_refresh ) {
+				self.preview.send( 'refresh' );
+			}
 		},
-
 
 		/**
 		 *
@@ -194,7 +208,6 @@ var WidgetCustomizerPreview = (function ($) {
 							}
 							else if ( ! new_widget.length && old_widget.length ) {
 								old_widget.remove();
-								// @todo if no more widgets are loaded in this sidebar, refresh preview
 							}
 							else if ( new_widget.length && ! old_widget.length ) {
 								var sidebar_widgets = wp.customize( sidebar_id_to_setting_id( r.data.sidebar_id ) )();
@@ -268,11 +281,8 @@ var WidgetCustomizerPreview = (function ($) {
 								if ( wp.customize.has( setting_id ) ) {
 									wp.customize.remove( setting_id );
 									// @todo WARNING: If a widget is moved to another sidebar, we need to either not do this, or force a refresh when a widget is  moved to another sidebar
-									// @todo if no more widgets are loaded in this sidebar, refresh preview
 								}
 								$( '#' + old_widget_id ).remove();
-
-								// @todo If the last widget in a sidebar is remmoved, this should trigger a refresh; switch transport and then invoke a preview refresh
 							}
 						} );
 
