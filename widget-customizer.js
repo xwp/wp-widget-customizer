@@ -287,7 +287,7 @@ var WidgetCustomizer = (function ($) {
 					settings: {
 						'default': setting_id
 					},
-					sidebar_id: control.sidebar_id,
+					sidebar_id: control.params.sidebar_id,
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type
