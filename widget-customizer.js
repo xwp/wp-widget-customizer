@@ -100,8 +100,13 @@ var WidgetCustomizer = (function ($) {
 				// Re-sort widget form controls
 				control.section_content.append( final_control_containers );
 
+				var must_refresh_preview = false;
+
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
+					if ( widget_form_control.params.sidebar_id !== control.params.sidebar_id ) {
+						must_refresh_preview = true;
+					}
 					widget_form_control.params.sidebar_id = control.params.sidebar_id;
 				} );
 
@@ -131,6 +136,10 @@ var WidgetCustomizer = (function ($) {
 						widget.set( 'is_disabled', false );
 					}
 				} );
+
+				if ( must_refresh_preview ) {
+					self.previewer.refresh();
+				}
 			});
 		},
 
