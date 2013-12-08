@@ -227,6 +227,8 @@ var WidgetCustomizerPreview = (function ($) {
 								}
 							}
 							self.preview.send( 'widget-updated', widget_id );
+							wp.customize.trigger( 'sidebar-updated', sidebar_id );
+							wp.customize.trigger( 'widget-updated', widget_id );
 							self.refreshTransports();
 						} );
 					} );
@@ -288,6 +290,7 @@ var WidgetCustomizerPreview = (function ($) {
 
 						// If a widget was removed so that no widgets remain rendered in sidebar, we need to disable postMessage
 						self.refreshTransports();
+						wp.customize.trigger( 'sidebar-updated', sidebar_id );
 					} );
 				} );
 			} );

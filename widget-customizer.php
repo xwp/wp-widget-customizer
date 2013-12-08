@@ -51,8 +51,16 @@ class Widget_Customizer {
 		'text',
 	);
 
+	protected static $builtin_supported_themes_with_scripts = array(
+		'tewntyten' => false,
+		'tewntyeleven' => false,
+		'tewntytwelve' => false,
+		'twentythirteen' => true,
+	);
+
 	static function setup() {
 		self::load_textdomain();
+		add_action( 'after_setup_theme', array( __CLASS__, 'add_builtin_theme_support' ) );
 		add_action( 'after_setup_theme', array( __CLASS__, 'setup_widget_addition_previews' ) );
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'schedule_customize_register' ), 1 );
@@ -102,6 +110,21 @@ class Widget_Customizer {
 
 	protected static $_customized;
 	protected static $_prepreview_added_filters = array();
+
+	/**
+	 * Do add_theme_support() for any built-in supported theme; other themes need to do this themselves
+	 * @action after_setup_theme
+	 */
+	static function add_builtin_theme_support() {
+		$is_builtin_supported = (
+			isset( self::$builtin_supported_themes_with_scripts[ get_stylesheet() ] )
+			||
+			isset( self::$builtin_supported_themes_with_scripts[ get_template() ] )
+		);
+		if ( $is_builtin_supported ) {
+			add_theme_support( 'widget-customizer' );
+		}
+	}
 
 	/**
 	 * Since the widgets get registered (widgets_init) before the customizer settings are set up (customize_register),
@@ -701,6 +724,23 @@ class Widget_Customizer {
 			array(),
 			self::get_version()
 		);
+
+		// Enqueue any scripts provided to add live preview support for buultin themes (e.g. twentythirteen)
+		$applied_themes = array( get_template() );
+		if ( get_stylesheet() !== get_template() ) {
+			$applied_themes[] = get_stylesheet();
+		}
+		foreach ( $applied_themes as $applied_theme ) {
+			if ( ! empty( self::$builtin_supported_themes_with_scripts[ $applied_theme ] ) ) {
+				wp_enqueue_script(
+					"widget-customizer-$applied_theme",
+					self::get_plugin_path_url( "theme-support/$applied_theme.js" ),
+					array( 'customize-preview' ),
+					self::get_version(),
+					true
+				);
+			}
+		}
 
 		$all_id_bases = array();
 		foreach ( $wp_registered_widgets as $widget ) {
