@@ -413,7 +413,7 @@ class Widget_Customizer {
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
 				<?php
 				$icon_path = sprintf( plugin_dir_path( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
-				$icon_url  = null;
+				$icon_url  = plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
 				if ( file_exists( $icon_path ) ) {
 					$icon_url = sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
 				}
