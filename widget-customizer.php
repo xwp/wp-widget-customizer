@@ -552,14 +552,14 @@ class Widget_Customizer {
 	 * @return string
 	 */
 	static function get_widget_setting_transport( $id_base ) {
-		$transport = 'refresh';
+		$live_previewable = false;
 		if ( current_theme_supports( 'widget-customizer' ) && in_array( $id_base, self::$core_widget_base_ids ) ) {
-			$transport = 'postMessage';
+			$live_previewable = true;
 		}
 		// Allow widgets to opt-in for postMessage
-		$transport = apply_filters( 'customizer_widget_transport', $transport, $id_base );
-		$transport = apply_filters( "customizer_widget_transport_{$id_base}", $transport );
-		return $transport;
+		$live_previewable = apply_filters( 'customizer_widget_live_previewable', $live_previewable, $id_base );
+		$live_previewable = apply_filters( "customizer_widget_live_previewable_{$id_base}", $live_previewable );
+		return $live_previewable ? 'postMessage' : 'refresh';
 	}
 
 	/**
@@ -567,13 +567,13 @@ class Widget_Customizer {
 	 * @return string
 	 */
 	static function get_sidebar_widgets_setting_transport( $sidebar_id ) {
-		$transport = 'refresh';
+		$live_previewable = false;
 		if ( current_theme_supports( 'widget-customizer' ) ) {
-			$transport = 'postMessage';
+			$live_previewable = true;
 		}
-		$transport = apply_filters( 'customizer_sidebar_widgets_transport', $transport, $sidebar_id );
-		$transport = apply_filters( "customizer_sidebar_widgets_transport_{$sidebar_id}", $transport );
-		return $transport;
+		$live_previewable = apply_filters( 'customizer_sidebar_widgets_live_previewable', $live_previewable, $sidebar_id );
+		$live_previewable = apply_filters( "customizer_sidebar_widgets_live_previewable_{$sidebar_id}", $live_previewable );
+		return $live_previewable ? 'postMessage' : 'refresh';
 	}
 
 	/**
