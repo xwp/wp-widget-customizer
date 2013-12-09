@@ -591,14 +591,39 @@ var WidgetCustomizer = (function ($) {
 		 * Add the widget-customizer-highlighted-widget class to the widget for 500ms
 		 */
 		highlightPreviewWidget: function () {
-			var control = this;
-			var widget_el = control.getPreviewWidgetElement();
-			var root_el = widget_el.closest('html');
-			root_el.find('.widget-customizer-highlighted-widget').removeClass('widget-customizer-highlighted-widget');
-			widget_el.addClass('widget-customizer-highlighted-widget');
-			setTimeout( function () {
-				widget_el.removeClass('widget-customizer-highlighted-widget');
-			}, 500 );
+			var control = this,
+				widget = control.getPreviewWidgetElement(),
+				widget_coords = widget.offset(),
+				widget_width = widget.width(),
+				widget_height = widget.height(),
+				preview = widget.closest('html'),
+				preview_width = preview.width(),
+				preview_height = preview.height(),
+				canvas = document.getElementById( 'focus-overlay' ),
+				context = canvas.getContext( '2d' );
+
+			canvas.width = 0;
+			canvas.height = 0;
+			$( '.wp-customizer' ).removeClass( 'highlight' );
+
+			canvas.width = preview_width;
+			canvas.height = preview_height;
+
+			context.beginPath();
+			context.fillStyle = 'rgba(238, 238, 238, 0.8)';
+			context.fillRect(0,0,preview_width,preview_height);
+
+			context.beginPath();
+			context.strokeStyle = 'rgba(0,0,0,0.6)';
+			context.rect( widget_coords.left - 10, widget_coords.top - 10, widget_width + 20, widget_height + 20 );
+			context.lineWidth = 1;
+			context.strokeStyle = 'black';
+			context.stroke();
+			
+			context.beginPath();
+			context.clearRect( widget_coords.left - 10, widget_coords.top - 10, widget_width + 20, widget_height + 20 );
+
+			$( '.wp-customizer' ).addClass( 'highlight' );
 		},
 
 		/**
@@ -608,8 +633,12 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			// Highlight whenever hovering or clicking over the form
-			control.container.on( 'mouseenter click', function () {
-				control.highlightPreviewWidget();
+			control.container.on( 'click', function () {
+				//control.highlightPreviewWidget();
+			});
+
+			control.container.on( 'mouseleave', function () {
+				//$( '.wp-customizer' ).removeClass( 'highlight' );
 			});
 
 			// Highlight when the setting is updated
@@ -620,7 +649,7 @@ var WidgetCustomizer = (function ($) {
 
 			// Highlight when the widget form is expanded
 			control.container.on( 'expand', function () {
-				control.scrollPreviewWidgetIntoView();
+				//control.scrollPreviewWidgetIntoView();
 			});
 
 		}
