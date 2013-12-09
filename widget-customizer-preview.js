@@ -272,7 +272,12 @@ var WidgetCustomizerPreview = (function ($) {
 							// Force the callback to fire if this widget is newly-added
 							if ( from.indexOf( widget_id ) === -1 ) {
 								self.refreshTransports();
-								setting.callbacks.fireWith( setting, [ setting(), null ] );
+								var parent_setting = parent.wp.customize( setting_id );
+								if ( 'postMessage' === parent_setting.transport ) {
+									setting.callbacks.fireWith( setting, [ setting(), null ] );
+								} else {
+									self.preview.send( 'refresh' );
+								}
 							}
 						} );
 
