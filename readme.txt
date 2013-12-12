@@ -2,7 +2,7 @@
 Contributors:      X-team, westonruter, johnregan3, akeda, topher1kenobe, topquarky, bobbravo2, ricardocorreia
 Tags:              customizer, widgets, sidebars, preview
 Requires at least: 3.6
-Tested up to:      3.7.1
+Tested up to:      3.8
 Stable tag:        trunk
 License:           GPLv2 or later
 License URI:       http://www.gnu.org/licenses/gpl-2.0.html
@@ -41,6 +41,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 6. I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
 == Changelog ==
+
+= 0.9.5 =
+* Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
 
 = 0.9.4 =
  * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).

@@ -63,6 +63,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Changelog ##
 
+### 0.9.5 ###
+* Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
+
 ### 0.9.4 ###
 * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
  * Apply some jshint fixes and update plugin dev library
