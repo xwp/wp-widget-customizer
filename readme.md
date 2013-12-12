@@ -7,7 +7,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 **Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [johnregan3](http://profiles.wordpress.org/johnregan3), [akeda](http://profiles.wordpress.org/akeda), [topher1kenobe](http://profiles.wordpress.org/topher1kenobe), [topquarky](http://profiles.wordpress.org/topquarky), [bobbravo2](http://profiles.wordpress.org/bobbravo2), [ricardocorreia](http://profiles.wordpress.org/ricardocorreia)  
 **Tags:** [customizer](http://wordpress.org/plugins/tags/customizer), [widgets](http://wordpress.org/plugins/tags/widgets), [sidebars](http://wordpress.org/plugins/tags/sidebars), [preview](http://wordpress.org/plugins/tags/preview)  
 **Requires at least:** 3.6  
-**Tested up to:** 3.7.1  
+**Tested up to:** 3.8  
 **Stable tag:** trunk (master)  
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)  
 
@@ -33,7 +33,7 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 **Development of this plugin is done [on GitHub](https://github.com/x-team/wp-widget-customizer). Pull requests welcome. Please see [issues](https://github.com/x-team/wp-widget-customizer/issues) reported there before going to the plugin forum.**
 
-[![Build Status](https://travis-ci.org/x-team/wp-widget-customizer.png)](https://travis-ci.org/x-team/wp-widget-customizer)
+[![Build Status](https://travis-ci.org/x-team/wp-widget-customizer.png?branch=master)](https://travis-ci.org/x-team/wp-widget-customizer)
 
 ## Screenshots ##
 
@@ -62,6 +62,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 ![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-6.jpg)
 
 ## Changelog ##
+
+### 0.9.5 ###
+* Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
 
 ### 0.9.4 ###
 * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
