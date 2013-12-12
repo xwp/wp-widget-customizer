@@ -583,12 +583,7 @@ var WidgetCustomizer = (function ($) {
 		 * Inside of the customizer preview, scroll the widget into view
 		 */
 		scrollPreviewWidgetIntoView: function () {
-			var control = this;
-			var widget_el = control.getPreviewWidgetElement();
 			// @todo scrollIntoView() provides a robust but very poor experience. Animation is needed. See https://github.com/x-team/wp-widget-customizer/issues/16
-			if ( widget_el.length ) {
-				widget_el[0].scrollIntoView( false );
-			}
 		},
 
 		/**
