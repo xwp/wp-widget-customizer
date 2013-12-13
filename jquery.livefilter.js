@@ -17,10 +17,12 @@
 			before: function(){},
 			after: function(){}
 		};
-		var options = $.extend(defaults, options);
+		options = $.extend(defaults, options);
 		
 		var el = $(this).find(filterEl);
-		if (options.filterChildSelector) el = el.find(options.filterChildSelector);
+		if (options.filterChildSelector) {
+			el = el.find(options.filterChildSelector);
+		}
 
 		var filter = options.filter;
 		$(inputEl).keyup(function(){
@@ -46,5 +48,5 @@
 			
 			options.after.call(this, contains, containsNot);
 		});
-	}
+	};
 })(jQuery);
