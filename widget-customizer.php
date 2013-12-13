@@ -295,7 +295,10 @@ class Widget_Customizer {
 			 * Add setting for each widget, and a control for each active widget (located in a sidebar)
 			 */
 			foreach ( $sidebar_widget_ids as $i => $widget_id ) {
-				assert( isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) );
+				// Skip widgets that may have gone away due to a plugin being deactivated
+				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
+					continue;
+				}
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
 				$setting_id = self::get_setting_id( $widget_id );
 				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );

@@ -70,6 +70,12 @@ var WidgetCustomizer = (function ($) {
 			control.setting.bind( function( new_widget_ids, old_widget_ids ) {
 				var removed_widget_ids = _( old_widget_ids ).difference( new_widget_ids );
 
+				// Filter out any persistent widget_ids for widgets which have been deactivated
+				new_widget_ids = _( new_widget_ids ).filter( function ( new_widget_id ) {
+					var parsed_widget_id = parse_widget_id( new_widget_id );
+					return !! self.available_widgets.findWhere({ id_base: parsed_widget_id.id_base } );
+				} );
+
 				var widget_form_controls = _( new_widget_ids ).map( function ( widget_id ) {
 					var widget_form_control = self.getWidgetFormControlForWidget( widget_id );
 					if ( ! widget_form_control ) {
@@ -197,18 +203,9 @@ var WidgetCustomizer = (function ($) {
 		 */
 		addWidget: function ( widget_id ) {
 			var control = this;
-			var widget_number = null;
-			var widget_id_base = null;
-			var matches = widget_id.match( /^(.+)-(\d+)$/ );
-			if ( matches ) {
-				widget_id_base = matches[1];
-				widget_number = parseInt( matches[2], 10 );
-			}
-			else {
-				// could be an old single widget, or adding a new widget
-				widget_id_base = widget_id;
-			}
-
+			var parsed_widget_id = parse_widget_id( widget_id );
+			var widget_number = parsed_widget_id.number;
+			var widget_id_base = parsed_widget_id.id_base;
 			var widget = self.available_widgets.findWhere({id_base: widget_id_base});
 			if ( ! widget ) {
 				throw new Error( 'Widget unexpectedly not found.' );
@@ -657,6 +654,26 @@ var WidgetCustomizer = (function ($) {
 		});
 		return found_control;
 	};
+
+	/**
+	 * @param {String} widget_id
+	 * @returns {Object}
+	 */
+	function parse_widget_id( widget_id ) {
+		var parsed = {
+			number: null,
+			id_base: null
+		};
+		var matches = widget_id.match( /^(.+)-(\d+)$/ );
+		if ( matches ) {
+			parsed.id_base = matches[1];
+			parsed.number = parseInt( matches[2], 10 );
+		} else {
+			// likely an old single widget
+			parsed.id_base = widget_id;
+		}
+		return parsed;
+	}
 
 	return self;
 }( jQuery ));
