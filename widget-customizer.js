@@ -184,12 +184,11 @@ var WidgetCustomizer = (function ($) {
 		setupAddition: function () {
 			var control = this;
 
-			control.container.find( '.add-new-widget' ).on( 'click', function() {
+			control.container.find( '.add-new-widget' ).on( 'click keydown', function() {
 				// @todo the active_sidebar_control should be set when a sidebar is opened
 				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
 					self.active_sidebar_control = control;
 					$( 'body' ).addClass( 'adding-widget' );
-					$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget-tpl', '.widget-title h4' );
 					$( '#available-widgets-filter input' ).focus();
 				}
 				else {
@@ -672,6 +671,26 @@ var WidgetCustomizer = (function ($) {
 			}
 			self.active_sidebar_control.addWidget( widget.get( 'id_base' ) );
 			$( 'body' ).removeClass( 'adding-widget' );
+		} );
+
+		$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget-tpl', '.widget-title h4' );
+
+		$( '#available-widgets' ).on( 'keydown', function ( event ) {
+			var is_enter = ( ( event.keyCode || event.which ) === 13 );
+			var is_esc = ( ( event.keyCode || event.which ) === 27 );
+			var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
+			if ( is_enter ) {
+				if ( ! first_visible_widget.length ) {
+					return;
+				}
+				first_visible_widget.click();
+			}
+			else if ( is_esc ) {
+				$( 'body' ).removeClass( 'adding-widget' );
+				if ( self.active_sidebar_control ) {
+					self.active_sidebar_control.container.find( '.add-new-widget' ).focus();
+				}
+			}
 		} );
 	};
 

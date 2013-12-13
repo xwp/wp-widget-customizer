@@ -17,7 +17,7 @@ class Sidebar_Widgets_WP_Customize_Control extends WP_Customize_Control {
 
 	public function render_content() {
 		?>
-		<span class="add-new-widget">
+		<span class="add-new-widget" tabindex="0">
 			<b><?php esc_html_e( 'Add a Widget', 'widget-customizer' ) ?></b>
 		</span>
 		<?php

@@ -100,9 +100,16 @@
 }
 .add-new-widget:hover {
 	opacity: 0.8;
+	outline: none;
 }
 .add-new-widget:active {
 	opacity: 0.6;
+}
+.add-new-widget:focus {
+	outline: none;
+}
+.add-new-widget:focus b {
+	outline: 1px dotted;
 }
 .add-new-widget:before {
 	content: "\f132";
