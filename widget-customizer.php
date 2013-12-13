@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widget Customizer
  * Description: Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
- * Version:     0.9.5
+ * Version:     0.9.6
  * Author:      X-Team
  * Author URI:  http://x-team.com/wordpress/
  * License:     GPLv2+
@@ -269,10 +269,7 @@ class Widget_Customizer {
 				$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 				if ( $is_active_sidebar ) {
 					$section_args = array(
-						'title' => sprintf(
-							__( 'Widgets: %s', 'widget-customizer' ),
-							$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
-						),
+						'title' => sprintf( __( 'Wodgets: %s', 'widget-customizer' ), $GLOBALS['wp_registered_sidebars'][$sidebar_id]['name'] ),
 						'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
 					);
 					$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
@@ -295,7 +292,10 @@ class Widget_Customizer {
 			 * Add setting for each widget, and a control for each active widget (located in a sidebar)
 			 */
 			foreach ( $sidebar_widget_ids as $i => $widget_id ) {
-				assert( isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) );
+				// Skip widgets that may have gone away due to a plugin being deactivated
+				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
+					continue;
+				}
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
 				$setting_id = self::get_setting_id( $widget_id );
 				$wp_customize->add_setting( $setting_id, self::get_setting_args( $setting_id ) );
@@ -413,11 +413,8 @@ class Widget_Customizer {
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
 				<?php
 				$icon_path = sprintf( plugin_dir_path( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
-				$icon_url  = plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
-				if ( file_exists( $icon_path ) ) {
-					$icon_url = sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
-				}
-				$icon_url = apply_filters( 'widget_icon_url', $icon_url, $available_widget['id'] );
+				$icon_url  = file_exists( $icon_path ) ? sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] ) : plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
+				$icon_url  = apply_filters( 'widget_icon_url', $icon_url, $available_widget['id'] );
 				?>
 				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
 					<?php if ( ! empty( $icon_url ) ): ?>
