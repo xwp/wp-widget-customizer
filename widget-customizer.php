@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widget Customizer
  * Description: Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
- * Version:     0.9.5
+ * Version:     0.9.6
  * Author:      X-Team
  * Author URI:  http://x-team.com/wordpress/
  * License:     GPLv2+
@@ -269,10 +269,7 @@ class Widget_Customizer {
 				$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 				if ( $is_active_sidebar ) {
 					$section_args = array(
-						'title' => sprintf(
-							__( 'Sidebar: %s', 'widget-customizer' ),
-							$GLOBALS['wp_registered_sidebars'][$sidebar_id]['name']
-						),
+						'title' => sprintf( __( 'Sidebar: %s', 'widget-customizer' ), $GLOBALS['wp_registered_sidebars'][$sidebar_id]['name'] ),
 						'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
 					);
 					$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );

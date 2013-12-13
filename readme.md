@@ -63,6 +63,9 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Changelog ##
 
+### 0.9.6 ###
+* Skip over instances for widgets no longer registered (as core does), eliminating assertion warnings. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#48](https://github.com/x-team/wp-widget-customizer/issues/48).
+
 ### 0.9.5 ###
 * Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
 
