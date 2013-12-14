@@ -762,7 +762,7 @@ class Widget_Customizer {
 		$exports = array(
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
 			'i18n' => array(
-				'widget_tooltip' => __( 'Edit widget in customizer...', 'widget-customizer' ),
+				'widget_tooltip' => __( 'Press shift and then click to edit widget in customizer...', 'widget-customizer' ),
 			),
 			'render_widget_ajax_action' => self::RENDER_WIDGET_AJAX_ACTION,
 			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),

@@ -72,8 +72,12 @@ var WidgetCustomizerPreview = (function ($) {
 				}
 			});
 
-			// @todo click can interfere with interacting with the widget in the preview window; better to make a EDIT link overlay appear when hovering over the widget?
-			$(document).on( 'click', selector, function () {
+			// Open expand the widget control when shift+clicking the widget element
+			$(document).on( 'click', selector, function ( e ) {
+				if ( ! e.shiftKey ) {
+					return;
+				}
+				e.preventDefault();
 				var control = parent.WidgetCustomizer.getWidgetFormControlForWidget( $(this).prop('id') );
 				if ( control ) {
 					control.expandControlSection();
