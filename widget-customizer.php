@@ -830,7 +830,7 @@ class Widget_Customizer {
 			if ( in_array( $sidebar_id, self::$rendered_sidebars ) ) {
 				continue;
 			}
-			if ( is_array( $widget_ids ) && in_array( $widget['id'], $widget_ids ) ) {
+			if ( isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) && is_array( $widget_ids ) && in_array( $widget['id'], $widget_ids ) ) {
 				self::$rendered_sidebars[] = $sidebar_id;
 			}
 		}
@@ -843,7 +843,9 @@ class Widget_Customizer {
 	 * @filter temp_is_active_sidebar
 	 */
 	static function tally_sidebars_via_is_active_sidebar_calls( $is_active, $sidebar_id ) {
-		self::$rendered_sidebars[] = $sidebar_id;
+		if ( isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) ) {
+			self::$rendered_sidebars[] = $sidebar_id;
+		}
 		// We may need to force this to true, and also force-true the value for temp_dynamic_sidebar_has_widgets
 		// if we want to ensure that there is an area to drop widgets into, if the sidebar is empty.
 		return $is_active;
@@ -856,7 +858,9 @@ class Widget_Customizer {
 	 * @filter temp_dynamic_sidebar_has_widgets
 	 */
 	static function tally_sidebars_via_dynamic_sidebar_calls( $has_widgets, $sidebar_id ) {
-		self::$rendered_sidebars[] = $sidebar_id;
+		if ( isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] ) ) {
+			self::$rendered_sidebars[] = $sidebar_id;
+		}
 		// We may need to force this to true, and also force-true the value for temp_is_active_sidebar
 		// if we want to ensure that there is an area to drop widgets into, if the sidebar is empty.
 		return $has_widgets;
