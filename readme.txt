@@ -1,5 +1,5 @@
 === Widget Customizer ===
-Contributors:      X-team, westonruter, johnregan3, akeda, topher1kenobe, topquarky, bobbravo2, ricardocorreia
+Contributors:      X-team, westonruter, shaunandrews, johnregan3, akeda, topher1kenobe, topquarky, bobbravo2, ricardocorreia
 Tags:              customizer, widgets, sidebars, preview
 Requires at least: 3.6
 Tested up to:      3.8
@@ -11,25 +11,35 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 == Description ==
 
-**Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary were [removed for 3.7](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar for it to appear in the customizer.
+**NEW** Changes to sidebars and widgets no longer require a full page refresh of the preview window. See Live Previews section.
+
+**Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
 
 **This plugin is being developed as part of the Widgets UI Refresh feature-as-plugin group. We're hoping it will be accepted into WordPress Core for the 3.9 release, so we are targeting presentation for inclusion in the release at the beginning of the 3.9 development cycle tentatively in December 2013.**
 
-Widgets in WordPress provide an easy way to add functionality to predefined areas of your theme templates. However, once you add a widget to a sidebar you have to leave the WordPress admin to go back to the frontend to actually see how the updated widget appears in the sidebar on your site's public frontend. While you are making these changes and experimenting with a widget, it could be completely broken and everyone visiting your site will see this broken widget since there is no core way to preview changes made to widgets. But WordPress also provides an excellent way to preview changes to various settings on your site via the Theme Customizer. Changes made when using the Customizer are not visible to site visitors until you hit Save & Publish. So what if widgets could be edited in the Theme Customizer? That's what this plugin makes possible.
+Widgets in WordPress provide an easy way to add functionality to predefined areas of your theme templates. However, once you add a widget to a sidebar you have to leave the WordPress admin to go back to the frontend to actually see how the updated widget appears in the sidebar on your site's public frontend. While you are making these changes and experimenting with a widget, it could be completely broken and everyone visiting your site will see this broken widget since there is no core way to preview changes made to widgets. But WordPress also provides an excellent way to preview changes to various settings on your site via the (Theme) Customizer. Changes made when using the Customizer are not visible to site visitors until you hit Save & Publish. So what if widgets could be edited in the Customizer? That's what this plugin makes possible.
 
-Each registered sidebar on your site will get its own section in the Theme Customizer panel. Within each Sidebar Widgets section, each widget added to the sidebar will appear in order and its widget form will appear there just as it appears when editing widgets in the WordPress widgets admin page. Upon making a change to the widget form, press the form's Update button to then see the changes in the preview window and to stage the widget changes for committing once the **Save & Publish** button is clicked. Again, changes made when in the Theme Customizer do not appear until you hit this button. This goes for whether you're adding a new widget, editing existing widgets, reordering widgets, dragging widgets to other sidebars, or even removing widgets from the sidebars entirely: all of these actions are previewable.
+Each registered sidebar on your site gets its own section in the Customizer panel. Within each Sidebar Widgets section, each widget added to the sidebar will appear in order and its widget form will appear there just as it appears when editing widgets in the WordPress widgets admin page (note that wide widget controls are not currently supported, see [#18](https://github.com/x-team/wp-widget-customizer/issues/18)). Upon making a change to the widget form, press the form's Update button to then see the changes in the preview window and to stage the widget changes for committing once the **Save & Publish** button is clicked. Again, changes made when in the Customizer do not appear until you hit this button. This goes for whether you're adding a new widget, editing existing widgets, reordering widgets, dragging widgets to other sidebars, or even removing widgets from the sidebars entirely: all of these actions are previewable.
 
 When you remove a widget from a sidebar, it is not deleted. Instead, it is moved from an active sidebar to the "Inactive Widgets" sidebar which can currently be seen on the widgets admin page. As such, removing a widget now is the same as trashing a widget.
 
 Customizer control sections for sidebars will be shown or hidden dynamically when the the preview window is initially loaded or when navigating the site within the preview window, based on whether or not the sidebar got rendered in the previewed page. Only sidebars which can be previewed will be shown in the customizer panel.
 
-No longer do you have to edit your widgets blind!
+*No longer do you have to edit your widgets blind!*
 
 [youtube http://www.youtube.com/watch?v=D1GHc5OGWEQ]
 
 And here's an **awesome bonus**: since the widgets are registered as settings in the customizer, if you also have the [Settings Revisions](http://wordpress.org/plugins/settings-revisions/) plugin also activated, the widgets will then get versioned! Each time you save your changes, the current instance of each widget will be saved in a revision, and you can restore a previous widget state by rolling back the settings revision.
 
 **Development of this plugin is done [on GitHub](https://github.com/x-team/wp-widget-customizer). Pull requests welcome. Please see [issues](https://github.com/x-team/wp-widget-customizer/issues) reported there before going to the plugin forum.**
+
+== Live Previews ==
+
+As of v0.10, changes to sidebars and widgets no longer require a full page refresh of the preview window in order to see the changes applied. To take advantage of this capability, both the theme and the widgets must indicate that they support live previewing in the Customizer. All core widgets and themes distributed with WordPress core are supported by default. Include `add_theme_support( 'widget-customizer' );` in your theme's `functions.php` to opt-in. If your theme does some dynamic layout for a sidebar (like Twenty Thirteen uses jQuery Masonry), you'll also need to enqueue some JavaScript to listen for changes to the sidebar and reflow them when that happens; see the [bundled support](https://github.com/x-team/wp-widget-customizer/blob/develop/theme-support/twentythirteen.js) for Twenty Thirteen to see an example of what is required.
+
+Along with a themes needing to indicate support for live-previewable sidebars, widgets must also indicate that they support being live-previewed. When updating a widget, an Ajax call is made to re-render the widge with the latest changes, and then the widget element is replaced in the sidebar inside the preview. If a widget is purely static HTML with no associated script behaviors or dynamic stylesheets (like all widgets in core), then they can freely opt-in to live previews simply by including `add_filter( 'customizer_widget_live_previewable_{id_base}', '__return_true' );`. If a widget has dynamic behaviors (e.g. such as a widget which includes a carousel) which normally only get added when the page first loads, then a script needs to be enqueued in the Customizer preview which will re-initialize the widget when a widget is changed.
+
+The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize` when sidebars and widgets get updated respectively, each being passed the sidebar ID and the widget ID respectively as the first argument in the callbacks.
 
 == Screenshots ==
 
@@ -42,11 +52,14 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 == Changelog ==
 
+= 0.10 =
+Allow themes and widgets to support previewing changes to sidebars and widgets without resorting to refreshing the entire preview window. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#37](https://github.com/x-team/wp-widget-customizer/pull/37).
+
 = 0.9.6 =
-* Skip over instances for widgets no longer registered (as core does), eliminating assertion warnings. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#48](https://github.com/x-team/wp-widget-customizer/issues/48).
+Skip over instances for widgets no longer registered (as core does), eliminating assertion warnings. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#48](https://github.com/x-team/wp-widget-customizer/issues/48).
 
 = 0.9.5 =
-* Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
+Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#57](https://github.com/x-team/wp-widget-customizer/issues/57).
 
 = 0.9.4 =
  * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
@@ -57,10 +70,10 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
  * Trigger widget update when hitting enter in control input. Fixes [#47](https://github.com/x-team/wp-widget-customizer/issues/47).
 
 = 0.9.2 =
- * Fix addition of previously-uninstantiated widgets to previously-empty sidebars. It was not possible to add new widgets to a fresh install. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+Fix addition of previously-uninstantiated widgets to previously-empty sidebars. It was not possible to add new widgets to a fresh install. Props [westonruter](http://profiles.wordpress.org/westonruter/).
 
 = 0.9.1 =
- * Render widget control templates into DOM for plugins to manipulate. The Jetpack Widget Visibility module expects the widget templates to be rendered into the DOM as hidden elements so that it can inject the "Visibility" button in the proper place. So we have to move the templates from the model and into the DOM for compat. Other plugins probably do this as well. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+Render widget control templates into DOM for plugins to manipulate. The Jetpack Widget Visibility module expects the widget templates to be rendered into the DOM as hidden elements so that it can inject the "Visibility" button in the proper place. So we have to move the templates from the model and into the DOM for compat. Other plugins probably do this as well. Props [westonruter](http://profiles.wordpress.org/westonruter/).
 
 = 0.9 =
 * Add support for adding new widgets in the customizer. Widgets can now be added, reordered, modified, and deleted all in the customizer preview, without impacting any visitor to the site until you hit **Save & Publish**. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#3](https://github.com/x-team/wp-widget-customizer/issues/3).
