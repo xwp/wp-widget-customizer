@@ -10,7 +10,11 @@ var WidgetCustomizer = (function ($) {
 		update_widget_nonce_post_key: null,
 		i18n: {},
 		available_widgets: [],
-		active_sidebar_control: null
+		active_sidebar_control: null,
+		sidebars_eligible_for_post_message: {},
+		widgets_eligible_for_post_message: {},
+		current_theme_supports: false,
+		previewer: null
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -105,8 +109,13 @@ var WidgetCustomizer = (function ($) {
 				// Re-sort widget form controls
 				sidebar_widgets_add_control.before( final_control_containers );
 
+				var must_refresh_preview = false;
+
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
+					if ( widget_form_control.params.sidebar_id !== control.params.sidebar_id ) {
+						must_refresh_preview = true;
+					}
 					widget_form_control.params.sidebar_id = control.params.sidebar_id;
 				} );
 
@@ -117,7 +126,7 @@ var WidgetCustomizer = (function ($) {
 						return;
 					}
 
-					// Detect if widget dragged to another sidebar and abort
+					// Detect if widget control was dragged to another sidebar and abort
 					if ( ! $.contains( control.section_content[0], removed_control.container[0] ) ) {
 						return;
 					}
@@ -136,6 +145,10 @@ var WidgetCustomizer = (function ($) {
 						widget.set( 'is_disabled', false );
 					}
 				} );
+
+				if ( must_refresh_preview ) {
+					self.previewer.refresh();
+				}
 			});
 		},
 
@@ -255,10 +268,16 @@ var WidgetCustomizer = (function ($) {
 			// Only create setting if it doesn't already exist (if we're adding a pre-existing inactive widget)
 			var is_existing_widget = wp.customize.has( setting_id );
 			if ( ! is_existing_widget ) {
-				wp.customize.create( setting_id, setting_id, {}, {
-					transport: widget.get( 'transport' ),
+				var setting_args = {
+					transport: 'refresh', // preview window will opt-in to postMessage if available
 					previewer: control.setting.previewer
-				} );
+				};
+				var sidebar_can_live_preview = self.getPreviewWindow().WidgetCustomizerPreview.sidebarCanLivePreview( control.params.sidebar_id );
+				var widget_can_live_preview = !! self.widgets_eligible_for_post_message[ widget_id_base ];
+				if ( self.current_theme_supports && sidebar_can_live_preview && widget_can_live_preview ) {
+					setting_args.transport = 'postMessage';
+				}
+				wp.customize.create( setting_id, setting_id, {}, setting_args );
 			}
 
 			var Constructor = wp.customize.controlConstructor[customize_control_type];
@@ -267,7 +286,7 @@ var WidgetCustomizer = (function ($) {
 					settings: {
 						'default': setting_id
 					},
-					sidebar_id: control.sidebar_id,
+					sidebar_id: control.params.sidebar_id,
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type
@@ -391,6 +410,11 @@ var WidgetCustomizer = (function ($) {
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
+			self.previewer.bind( 'widget-updated', function ( updated_widget_id ) {
+				if ( updated_widget_id === control.params.widget_id ) {
+					control.container.removeClass( 'previewer-loading' );
+				}
+			} );
 
 			control.setupControlToggle();
 			control.setupWidgetTitle();
@@ -545,12 +569,7 @@ var WidgetCustomizer = (function ($) {
 		 * Inside of the customizer preview, scroll the widget into view
 		 */
 		scrollPreviewWidgetIntoView: function () {
-			var control = this;
-			var widget_el = control.getPreviewWidgetElement();
 			// @todo scrollIntoView() provides a robust but very poor experience. Animation is needed. See https://github.com/x-team/wp-widget-customizer/issues/16
-			if ( widget_el.length ) {
-				widget_el[0].scrollIntoView( false );
-			}
 		},
 
 		/**
@@ -611,6 +630,18 @@ var WidgetCustomizer = (function ($) {
 
 		}
 	});
+
+	/**
+	 * Capture the instance of the Previewer since it is private
+	 */
+	var OldPreviewer = wp.customize.Previewer;
+	wp.customize.Previewer = OldPreviewer.extend( {
+		initialize: function( params, options ) {
+			self.previewer = this;
+			OldPreviewer.prototype.initialize.call( this, params, options );
+			this.bind( 'refresh', this.refresh );
+		}
+	} );
 
 	/**
 	 * Given a widget control, find the sidebar widgets control that contains it.
@@ -692,6 +723,13 @@ var WidgetCustomizer = (function ($) {
 				}
 			}
 		} );
+	};
+
+	/**
+	 * @returns {DOMWindow}
+	 */
+	self.getPreviewWindow = function (){
+		return $( '#customize-preview' ).find( 'iframe' ).prop( 'contentWindow' );
 	};
 
 	/**
