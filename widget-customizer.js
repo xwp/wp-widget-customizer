@@ -163,6 +163,7 @@ var WidgetCustomizer = (function ($) {
 			 */
 			control.section_content.sortable({
 				items: '> .customize-control-widget_form',
+				handle: '.widget-top',
 				axis: 'y',
 				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
 				update: function () {
