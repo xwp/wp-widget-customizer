@@ -197,7 +197,12 @@ var WidgetCustomizer = (function ($) {
 		setupAddition: function () {
 			var control = this;
 
-			control.container.find( '.add-new-widget' ).on( 'click keydown', function() {
+			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
+				var keycode = ( event.keyCode || event.which );
+				if ( event.type === 'keydown' && ! ( keycode === 13 || keycode === 32 ) ) { // Enter or Spacebar
+					return;
+				}
+
 				// @todo the active_sidebar_control should be set when a sidebar is opened
 				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
 					self.active_sidebar_control = control;
