@@ -13,7 +13,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 ## Description ##
 
-**NEW** Changes to sidebars and widgets no longer require a full page refresh of the preview window. See Live Previews section.
+**NEW** Changes to sidebars and widgets no longer require a full page refresh of the preview window. See §[Live Previews](http://wordpress.org/plugins/widget-customizer/other_notes/#Live-Previews).
 
 **Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
 
@@ -27,6 +27,8 @@ When you remove a widget from a sidebar, it is not deleted. Instead, it is moved
 
 Customizer control sections for sidebars will be shown or hidden dynamically when the the preview window is initially loaded or when navigating the site within the preview window, based on whether or not the sidebar got rendered in the previewed page. Only sidebars which can be previewed will be shown in the customizer panel.
 
+While all themes and widgets can work with Widget Customizer, for the best experience the themes and widgets need to indicate they support live previews of widgets. Without such support added, each change to a sidebar or widget will result in the preview window being refreshed, resulting in a delay before the changes can be seen. See Read more about §[Live Previews](http://wordpress.org/plugins/widget-customizer/other_notes/#Live-Previews).
+
 *No longer do you have to edit your widgets blind!*
 
 [![Play video on YouTube](http://i1.ytimg.com/vi/D1GHc5OGWEQ/hqdefault.jpg)](http://www.youtube.com/watch?v=D1GHc5OGWEQ)
@@ -39,11 +41,13 @@ And here's an **awesome bonus**: since the widgets are registered as settings in
 
 ## Live Previews ##
 
-As of v0.10, changes to sidebars and widgets no longer require a full page refresh of the preview window in order to see the changes applied. To take advantage of this capability, both the theme and the widgets must indicate that they support live previewing in the Customizer. All core widgets and themes distributed with WordPress core are supported by default. Include `add_theme_support( 'widget-customizer' );` in your theme's `functions.php` to opt-in. If your theme does some dynamic layout for a sidebar (like Twenty Thirteen uses jQuery Masonry), you'll also need to enqueue some JavaScript to listen for changes to the sidebar and reflow them when that happens; see the [bundled support](https://github.com/x-team/wp-widget-customizer/blob/develop/theme-support/twentythirteen.js) for Twenty Thirteen to see an example of what is required.
+While all themes and widgets can work with Widget Customizer, by default each change to a sidebar or widget will result in the preview window being refreshed (settings default to `transport=refresh`), resulting in a delay before the changes can be seen. As of v0.10, changes to sidebars and widgets no longer require a full page refresh of the preview window in order to see the changes applied. To enable a much more responsive preview experience, themes and widgets must indicate that they support Widget Customizer live previews (which will, in part, add `transport=postMessage` for the relevant settings).
 
-Along with a themes needing to indicate support for live-previewable sidebars, widgets must also indicate that they support being live-previewed. When updating a widget, an Ajax call is made to re-render the widge with the latest changes, and then the widget element is replaced in the sidebar inside the preview. If a widget is purely static HTML with no associated script behaviors or dynamic stylesheets (like all widgets in core), then they can freely opt-in to live previews simply by including `add_filter( 'customizer_widget_live_previewable_{id_base}', '__return_true' );`. If a widget has dynamic behaviors (e.g. such as a widget which includes a carousel) which normally only get added when the page first loads, then a script needs to be enqueued in the Customizer preview which will re-initialize the widget when a widget is changed.
+All core widgets and themes distributed with WordPress core are supported by default. For other themes, simply add `add_theme_support( 'widget-customizer' );` in your theme's `functions.php` to opt-in. If your theme does some dynamic layout for a sidebar (like Twenty Thirteen uses jQuery Masonry), you'll also need to then enqueue some JavaScript to listen for changes to the sidebar and reflow them when that happens; see the [bundled support](https://github.com/x-team/wp-widget-customizer/blob/develop/theme-support/twentythirteen.js) for Twenty Thirteen to see an example of what is required.
 
-The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize` when sidebars and widgets get updated respectively, each being passed the sidebar ID and the widget ID respectively as the first argument in the callbacks.
+Along with a themes needing to indicate support for live-previewable sidebars, widgets must also indicate that they support being live-previewed with Widget Customizer. When updating a widget, an Ajax call is made to re-render the widget with the latest changes, and then the widget element is replaced in the sidebar inside the preview. If a widget is purely static HTML with no associated script behaviors or dynamic stylesheets (like all widgets in core), then they can right-away indicate support for live previews simply by including `add_filter( 'customizer_widget_live_previewable_{id_base}', '__return_true' );`. As with sidebars, if a widget has dynamic behaviors which normally only get added when the page first loads (e.g. such as a widget which includes a carousel) , then a script needs to be enqueued in the Customizer preview which will re-initialize the widget when a widget is changed.
+
+The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize` when sidebars and widgets get updated respectively, each being passed the sidebar ID and the widget ID respectively as the first argument in the callbacks. For a full example demonstrating how to add theme support for live-previewing dynamic sidebars and how to add support for JS-initialized widgets, see this [annotated Gist](https://gist.github.com/westonruter/7965203).
 
 ## Screenshots ##
 
@@ -72,6 +76,10 @@ The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize
 ![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-6.jpg)
 
 ## Changelog ##
+
+### 0.10.1 ###
+* Require shift key when clicking on a widget in the preview to open and focus on the widget in the customizer. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+ * Prevent edge case error where `dynamic_sidebar` is called for a non-registered sidebar. Props [westonruter](http://profiles.wordpress.org/westonruter/).
 
 ### 0.10 ###
 Allow themes and widgets to support previewing changes to sidebars and widgets without resorting to refreshing the entire preview window. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#37](https://github.com/x-team/wp-widget-customizer/pull/37).
