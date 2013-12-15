@@ -715,7 +715,13 @@ var WidgetCustomizer = (function ($) {
 				$( 'body' ).removeClass( 'adding-widget' );
 			} );
 
-			$( '#available-widgets' ).liveFilter( '#available-widgets-filter input', '.widget-tpl', '.widget-title h4' );
+			$( '#available-widgets' ).liveFilter(
+				'#available-widgets-filter input',
+				'.widget-tpl',
+				{
+					filterChildSelector: '.widget-title h4'
+				}
+			);
 
 			$( '#available-widgets' ).on( 'keydown', function ( event ) {
 				var is_enter = ( ( event.keyCode || event.which ) === 13 );
