@@ -6,7 +6,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 **Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [shaunandrews](http://profiles.wordpress.org/shaunandrews), [johnregan3](http://profiles.wordpress.org/johnregan3), [akeda](http://profiles.wordpress.org/akeda), [topher1kenobe](http://profiles.wordpress.org/topher1kenobe), [topquarky](http://profiles.wordpress.org/topquarky), [bobbravo2](http://profiles.wordpress.org/bobbravo2), [ricardocorreia](http://profiles.wordpress.org/ricardocorreia)  
 **Tags:** [customizer](http://wordpress.org/plugins/tags/customizer), [widgets](http://wordpress.org/plugins/tags/widgets), [sidebars](http://wordpress.org/plugins/tags/sidebars), [preview](http://wordpress.org/plugins/tags/preview)  
-**Requires at least:** 3.6  
+**Requires at least:** 3.7  
 **Tested up to:** 3.8  
 **Stable tag:** trunk (master)  
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)  

@@ -1,7 +1,7 @@
 === Widget Customizer ===
 Contributors:      X-team, westonruter, shaunandrews, johnregan3, akeda, topher1kenobe, topquarky, bobbravo2, ricardocorreia
 Tags:              customizer, widgets, sidebars, preview
-Requires at least: 3.6
+Requires at least: 3.7
 Tested up to:      3.8
 Stable tag:        trunk
 License:           GPLv2 or later
