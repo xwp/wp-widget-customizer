@@ -527,6 +527,7 @@ class Widget_Customizer {
 				</div>
 			<?php endforeach; ?>
 		</div>
+		<canvas id="focus-overlay" height="0" width="0"></canvas>
 		<?php
 	}
 

@@ -66,3 +66,17 @@
 #customize-theme-controls .accordion-section-content .widget {
 	color: black;
 }
+
+/* Fancy Widget Highligher */
+#focus-overlay {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.3s ease-in-out;
+	position: absolute;
+		top: 0;
+		left: 0;
+}
+
+.highlight #focus-overlay {
+	opacity: 1;
+}
