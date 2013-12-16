@@ -537,7 +537,7 @@ class Widget_Customizer {
 				$icon_url  = file_exists( $icon_path ) ? sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] ) : plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
 				$icon_url  = apply_filters( 'widget_icon_url', $icon_url, $available_widget['id'] );
 				?>
-				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
+				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>" tabindex="0">
 					<?php if ( ! empty( $icon_url ) ): ?>
 						<img src="<?php echo esc_url( $icon_url ) ?>" alt="Icon" class="widget-icon">
 					<?php endif; ?>

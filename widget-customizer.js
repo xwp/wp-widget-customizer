@@ -199,8 +199,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 
 			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
-				var keycode = ( event.keyCode || event.which );
-				if ( event.type === 'keydown' && ! ( keycode === 13 || keycode === 32 ) ) { // Enter or Spacebar
+				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
 					return;
 				}
 
@@ -705,6 +704,7 @@ var WidgetCustomizer = (function ($) {
 	 */
 	self.availableWidgetsPanel = {
 		active_sidebar_widgets_control: null,
+		selected_widget_tpl: null,
 
 		/**
 		 * Set up event listeners
@@ -714,69 +714,160 @@ var WidgetCustomizer = (function ($) {
 
 			var update_available_widgets_list = function () {
 				self.available_widgets.each(function ( widget ) {
-					$( '#widget-tpl-' + widget.id ).toggle( ! widget.get( 'is_disabled' ) );
+					var widget_tpl = $( '#widget-tpl-' + widget.id );
+					widget_tpl.toggle( ! widget.get( 'is_disabled' ) );
+					if ( widget.get( 'is_disabled' ) && widget_tpl.is( panel.selected_widget_tpl ) ) {
+						panel.selected_widget_tpl = null;
+					}
 				});
 			};
 
-			self.available_widgets.on('change', update_available_widgets_list);
+			self.available_widgets.on( 'change', update_available_widgets_list );
 			update_available_widgets_list();
 
-			$( '#available-widgets .widget-tpl' ).on( 'click', function( event ) {
-				event.stopPropagation();
-				var widget_id = $( this ).data( 'widget-id' );
-				var widget = self.available_widgets.findWhere({id: widget_id});
-				if ( ! widget ) {
-					throw new Error( 'Widget unexpectedly not found.' );
+			// Submit a selection when clicked or
+			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
+
+				if ( event.type === 'click' ) {
+					// @todo Why?
+					event.stopPropagation();
 				}
-				panel.active_sidebar_widgets_control.addWidget( widget.get( 'id_base' ) );
-				$( 'body' ).removeClass( 'adding-widget' );
+
+				// Only proceed with keypress if it is Enter or Spacebar
+				if ( event.type === 'keydown' && ( event.which !== 13 && event.which !== 32 ) ) {
+					return;
+				}
+
+				panel.submit( this );
 			} );
 
 			$( '#available-widgets' ).liveFilter(
 				'#available-widgets-filter input',
 				'.widget-tpl',
 				{
-					filterChildSelector: '.widget-title h4'
+					filterChildSelector: '.widget-title h4',
+					after: function () {
+						var filter_val = $( '#available-widgets-filter input' ).val();
+
+						// Remove a widget from being selected if it is no longer visible
+						if ( panel.selected_widget_tpl && ! panel.selected_widget_tpl.is( ':visible' ) ) {
+							panel.selected_widget_tpl.removeClass( 'selected' );
+							panel.selected_widget_tpl = null;
+						}
+
+						// If a widget was selected but the filter value has been cleared out, clear selection
+						if ( panel.selected_widget_tpl && ! filter_val ) {
+							panel.selected_widget_tpl.removeClass( 'selected' );
+							panel.selected_widget_tpl = null;
+						}
+
+						// If a filter has been entered and a widget hasn't been selected, select the first one shown
+						if ( ! panel.selected_widget_tpl && filter_val ) {
+							var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
+							if ( first_visible_widget.length ) {
+								panel.select( first_visible_widget );
+							}
+						}
+
+					}
 				}
 			);
 
+			// Select a widget when it is focused on
+			$( '#available-widgets > .widget-tpl' ).on( 'focus', function () {
+				panel.select( this );
+			} );
+
 			$( '#available-widgets' ).on( 'keydown', function ( event ) {
-				var is_enter = ( ( event.keyCode || event.which ) === 13 );
-				var is_esc = ( ( event.keyCode || event.which ) === 27 );
+				var is_enter = ( event.which === 13 );
+				var is_esc = ( event.which === 27 );
+				var is_down = ( event.which === 40 );
+				var is_up = ( event.which === 38 );
 				var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
-				if ( is_enter ) {
-					if ( ! first_visible_widget.length ) {
-						return;
+				var last_visible_widget = $( '#available-widgets > .widget-tpl:visible:last' );
+
+				if ( is_down || is_up ) {
+					if ( is_down ) {
+						if ( ! panel.selected_widget_tpl || panel.selected_widget_tpl.nextAll( '.widget-tpl:visible' ).length === 0 ) {
+							panel.selected_widget_tpl = first_visible_widget;
+						} else {
+							panel.selected_widget_tpl = panel.selected_widget_tpl.nextAll( '.widget-tpl:visible:first' );
+						}
+					} else if ( is_up ) {
+						if ( ! panel.selected_widget_tpl || panel.selected_widget_tpl.prevAll( '.widget-tpl:visible' ).length === 0 ) {
+							panel.selected_widget_tpl = last_visible_widget;
+						} else {
+							panel.selected_widget_tpl = panel.selected_widget_tpl.prevAll( '.widget-tpl:visible:first' );
+						}
 					}
-					first_visible_widget.click();
+					panel.selected_widget_tpl.focus();
+					return;
 				}
-				else if ( is_esc ) {
-					$( 'body' ).removeClass( 'adding-widget' );
-					if ( panel.active_sidebar_widgets_control ) {
-						panel.active_sidebar_widgets_control.container.find( '.add-new-widget' ).focus();
-					}
+
+				// If enter pressed but nothing entered, don't do anything
+				if ( is_enter && ! $( this ).val() ) {
+					return;
+				}
+
+				if ( is_enter ) {
+					panel.submit();
+				} else if ( is_esc ) {
+					panel.close( { return_focus: true } );
 				}
 			} );
 		},
 
 		/**
-		 *
+		 * @param widget_tpl
+		 */
+		select: function ( widget_tpl ) {
+			var panel = this;
+			panel.selected_widget_tpl = $( widget_tpl );
+			panel.selected_widget_tpl.siblings( '.widget-tpl' ).removeClass( 'selected' );
+			panel.selected_widget_tpl.addClass( 'selected' );
+		},
+
+		submit: function ( widget_tpl ) {
+			var panel = this;
+			if ( ! widget_tpl ) {
+				widget_tpl = panel.selected_widget_tpl;
+			}
+			if ( ! widget_tpl ) {
+				return;
+			}
+			panel.select( widget_tpl );
+
+			var widget_id = $( panel.selected_widget_tpl ).data( 'widget-id' );
+			var widget = self.available_widgets.findWhere({id: widget_id});
+			if ( ! widget ) {
+				throw new Error( 'Widget unexpectedly not found.' );
+			}
+			panel.active_sidebar_widgets_control.addWidget( widget.get( 'id_base' ) );
+			panel.close();
+		},
+
+		/**
 		 * @param sidebars_widgets_control
 		 */
 		open: function ( sidebars_widgets_control ) {
-
 			this.active_sidebar_widgets_control = sidebars_widgets_control;
 			$( 'body' ).addClass( 'adding-widget' );
+			$( '#available-widgets .widget-tpl' ).removeClass( 'selected' );
 			$( '#available-widgets-filter input' ).focus();
 		},
 
 		/**
 		 * Hide the panel
 		 */
-		close: function () {
-
-			$( 'body' ).removeClass( 'adding-widget' );
+		close: function ( options ) {
+			options = options || {};
+			if ( options.return_focus && this.active_sidebar_widgets_control ) {
+				this.active_sidebar_widgets_control.container.find( '.add-new-widget' ).focus();
+			}
 			this.active_sidebar_widgets_control = null;
+			this.selected_widget_tpl = null;
+			$( 'body' ).removeClass( 'adding-widget' );
+			$( '#available-widgets-filter input' ).val( '' );
 		}
 	};
 
