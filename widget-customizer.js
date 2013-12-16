@@ -321,7 +321,12 @@ var WidgetCustomizer = (function ($) {
 			} );
 
 			var form_autofocus = function () {
-				widget_form_control.container.find( '.widget-inside :input:first' ).focus();
+				var first_inside_input = widget_form_control.container.find( '.widget-inside :input:visible:first' );
+				if ( first_inside_input.length ) {
+					first_inside_input.focus();
+				} else {
+					widget_form_control.container.find( '.widget-top .widget-action:first' ).focus();
+				}
 			};
 
 			customize_control.slideDown(function () {
@@ -371,14 +376,28 @@ var WidgetCustomizer = (function ($) {
 			});
 
 			var close_btn = control.container.find( '.widget-control-close' );
+			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			close_btn.on( 'click', function (e) {
 				e.preventDefault();
 				control.collapseForm();
+				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
 			} );
 
 			var remove_btn = control.container.find( 'a.widget-control-remove' );
+			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			remove_btn.on( 'click', function (e) {
 				e.preventDefault();
+
+				// Find an adjacent element to add focus to when this widget goes away
+				var adjacent_focus_target;
+				if ( control.container.next().is( '.customize-control-widget_form' ) ) {
+					adjacent_focus_target = control.container.next().find( '.widget-action:first' );
+				} else if ( control.container.prev().is( '.customize-control-widget_form' ) ) {
+					adjacent_focus_target = control.container.prev().find( '.widget-action:first' );
+				} else {
+					adjacent_focus_target = control.container.next( '.customize-control-sidebar_widgets' ).find( '.add-new-widget:first' );
+				}
+
 				control.container.slideUp( function() {
 					var sidebars_widgets_control = self.getSidebarWidgetControlContainingWidget( control.params.widget_id );
 					if ( ! sidebars_widgets_control ) {
@@ -391,17 +410,13 @@ var WidgetCustomizer = (function ($) {
 					}
 					sidebar_widget_ids.splice( i, 1 );
 					sidebars_widgets_control.setting( sidebar_widget_ids );
+					adjacent_focus_target.focus(); // keyboard accessibility
 				});
 			} );
 			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
 			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
 
-			control.container.find( '.widget-top a.widget-action' ).on( 'keydown', function(e) {
-				if ( 13 === e.which ){ // Enter
-					control.toggleForm();
-				}
-			});
-
+			// Trigger widget form update when hitting Enter within an input
 			control.container.find( '.widget-content' ).on( 'keydown', 'input', function(e) {
 				if ( 13 === e.which ){ // Enter
 					control.updateWidget();
@@ -409,6 +424,7 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
+			// Remove loading indicators when the setting is saved and the preview updates
 			control.setting.previewer.channel.bind( 'synced', function () {
 				control.container.removeClass( 'previewer-loading' );
 			});
