@@ -474,7 +474,7 @@ class Widget_Customizer {
 		wp_enqueue_script(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.js' ),
-			array( 'jquery', 'backbone', 'wp-util', 'customize-controls' ),
+			array( 'jquery', 'backbone', 'wp-util', 'customize-controls', 'farbtastic' ),
 			self::get_version(),
 			true
 		);
