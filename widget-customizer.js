@@ -725,6 +725,16 @@ var WidgetCustomizer = (function ($) {
 			self.available_widgets.on( 'change', update_available_widgets_list );
 			update_available_widgets_list();
 
+			// If the available widgets panel is open and the customize controls are
+			// interacted with (i.e. available widgets panel is blurred) then close the
+			// available widgets panel.
+			$( '#customize-controls' ).on( 'click keydown', function ( e ) {
+				var is_add_new_widget_btn = $( e.target ).is( '.add-new-widget, .add-new-widget *' );
+				if ( $( 'body' ).hasClass( 'adding-widget' ) && ! is_add_new_widget_btn ) {
+					panel.close();
+				}
+			} );
+
 			// Submit a selection when clicked or keypressed
 			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
 
