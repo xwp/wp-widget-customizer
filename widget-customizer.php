@@ -375,7 +375,7 @@ class Widget_Customizer {
 				$section_id = sprintf( 'sidebar-widgets-%s', $sidebar_id );
 				if ( $is_active_sidebar ) {
 					$section_args = array(
-						'title' => sprintf( __( 'Sidebar: %s', 'widget-customizer' ), $GLOBALS['wp_registered_sidebars'][$sidebar_id]['name'] ),
+						'title' => sprintf( __( 'Widgets: %s', 'widget-customizer' ), $GLOBALS['wp_registered_sidebars'][$sidebar_id]['name'] ),
 						'description' => $GLOBALS['wp_registered_sidebars'][$sidebar_id]['description'],
 					);
 					$section_args = apply_filters( 'customizer_widgets_section_args', $section_args, $section_id, $sidebar_id );
@@ -387,7 +387,7 @@ class Widget_Customizer {
 						array(
 							'section' => $section_id,
 							'sidebar_id' => $sidebar_id,
-							'priority' => 10 - 1,
+							'priority' => 9999, // so it appears at the end
 						)
 					);
 					$new_setting_ids[] = $setting_id;
@@ -424,7 +424,7 @@ class Widget_Customizer {
 							'sidebar_id' => $sidebar_id,
 							'widget_id' => $widget_id,
 							'widget_id_base' => $id_base,
-							'priority' => 10 + $i,
+							'priority' => $i,
 						)
 					);
 					$wp_customize->add_control( $control );
@@ -472,9 +472,16 @@ class Widget_Customizer {
 			self::get_version()
 		);
 		wp_enqueue_script(
+			'jquery-livefilter',
+			self::get_plugin_path_url( 'jquery.livefilter.js' ),
+			array( 'jquery' ),
+			self::get_version(),
+			true
+		);
+		wp_enqueue_script(
 			'widget-customizer',
 			self::get_plugin_path_url( 'widget-customizer.js' ),
-			array( 'jquery', 'backbone', 'wp-util', 'customize-controls' ),
+			array( 'jquery', 'jquery-livefilter', 'backbone', 'wp-util', 'customize-controls' ),
 			self::get_version(),
 			true
 		);
@@ -520,9 +527,20 @@ class Widget_Customizer {
 	 */
 	static function output_widget_control_templates() {
 		?>
-		<div id="widget-customizer-control-templates" hidden>
+		<div id="available-widgets">
+			<div id="available-widgets-filter">
+				<input type="search" placeholder="<?php esc_attr_e( 'Find widgets&hellip;', 'widget-customizer' ) ?>">
+			</div>
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
-				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>">
+				<?php
+				$icon_path = sprintf( plugin_dir_path( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
+				$icon_url  = file_exists( $icon_path ) ? sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] ) : plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
+				$icon_url  = apply_filters( 'widget_icon_url', $icon_url, $available_widget['id'] );
+				?>
+				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>" tabindex="0">
+					<?php if ( ! empty( $icon_url ) ): ?>
+						<img src="<?php echo esc_url( $icon_url ) ?>" alt="Icon" class="widget-icon">
+					<?php endif; ?>
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
 			<?php endforeach; ?>
