@@ -725,13 +725,8 @@ var WidgetCustomizer = (function ($) {
 			self.available_widgets.on( 'change', update_available_widgets_list );
 			update_available_widgets_list();
 
-			// Submit a selection when clicked or
+			// Submit a selection when clicked or keypressed
 			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
-
-				if ( event.type === 'click' ) {
-					// @todo Why?
-					event.stopPropagation();
-				}
 
 				// Only proceed with keypress if it is Enter or Spacebar
 				if ( event.type === 'keydown' && ( event.which !== 13 && event.which !== 32 ) ) {
