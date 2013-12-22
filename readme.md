@@ -13,7 +13,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 ## Description ##
 
-**NEW** Changes to sidebars and widgets no longer require a full page refresh of the preview window. See §[Live Previews](http://wordpress.org/plugins/widget-customizer/other_notes/#Live-Previews).
+*NEW:* New panel for browsing available widgets to add.
 
 **Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
 
@@ -71,11 +71,18 @@ The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize
 
 ![Widgets are be rearranged by drag-and-drop, and widgets can be assigned to other sidebars by dragging them over](assets/screenshot-5.png)
 
+### Browse available widgets to add via a panel that slides out
+
+![Browse available widgets to add via a panel that slides out](assets/screenshot-6.png)
+
 ### I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN
 
-![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-6.jpg)
+![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-7.jpg)
 
 ## Changelog ##
+
+### 0.11 ###
+Introduce new panel for browsing and selecting widgets to add to a sidebar. This replaces the select dropdown that appeared at the top of the sidebar's widget controls. Props [shaunandrews](http://profiles.wordpress.org/shaunandrews/), [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#58](https://github.com/x-team/wp-widget-customizer/pull/58).
 
 ### 0.10.1 ###
 * Require shift key when clicking on a widget in the preview to open and focus on the widget in the customizer. Props [westonruter](http://profiles.wordpress.org/westonruter/).
