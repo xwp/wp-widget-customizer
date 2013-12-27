@@ -117,11 +117,7 @@ class Widget_Customizer {
 	 * @action after_setup_theme
 	 */
 	static function add_builtin_theme_support() {
-		$is_builtin_supported = (
-			isset( self::$builtin_supported_themes_with_scripts[ get_stylesheet() ] )
-			||
-			isset( self::$builtin_supported_themes_with_scripts[ get_template() ] )
-		);
+		$is_builtin_supported = isset( self::$builtin_supported_themes_with_scripts[ get_stylesheet() ] );
 		if ( $is_builtin_supported ) {
 			add_theme_support( 'widget-customizer' );
 		}
