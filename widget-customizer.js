@@ -735,6 +735,11 @@ var WidgetCustomizer = (function ($) {
 				}
 			} );
 
+			// Close the panel if the URL in the preview changes
+			self.previewer.bind( 'url', function () {
+				panel.close();
+			} );
+
 			// Submit a selection when clicked or keypressed
 			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
 
