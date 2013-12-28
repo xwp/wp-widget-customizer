@@ -50,10 +50,26 @@ var WidgetCustomizerPreview = (function ($) {
 		 * @todo Use postMessage instead of accessing parent window?
 		 */
 		toggleSections: function () {
-			parent.jQuery('.control-section[id^="accordion-section-sidebar-widgets-"]').hide();
-			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
-				parent.jQuery('#accordion-section-sidebar-widgets-' + sidebar_id).show();
-			});
+			var active_sidebar_section_selector = $.map( self.rendered_sidebars, function ( sidebar_id ) {
+				return '#accordion-section-sidebar-widgets-' + sidebar_id;
+			} ).join( ', ' );
+			var active_sidebar_sections = parent.jQuery( active_sidebar_section_selector );
+			var inactive_sidebar_sections = parent.jQuery( '.control-section[id^="accordion-section-sidebar-widgets-"]' ).not( active_sidebar_section_selector );
+
+			// Hide sections for sidebars no longer active
+			inactive_sidebar_sections.stop().each( function () {
+				// Make sure that hidden sections get closed first
+				if ( $( this ).hasClass( 'open' ) ) {
+					// it would be nice if accordionSwitch() in accordion.js was public
+					$( this ).find( '.accordion-section-title' ).trigger( 'click' );
+				}
+				$( this ).slideUp();
+			} );
+
+			// Show sections for sidebars now active
+			active_sidebar_sections.stop().slideDown( function () {
+				$( this ).css( 'height', 'auto' ); // so that the .accordion-section-content won't overflow
+			} );
 		},
 
 		/**
