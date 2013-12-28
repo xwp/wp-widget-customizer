@@ -18,9 +18,12 @@ var WidgetCustomizerPreview = (function ($) {
 
 		init: function () {
 			this.buildWidgetSelectors();
-			this.toggleSections();
 			this.highlightControls();
 			this.livePreview();
+
+			self.preview.bind( 'active', function() {
+				self.preview.send( 'rendered-sidebars', self.rendered_sidebars );
+			});
 		},
 
 		/**
@@ -42,34 +45,6 @@ var WidgetCustomizerPreview = (function ($) {
 				}
 				self.widget_selectors.push(widget_selector);
 			});
-		},
-
-		/**
-		 * @todo This will fail if a sidebar does not have at least one widget. Can be fixed with http://core.trac.wordpress.org/ticket/25368
-		 * @todo Use a method off of parent.WidgetCustomizer
-		 * @todo Use postMessage instead of accessing parent window?
-		 */
-		toggleSections: function () {
-			var active_sidebar_section_selector = $.map( self.rendered_sidebars, function ( sidebar_id ) {
-				return '#accordion-section-sidebar-widgets-' + sidebar_id;
-			} ).join( ', ' );
-			var active_sidebar_sections = parent.jQuery( active_sidebar_section_selector );
-			var inactive_sidebar_sections = parent.jQuery( '.control-section[id^="accordion-section-sidebar-widgets-"]' ).not( active_sidebar_section_selector );
-
-			// Hide sections for sidebars no longer active
-			inactive_sidebar_sections.stop().each( function () {
-				// Make sure that hidden sections get closed first
-				if ( $( this ).hasClass( 'open' ) ) {
-					// it would be nice if accordionSwitch() in accordion.js was public
-					$( this ).find( '.accordion-section-title' ).trigger( 'click' );
-				}
-				$( this ).slideUp();
-			} );
-
-			// Show sections for sidebars now active
-			active_sidebar_sections.stop().slideDown( function () {
-				$( this ).css( 'height', 'auto' ); // so that the .accordion-section-content won't overflow
-			} );
 		},
 
 		/**

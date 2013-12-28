@@ -50,6 +50,49 @@ var WidgetCustomizer = (function ($) {
 	self.available_widgets = new WidgetLibrary(self.available_widgets);
 
 	/**
+	 * On DOM ready, initialize some meta functionality independent of specific
+	 * customizer controls.
+	 */
+	self.init = function () {
+		this.setupSectionVisibility();
+		this.availableWidgetsPanel.setup();
+	};
+	$( function () {
+		self.init();
+	} );
+
+	/**
+	 * Listen for updates to which sidebars are rendered in the preview and toggle
+	 * the customizer sections accordingly.
+	 */
+	self.setupSectionVisibility = function () {
+
+		self.previewer.bind( 'rendered-sidebars', function ( rendered_sidebars ) {
+
+			var active_sidebar_section_selector = $.map( rendered_sidebars, function ( sidebar_id ) {
+				return '#accordion-section-sidebar-widgets-' + sidebar_id;
+			} ).join( ', ' );
+			var active_sidebar_sections = $( active_sidebar_section_selector );
+			var inactive_sidebar_sections = $( '.control-section[id^="accordion-section-sidebar-widgets-"]' ).not( active_sidebar_section_selector );
+
+			// Hide sections for sidebars no longer active
+			inactive_sidebar_sections.stop().each( function () {
+				// Make sure that hidden sections get closed first
+				if ( $( this ).hasClass( 'open' ) ) {
+					// it would be nice if accordionSwitch() in accordion.js was public
+					$( this ).find( '.accordion-section-title' ).trigger( 'click' );
+				}
+				$( this ).slideUp();
+			} );
+
+			// Show sections for sidebars now active
+			active_sidebar_sections.stop().slideDown( function () {
+				$( this ).css( 'height', 'auto' ); // so that the .accordion-section-content won't overflow
+			} );
+		} );
+	};
+
+	/**
 	 * Sidebar Widgets control
 	 * Note that 'sidebar_widgets' must match the Sidebar_Widgets_WP_Customize_Control::$type
 	 */
@@ -886,11 +929,6 @@ var WidgetCustomizer = (function ($) {
 			$( '#available-widgets-filter input' ).val( '' );
 		}
 	};
-
-	$( function () {
-		self.availableWidgetsPanel.setup();
-	} );
-
 
 	/**
 	 * @param {String} widget_id
