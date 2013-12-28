@@ -1166,8 +1166,9 @@ class Widget_Customizer {
 				echo sprintf(
 					__( 'The Widget Customizer plugin is activated. You can now edit and preview changes to widgets in the %1$s.', 'widget-customizer' ),
 					sprintf(
-						'<a href="%1$s">%2$s</a>',
-						admin_url( 'customize.php' ),
+						'<a href="%1$s" title="%2$s">%3$s</a>',
+						admin_url( 'customize.php?widget-customizer=open' ),
+						esc_attr__( 'Open the Customizer with the section for the template\'s first rendered sidebar pre-opened.', 'widget-customizer' ),
 						esc_html__( 'Customizer', 'widget-customizer' )
 					)
 				); // xss ok

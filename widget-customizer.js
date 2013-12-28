@@ -89,7 +89,20 @@ var WidgetCustomizer = (function ($) {
 			active_sidebar_sections.stop().slideDown( function () {
 				$( this ).css( 'height', 'auto' ); // so that the .accordion-section-content won't overflow
 			} );
+
+			// Open the first visible sidebar section automatically if widget customizer
+			// requested from the admin notice on the widgets page
+			if ( ! self._visibilitySetup && /widget-customizer=open/.test( location.search ) ) {
+				active_sidebar_sections.filter( ':first' ).each( function () {
+					if ( ! $( this ).hasClass( 'open' ) ) {
+						$( this ).find( '.accordion-section-title' ).trigger( 'click' );
+					}
+					this.scrollIntoView();
+				} );
+			}
+			self._visibilitySetup = true;
 		} );
+
 	};
 
 	/**
