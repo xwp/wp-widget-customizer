@@ -313,8 +313,7 @@ class Widget_Customizer {
 	static function schedule_customize_register( $wp_customize ) {
 		if ( is_admin() ) { // @todo for some reason, $wp_customize->is_preview() is true here?
 			self::customize_register( $wp_customize );
-		}
-		else {
+		} else {
 			add_action( 'wp', array( __CLASS__, 'customize_register' ) );
 		}
 	}
@@ -358,8 +357,7 @@ class Widget_Customizer {
 				$setting_args = self::get_setting_args( $setting_id );
 				if ( $is_inactive_widgets ) {
 					$setting_args['transport'] = 'postMessage'; // prevent refresh since not rendered anyway
-				}
-				else {
+				} else {
 					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
 				}
 				$wp_customize->add_setting( $setting_id, $setting_args );
@@ -639,8 +637,7 @@ class Widget_Customizer {
 				$args['_temp_id']   = "$id_base-__i__";
 				$args['_multi_num'] = next_widget_id_number( $id_base );
 				$args['_add']       = 'multi';
-			}
-			else {
+			} else {
 				$args['_add'] = 'single';
 				if ( $sidebar && 'wp_inactive_widgets' !== $sidebar ) {
 					$is_disabled = true;
@@ -761,8 +758,7 @@ class Widget_Customizer {
 		foreach ( $wp_registered_widgets as $widget ) {
 			if ( isset( $wp_registered_widget_controls[$widget['id']]['id_base'] ) ) {
 				$all_id_bases[] = $wp_registered_widget_controls[$widget['id']]['id_base'];
-			}
-			else {
+			} else {
 				$all_id_bases[] = $widget['id'];
 			}
 		}
@@ -824,8 +820,7 @@ class Widget_Customizer {
 			if ( ! empty( $option_value[$matches[2]] ) ) {
 				$instance = $option_value[$matches[2]];
 			}
-		}
-		else {
+		} else {
 			$instance = get_option( 'widget_' . $widget['id'], array() );
 		}
 		self::$rendered_widgets[$widget['id']] = $instance;
@@ -937,8 +932,7 @@ class Widget_Customizer {
 			$option_value  = get_option( $option_name );
 			if ( is_null( $widget_number ) ) {
 				$option_value = $instance;
-			}
-			else {
+			} else {
 				if ( ! is_array( $option_value ) ) {
 					$option_value = array();
 				}
@@ -973,8 +967,7 @@ class Widget_Customizer {
 				foreach ( (array) $widget['classname'] as $cn ) {
 					if ( is_string( $cn ) ) {
 						$classname_ .= '_' . $cn;
-					}
-					else if ( is_object( $cn ) ) {
+					} else if ( is_object( $cn ) ) {
 						$classname_ .= '_' . get_class( $cn );
 					}
 				}
@@ -998,8 +991,7 @@ class Widget_Customizer {
 			$options_transaction->rollback();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
-			}
-			else {
+			} else {
 				error_log( sprintf( '%s in %s: %s', get_class( $e ), __FUNCTION__, $e->getMessage() ) );
 				$message = $generic_error;
 			}
@@ -1119,8 +1111,7 @@ class Widget_Customizer {
 			$option = get_option( $option_name );
 			if ( $widget_number ) {
 				$instance = $option[$widget_number];
-			}
-			else {
+			} else {
 				$instance = $option;
 			}
 
