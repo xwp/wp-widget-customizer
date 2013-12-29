@@ -852,16 +852,18 @@ var WidgetCustomizer = (function ($) {
 				var selected_widget_tpl = null;
 				var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
 				var last_visible_widget = $( '#available-widgets > .widget-tpl:visible:last' );
+				var filter_input = $( '#available-widgets-filter input' );
+				var is_input_focused = $( event.target ).is( filter_input );
 
 				if ( is_down || is_up ) {
 					if ( is_down ) {
-						if ( $( event.target ).is( 'input' ) ) {
+						if ( is_input_focused ) {
 							selected_widget_tpl = first_visible_widget;
 						} else if ( panel.selected_widget_tpl && panel.selected_widget_tpl.nextAll( '.widget-tpl:visible' ).length !== 0 ) {
 							selected_widget_tpl = panel.selected_widget_tpl.nextAll( '.widget-tpl:visible:first' );
 						}
 					} else if ( is_up ) {
-						if ( $( event.target ).is( 'input' ) ) {
+						if ( is_input_focused ) {
 							selected_widget_tpl = last_visible_widget;
 						} else if ( panel.selected_widget_tpl && panel.selected_widget_tpl.prevAll( '.widget-tpl:visible' ).length !== 0 ) {
 							selected_widget_tpl = panel.selected_widget_tpl.prevAll( '.widget-tpl:visible:first' );
@@ -871,13 +873,13 @@ var WidgetCustomizer = (function ($) {
 					if ( selected_widget_tpl ) {
 						selected_widget_tpl.focus();
 					} else {
-						$( '#available-widgets-filter input' ).focus();
+						filter_input.focus();
 					}
 					return;
 				}
 
 				// If enter pressed but nothing entered, don't do anything
-				if ( is_enter && ! $( this ).val() ) {
+				if ( is_enter && ! filter_input.val() ) {
 					return;
 				}
 
