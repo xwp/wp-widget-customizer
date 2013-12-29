@@ -560,15 +560,33 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Get the customizer preview transport for the widget's setting
+	 *
 	 * @param string $id_base
-	 * @return string
+	 * @return string {refresh|postMessage}
 	 */
 	static function get_widget_setting_transport( $id_base ) {
-		$live_previewable = false;
-		if ( current_theme_supports( 'widget-customizer' ) && in_array( $id_base, self::$core_widget_base_ids ) ) {
-			$live_previewable = true;
+		global $wp_registered_widgets, $wp_registered_widget_controls;
+		if ( ! current_theme_supports( 'widget-customizer' ) ) {
+			return 'refresh';
 		}
-		// Allow widgets to opt-in for postMessage
+		$live_previewable = false;
+
+		// Core widgets all have built-in support
+		if ( in_array( $id_base, self::$core_widget_base_ids ) ) {
+			$live_previewable = true;
+		} else {
+			// Other widgets can opt-in via the customizer_support widget_option passed to the WP_Widget constructor
+			// @todo Should we have a lookup of widgets and their controls by id_base?
+			foreach ( $wp_registered_widget_controls as $widget_id => $widget_control ) {
+				if ( $widget_control['id_base'] === $id_base ) {
+					assert( isset( $wp_registered_widgets[$widget_id] ) );
+					$live_previewable = ! empty( $wp_registered_widgets[$widget_id]['customizer_support'] );
+					break;
+				}
+			}
+		}
+
 		$live_previewable = apply_filters( 'customizer_widget_live_previewable', $live_previewable, $id_base );
 		$live_previewable = apply_filters( "customizer_widget_live_previewable_{$id_base}", $live_previewable );
 		return $live_previewable ? 'postMessage' : 'refresh';
