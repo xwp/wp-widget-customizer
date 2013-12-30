@@ -83,21 +83,21 @@ The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize
 
 ### 0.12 ###
 * Delete widgets directly if they have not been previously-saved; if a widget has been previously saved, removal of the widget moves it to the inactive widgets sidebar. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/46">#46</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Facilitate widgets opting-in to indicate customizer support via a widget option passed via constructor; this is in addition to the filter method. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/67">#67</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Auto-open sidebar section in customizer when accessed via notice on widgets admin. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/32">#32</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Animate toggling of active/inactive sidebars. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/9">#9</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Hide sidebar sections initially to prevent FOIS (flash of inactive sidebars). Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/36">#36</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Close available widgets panel when previewed URL changes. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Remove default live preview support from children of core twenty* themes. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Fix submission of selected widget with “enter” keypress on filter input. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Fix top widget padding and broken borders. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Facilitate widgets opting-in to indicate customizer support via a widget option passed via constructor; this is in addition to the filter method. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/67">#67</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Auto-open sidebar section in customizer when accessed via notice on widgets admin. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/32">#32</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Animate toggling of active/inactive sidebars. Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/9">#9</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Hide sidebar sections initially to prevent FOIS (flash of inactive sidebars). Fixes <a href="https://github.com/x-team/wp-widget-customizer/issues/36">#36</a>. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Close available widgets panel when previewed URL changes. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Remove default live preview support from children of core twenty* themes. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Fix submission of selected widget with “enter” keypress on filter input. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Fix top widget padding and broken borders. Props [westonruter](http://profiles.wordpress.org/westonruter/).
 
 ### 0.11 ###
 Introduce new panel for browsing and selecting widgets to add to a sidebar. This replaces the select dropdown that appeared at the top of the sidebar's widget controls. Props [shaunandrews](http://profiles.wordpress.org/shaunandrews/), [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#58](https://github.com/x-team/wp-widget-customizer/pull/58).
 
 ### 0.10.1 ###
 * Require shift key when clicking on a widget in the preview to open and focus on the widget in the customizer. Props [westonruter](http://profiles.wordpress.org/westonruter/).
- * Prevent edge case error where `dynamic_sidebar` is called for a non-registered sidebar. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Prevent edge case error where `dynamic_sidebar` is called for a non-registered sidebar. Props [westonruter](http://profiles.wordpress.org/westonruter/).
 
 ### 0.10 ###
 Allow themes and widgets to support previewing changes to sidebars and widgets without resorting to refreshing the entire preview window. Props [westonruter](http://profiles.wordpress.org/westonruter/). Fixes [#37](https://github.com/x-team/wp-widget-customizer/pull/37).
@@ -110,11 +110,11 @@ Fix padding for widget customizer controls in WordPress 3.8. Props [westonruter]
 
 ### 0.9.4 ###
 * Add demo video to readme. Props [topher1kenobe](http://profiles.wordpress.org/topher1kenobe/).
- * Apply some jshint fixes and update plugin dev library
+* Apply some jshint fixes and update plugin dev library
 
 ### 0.9.3 ###
 * Fix HTML markup breaking customizer "Collapse" link position.
- * Trigger widget update when hitting enter in control input. Fixes [#47](https://github.com/x-team/wp-widget-customizer/issues/47).
+* Trigger widget update when hitting enter in control input. Fixes [#47](https://github.com/x-team/wp-widget-customizer/issues/47).
 
 ### 0.9.2 ###
 Fix addition of previously-uninstantiated widgets to previously-empty sidebars. It was not possible to add new widgets to a fresh install. Props [westonruter](http://profiles.wordpress.org/westonruter/).
