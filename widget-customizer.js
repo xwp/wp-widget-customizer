@@ -14,7 +14,8 @@ var WidgetCustomizer = (function ($) {
 		sidebars_eligible_for_post_message: {},
 		widgets_eligible_for_post_message: {},
 		current_theme_supports: false,
-		previewer: null
+		previewer: null,
+		saved_widget_ids: {}
 	};
 	$.extend(self, WidgetCustomizer_exports);
 
@@ -57,7 +58,7 @@ var WidgetCustomizer = (function ($) {
 		this.setupSectionVisibility();
 		this.availableWidgetsPanel.setup();
 	};
-	$( function () {
+	wp.customize.bind( 'ready', function () {
 		self.init();
 	} );
 
@@ -190,10 +191,12 @@ var WidgetCustomizer = (function ($) {
 					wp.customize.control.remove( removed_control.id );
 					removed_control.container.remove();
 
-					// Move widget to inactive widgets sidebar
-					var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
-					inactive_widgets.push( removed_widget_id );
-					wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
+					// Move widget to inactive widgets sidebar (move it to trash) if it was not previously saved
+					if ( self.saved_widget_ids[removed_widget_id] ) {
+						var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
+						inactive_widgets.push( removed_widget_id );
+						wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
+					}
 
 					// Make old single widget available for adding again
 					var widget = self.available_widgets.findWhere({ id_base: removed_control.params.widget_id_base });
@@ -414,6 +417,14 @@ var WidgetCustomizer = (function ($) {
 		ready: function() {
 			var control = this;
 
+			// Remember saved widgets so we know which to trash (move to inactive widgets sidebar)
+			var remember_saved_widget_id = function () {
+				self.saved_widget_ids[control.params.widget_id] = true;
+			};
+			wp.customize.bind( 'ready', remember_saved_widget_id );
+			wp.customize.bind( 'saved', remember_saved_widget_id );
+
+			// Update widget whenever model changes
 			control.suppress_update = false;
 			control.setting.bind( function( to, from ) {
 				if ( ! _( from ).isEqual( to ) && ! control.suppress_update ) {
