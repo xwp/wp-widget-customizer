@@ -35,7 +35,12 @@ class Widget_Customizer {
 	const RENDER_WIDGET_NONCE_POST_KEY = 'render-sidebar-widgets-nonce';
 	const RENDER_WIDGET_QUERY_VAR      = 'widget_customizer_render_widget';
 
-	protected static $core_widget_base_ids = array(
+	/**
+	 * All id_bases for widgets defined in core
+	 *
+	 * @var array
+	 */
+	protected static $core_widget_id_bases = array(
 		'archives',
 		'calendar',
 		'categories',
@@ -51,6 +56,11 @@ class Widget_Customizer {
 		'text',
 	);
 
+	/**
+	 * List of builtin themes with indicators for whether they have supporting JS
+	 *
+	 * @var array
+	 */
 	protected static $builtin_supported_themes_with_scripts = array(
 		'tewntyten' => false,
 		'tewntyeleven' => false,
@@ -59,6 +69,11 @@ class Widget_Customizer {
 		'twentyfourteen' => false,
 	);
 
+	/**
+	 * Initial function that loads up the plugin
+	 *
+	 * @action plugins_loaded
+	 */
 	static function setup() {
 		self::load_textdomain();
 		add_action( 'after_setup_theme', array( __CLASS__, 'add_builtin_theme_support' ) );
@@ -79,6 +94,9 @@ class Widget_Customizer {
 		add_filter( 'temp_dynamic_sidebar_has_widgets', array( __CLASS__, 'tally_sidebars_via_dynamic_sidebar_calls' ), 10, 2 );
 	}
 
+	/**
+	 * Load the plugin's translations
+	 */
 	static function load_textdomain() {
 		$text_domain = self::get_plugin_meta( 'TextDomain' );
 		$locale      = apply_filters( 'plugin_locale', get_locale(), $text_domain );
@@ -89,6 +107,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Get all metadata defined in the plugin's metadata block
+	 *
 	 * @param null|string meta key, if omitted all meta are returned
 	 * @return array|mixed meta value(s)
 	 */
@@ -103,7 +123,9 @@ class Widget_Customizer {
 	}
 
 	/**
-	 * @return string the plugin version
+	 * Get the plugin version as defined in the plugin's metadata block
+	 *
+	 * @return string
 	 */
 	static function get_version() {
 		return self::get_plugin_meta( 'Version' );
@@ -114,6 +136,7 @@ class Widget_Customizer {
 
 	/**
 	 * Do add_theme_support() for any built-in supported theme; other themes need to do this themselves
+	 *
 	 * @action after_setup_theme
 	 */
 	static function add_builtin_theme_support() {
@@ -126,6 +149,7 @@ class Widget_Customizer {
 	/**
 	 * Since the widgets get registered (widgets_init) before the customizer settings are set up (customize_register),
 	 * we have to filter the options similarly to how the setting previewer will filter the options later.
+	 *
 	 * @action after_setup_theme
 	 */
 	static function setup_widget_addition_previews() {
@@ -225,6 +249,7 @@ class Widget_Customizer {
 	 * Ensure that newly-added widgets will appear in the widgets_sidebars.
 	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
 	 * which is too late for the widgets to be set up properly.
+	 *
 	 * @param array $sidebars_widgets
 	 * @return array
 	 */
@@ -245,6 +270,7 @@ class Widget_Customizer {
 	 * Ensure that newly-added widgets will have empty instances so that they will be recognized.
 	 * This is necessary because the customizer's setting preview filters are added after the widgets_init action,
 	 * which is too late for the widgets to be set up properly.
+	 *
 	 * @param array $instance
 	 * @param string $setting_id
 	 * @return array
@@ -276,6 +302,7 @@ class Widget_Customizer {
 	/**
 	 * Remove filters added in setup_widget_addition_previews() which ensure that
 	 * widgets are populating the options during widgets_init
+	 *
 	 * @action wp_loaded
 	 */
 	static function remove_prepreview_filters() {
@@ -287,6 +314,7 @@ class Widget_Customizer {
 
 	/**
 	 * Make sure that all widgets get loaded into customizer; these actions are also done in the wp_ajax_save_widget()
+	 *
 	 * @see wp_ajax_save_widget()
 	 * @action customize_controls_init
 	 */
@@ -297,6 +325,10 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Add query var so that we can request a widget to be rendered standalone
+	 * on any queried page. This will facilitate rendering widgets if Jetpack's
+	 * Widget Visibility is used, as opposed to rendering a widget via WP Ajax.
+	 *
 	 * @filter query_vars
 	 */
 	static function add_render_widget_query_var( $query_vars ) {
@@ -322,6 +354,8 @@ class Widget_Customizer {
 	static $widgets_eligible_for_post_message  = array();
 
 	/**
+	 * Register customizer settings and controls for all sidebars and widgets
+	 *
 	 * @action customize_register
 	 */
 	static function customize_register( $wp_customize = null ) {
@@ -441,6 +475,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Covert a widget_id into its corresponding customizer setting id (option name)
+	 *
 	 * @param string $widget_id
 	 * @return string
 	 */
@@ -454,6 +490,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Enqueue scripts and styles for customizer panel and export data to JS
+	 *
 	 * @action customize_controls_enqueue_scripts
 	 */
 	static function customize_controls_enqueue_deps() {
@@ -517,6 +555,7 @@ class Widget_Customizer {
 
 	/**
 	 * Render the widget form control templates into the DOM so that plugin scripts can manipulate them
+	 *
 	 * @action customize_controls_print_footer_scripts
 	 */
 	static function output_widget_control_templates() {
@@ -543,6 +582,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Get common arguments to supply when constructing a customizer setting
+	 *
 	 * @param string $id
 	 * @param array  [$overrides]
 	 * @return array
@@ -573,7 +614,7 @@ class Widget_Customizer {
 		$live_previewable = false;
 
 		// Core widgets all have built-in support
-		if ( in_array( $id_base, self::$core_widget_base_ids ) ) {
+		if ( in_array( $id_base, self::$core_widget_id_bases ) ) {
 			$live_previewable = true;
 		} else {
 			// Other widgets can opt-in via the customizer_support widget_option passed to the WP_Widget constructor
@@ -593,6 +634,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Get the customizer preview transport for a sidebar
+	 *
 	 * @param string $sidebar_id
 	 * @return string
 	 */
@@ -607,6 +650,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Build up an index of all available widgets for use in Backbone models
+	 *
 	 * @see wp_list_widgets()
 	 * @return array
 	 */
@@ -687,6 +732,7 @@ class Widget_Customizer {
 	/**
 	 * Replace with inline closure once on PHP 5.3:
 	 * sort( $array, function ( $a, $b ) { return strnatcasecmp( $a['name'], $b['name'] ); } );
+	 *
 	 * @access private
 	 */
 	static function _sort_name_callback( $a, $b ) {
@@ -714,6 +760,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Add hooks for the customizer preview
+	 *
 	 * @action customize_preview_init
 	 */
 	static function customize_preview_init() {
@@ -727,6 +775,7 @@ class Widget_Customizer {
 	 * gets called early at init (via wp_convert_widget_settings()) and can set global variable
 	 * $_wp_sidebars_widgets to the value of get_option( 'sidebars_widgets' ) before the customizer
 	 * preview filter is added, we have to reset it after the filter has been added.
+	 *
 	 * @filter sidebars_widgets
 	 */
 	static function preview_sidebars_widgets( $sidebars_widgets ) {
@@ -736,6 +785,8 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Enqueue scripts for the customizer preview
+	 *
 	 * @action wp_enqueue_scripts
 	 */
 	static function customize_preview_enqueue_deps() {
@@ -809,6 +860,8 @@ class Widget_Customizer {
 
 	/**
 	 * At the very end of the page, at the very end of the wp_footer, communicate the sidebars that appeared on the page
+	 *
+	 * @action wp_footer
 	 */
 	static function export_preview_data() {
 		wp_print_scripts( array( 'widget-customizer-preview' ) );
@@ -828,6 +881,7 @@ class Widget_Customizer {
 
 	/**
 	 * Keep track of the widgets that were rendered
+	 *
 	 * @todo With this in place, do we even need to register the settings while in the customizer preview?
 	 * @action dynamic_sidebar
 	 */
@@ -847,7 +901,8 @@ class Widget_Customizer {
 	/**
 	 * This is hacky. It is too bad that dynamic_sidebar is not just called once with the $sidebar_id supplied
 	 * This does not get called for a sidebar which lacks widgets.
-	 * See core patch which addresses the problem:
+	 * See core patch which addresses the problem.
+	 *
 	 * @link http://core.trac.wordpress.org/ticket/25368
 	 * @action dynamic_sidebar
 	 */
@@ -866,6 +921,7 @@ class Widget_Customizer {
 	/**
 	 * Keep track of the times that is_active_sidebar() is called in the template, and assume that this
 	 * means that the sidebar would be rendered on the template if there were widgets populating it.
+	 *
 	 * @see http://core.trac.wordpress.org/ticket/25368
 	 * @filter temp_is_active_sidebar
 	 */
@@ -881,6 +937,7 @@ class Widget_Customizer {
 	/**
 	 * Keep track of the times that dynamic_sidebar() is called in the template, and assume that this
 	 * means that the sidebar would be rendered on the template if there were widgets populating it.
+	 *
 	 * @see http://core.trac.wordpress.org/ticket/25368
 	 * @filter temp_dynamic_sidebar_has_widgets
 	 */
@@ -894,6 +951,13 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * When the RENDER_WIDGET_QUERY_VAR query_var is supplied, short-circuit the
+	 * default template from being used and instead render the standalone widget
+	 * in the context of the original WP query so that things like Jetpack's
+	 * Widget Visibility work.
+	 *
+	 * @uses wp_send_json_success
+	 * @uses wp_send_json_error
 	 * @see dynamic_sidebar()
 	 * @action template_redirect
 	 */
@@ -978,7 +1042,7 @@ class Widget_Customizer {
 
 				$callback = $widget['callback'];
 
-				// @todo If the widget is not assigned to a sidebar (e.g. via Widget Visibility, we need to return nothing!
+				// @todo If the widget is not assigned to a sidebar (e.g. via Widget Visibility), we need to return nothing!
 
 				// Substitute HTML id and class attributes into before_widget
 				$classname_ = '';
@@ -1018,7 +1082,10 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Allow customizer to update a widget using its form, but return the new
+	 * instance info via Ajax instead of saving it to the options table.
 	 * Most code here copied from wp_ajax_save_widget()
+	 *
 	 * @see wp_ajax_save_widget
 	 * @todo Reuse wp_ajax_save_widget now that we have option transactions?
 	 * @action wp_ajax_update_widget
@@ -1152,6 +1219,9 @@ class Widget_Customizer {
 	/**
 	 * Gets Plugin URL from a path
 	 * Not using plugin_dir_url because it is not symlink-friendly
+	 *
+	 * @param {string|null} $path
+	 * @return string
 	 */
 	static function get_plugin_path_url( $path = null ) {
 		$plugin_dirname = basename( dirname( __FILE__ ) );
@@ -1165,6 +1235,7 @@ class Widget_Customizer {
 
 	/**
 	 * Adds Message to Widgets Admin Page to guide user to Widget Customizer
+	 *
 	 * @action widgets_admin_page
 	 */
 	static function widget_customizer_link() {
