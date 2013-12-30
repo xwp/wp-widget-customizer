@@ -299,8 +299,7 @@ var WidgetCustomizer = (function ($) {
 				control_html = control_html.replace(/<[^<>]+>/g, function (m) {
 					return m.replace( /__i__|%i%/g, widget_number );
 				});
-			}
-			else {
+			} else {
 				widget.set( 'is_disabled', true ); // Prevent single widget from being added again now
 			}
 
@@ -349,7 +348,8 @@ var WidgetCustomizer = (function ($) {
 					sidebar_id: control.params.sidebar_id,
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
-					type: customize_control_type
+					type: customize_control_type,
+					is_new: ! is_existing_widget
 				},
 				previewer: control.setting.previewer
 			} );
@@ -394,8 +394,7 @@ var WidgetCustomizer = (function ($) {
 					widget_form_control.updateWidget( widget_form_control.setting(), function () {
 						form_autofocus();
 					} );
-				}
-				else {
+				} else {
 					form_autofocus();
 				}
 			});
@@ -479,8 +478,16 @@ var WidgetCustomizer = (function ($) {
 					adjacent_focus_target.focus(); // keyboard accessibility
 				});
 			} );
-			remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
-			remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
+
+			var update_form_as_saved = function () {
+				remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
+				remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
+			};
+			if ( control.params.is_new ) {
+				wp.customize.bind( 'saved', update_form_as_saved );
+			} else {
+				update_form_as_saved();
+			}
 
 			// Trigger widget form update when hitting Enter within an input
 			control.container.find( '.widget-content' ).on( 'keydown', 'input', function(e) {

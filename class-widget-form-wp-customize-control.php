@@ -8,6 +8,7 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 	public $widget_id;
 	public $widget_id_base;
 	public $sidebar_id;
+	public $is_new = false;
 
 	public function to_json() {
 		parent::to_json();
