@@ -69,6 +69,7 @@ var WidgetCustomizer = (function ($) {
 	self.setupSectionVisibility = function () {
 
 		self.previewer.bind( 'rendered-sidebars', function ( rendered_sidebars ) {
+			rendered_sidebars = _( rendered_sidebars ).keys();
 
 			var active_sidebar_section_selector = $.map( rendered_sidebars, function ( sidebar_id ) {
 				return '#accordion-section-sidebar-widgets-' + sidebar_id;
@@ -505,6 +506,12 @@ var WidgetCustomizer = (function ($) {
 				if ( updated_widget_id === control.params.widget_id ) {
 					control.container.removeClass( 'previewer-loading' );
 				}
+			} );
+
+			// Update widget control to indicate whether it is currently rendered (cf. Widget Visibility)
+			self.previewer.bind( 'rendered-widgets', function ( rendered_widgets ) {
+				var is_rendered = !! rendered_widgets[control.params.widget_id];
+				control.container.toggleClass( 'widget-rendered', is_rendered );
 			} );
 
 			control.setupControlToggle();

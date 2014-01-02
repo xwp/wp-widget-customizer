@@ -14,6 +14,17 @@
 	display: none; /* the link in here will fail if it ever gets used */
 }
 
+.customize-control-widget_form .widget-top {
+	-webkit-transition: opacity 0.5s;
+	-moz-transition:    opacity 0.5s;
+	-ms-transition:     opacity 0.5s;
+	-o-transition:      opacity 0.5s;
+	transition:         opacity 0.5s;
+}
+.customize-control-widget_form:not(.widget-rendered) .widget-top {
+	opacity: 0.5;
+}
+
 .customize-control-widget_form.previewer-loading .spinner {
 	display: inline;
 }

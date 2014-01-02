@@ -4,11 +4,12 @@ var WidgetCustomizerPreview = (function ($) {
 	'use strict';
 
 	var self = {
-		rendered_sidebars: [],
+		rendered_sidebars: {},
 		sidebars_eligible_for_post_message: {},
-		rendered_widgets: [], // @todo only used once; not really needed as we can just loop over sidebars_widgets
+		rendered_widgets: {},
 		widgets_eligible_for_post_message: {},
 		registered_sidebars: {},
+		registered_widgets: {},
 		widget_selectors: [],
 		render_widget_ajax_action: null,
 		render_widget_nonce_value: null,
@@ -23,7 +24,8 @@ var WidgetCustomizerPreview = (function ($) {
 
 			self.preview.bind( 'active', function() {
 				self.preview.send( 'rendered-sidebars', self.rendered_sidebars );
-			});
+				self.preview.send( 'rendered-widgets', self.rendered_widgets );
+			} );
 		},
 
 		/**
@@ -110,7 +112,7 @@ var WidgetCustomizerPreview = (function ($) {
 		 */
 		refreshTransports: function () {
 			var changed_to_refresh = false;
-			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
+			$.each( self.rendered_sidebars, function ( sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				var setting = parent.wp.customize( setting_id );
 				var sidebar_transport = self.sidebarCanLivePreview( sidebar_id ) ? 'postMessage' : 'refresh';
@@ -140,7 +142,7 @@ var WidgetCustomizerPreview = (function ($) {
 		},
 
 		/**
-		 *
+		 * Set up the ability for the widget to be previewed without doing a preview refresh
 		 */
 		livePreview: function () {
 			var already_bound_widgets = {};
@@ -199,11 +201,9 @@ var WidgetCustomizerPreview = (function ($) {
 							var new_widget = $( r.data.rendered_widget );
 							if ( new_widget.length && old_widget.length ) {
 								old_widget.replaceWith( new_widget );
-							}
-							else if ( ! new_widget.length && old_widget.length ) {
+							} else if ( ! new_widget.length && old_widget.length ) {
 								old_widget.remove();
-							}
-							else if ( new_widget.length && ! old_widget.length ) {
+							} else if ( new_widget.length && ! old_widget.length ) {
 								var sidebar_widgets = wp.customize( sidebar_id_to_setting_id( r.data.sidebar_id ) )();
 								var position = sidebar_widgets.indexOf( widget_id );
 								if ( -1 === position ) {
@@ -215,12 +215,16 @@ var WidgetCustomizerPreview = (function ($) {
 								if ( position > 0 ) {
 									var before_widget = $( '#' + sidebar_widgets[ position - 1 ] );
 									before_widget.after( new_widget );
-								}
-								else {
+								} else {
 									var after_widget = $( '#' + sidebar_widgets[ position + 1 ] );
 									after_widget.before( new_widget );
 								}
 							}
+
+							// Update widget visibility
+							self.rendered_widgets[widget_id] = ( 0 !== $( '#' + widget_id ).length );
+
+							self.preview.send( 'rendered-widgets', self.rendered_widgets );
 							self.preview.send( 'widget-updated', widget_id );
 							wp.customize.trigger( 'sidebar-updated', sidebar_id );
 							wp.customize.trigger( 'widget-updated', widget_id );
@@ -232,7 +236,7 @@ var WidgetCustomizerPreview = (function ($) {
 				already_bound_widgets[setting_id] = binder;
 			};
 
-			$.each( self.rendered_sidebars, function ( i, sidebar_id ) {
+			$.each( self.rendered_sidebars, function ( sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				wp.customize( setting_id, function( value ) {
 					var update_count = 0;
@@ -295,8 +299,7 @@ var WidgetCustomizerPreview = (function ($) {
 				} );
 			} );
 
-			// @todo We don't really need rendered_widgets; we can just loop over all sidebars_widgets, and get all their widget_ids
-			$.each( self.rendered_widgets, function ( widget_id ) {
+			$.each( self.registered_widgets, function ( widget_id ) {
 				var setting_id = widget_id_to_setting_id( widget_id );
 				if ( ! wp.customize.has( setting_id ) ) {
 					// Used to have to do this: wp.customize.create( setting_id, instance );
@@ -334,8 +337,7 @@ var WidgetCustomizerPreview = (function ($) {
 		var matches = widget_id.match(/^(.+?)(?:-(\d+)?)$/);
 		if ( matches ) {
 			setting_id = 'widget_' + matches[1] + '[' + matches[2] + ']';
-		}
-		else {
+		} else {
 			setting_id = 'widget_' + widget_id;
 		}
 		return setting_id;
@@ -357,6 +359,7 @@ var WidgetCustomizerPreview = (function ($) {
 		return 'sidebars_widgets[' + sidebar_id + ']';
 	}
 
+	// @todo on customize ready?
 	$(function () {
 		self.init();
 	});

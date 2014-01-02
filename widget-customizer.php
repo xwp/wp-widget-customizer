@@ -375,6 +375,17 @@ class Widget_Customizer {
 
 		$new_setting_ids = array();
 
+		/**
+		 * Register a setting for all widgets, including those which are active, inactive, and orphaned
+		 * since a widget may get suppressed from a sidebar via a plugin (like Widget Visibility).
+		 */
+		foreach ( array_keys( $GLOBALS['wp_registered_widgets'] ) as $widget_id ) {
+			$setting_id   = self::get_setting_id( $widget_id );
+			$setting_args = self::get_setting_args( $setting_id );
+			$wp_customize->add_setting( $setting_id, $setting_args );
+			$new_setting_ids[] = $setting_id;
+		}
+
 		foreach ( $sidebars_widgets as $sidebar_id => $sidebar_widget_ids ) {
 			if ( empty( $sidebar_widget_ids ) ) {
 				$sidebar_widget_ids = array();
@@ -424,39 +435,30 @@ class Widget_Customizer {
 			}
 
 			/**
-			 * Add setting for each widget, and a control for each active widget (located in a sidebar)
+			 * Add a control for each active widget (located in a sidebar)
 			 */
 			foreach ( $sidebar_widget_ids as $i => $widget_id ) {
 				// Skip widgets that may have gone away due to a plugin being deactivated
-				if ( ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
+				if ( ! $is_active_sidebar || ! isset( $GLOBALS['wp_registered_widgets'][$widget_id] ) ) {
 					continue;
 				}
 				$registered_widget = $GLOBALS['wp_registered_widgets'][$widget_id];
 				$setting_id = self::get_setting_id( $widget_id );
-				$setting_args = self::get_setting_args( $setting_id );
 				$id_base = $GLOBALS['wp_registered_widget_controls'][$widget_id]['id_base'];
-				$wp_customize->add_setting( $setting_id, $setting_args );
-				$new_setting_ids[] = $setting_id;
-
-				/**
-				 * Add control for widget if it is active
-				 */
-				if ( $is_active_sidebar ) {
-					assert( false !== is_active_widget( $registered_widget['callback'], $registered_widget['id'], false, false ) );
-					$control = new Widget_Form_WP_Customize_Control(
-						$wp_customize,
-						$setting_id,
-						array(
-							'label' => $registered_widget['name'],
-							'section' => $section_id,
-							'sidebar_id' => $sidebar_id,
-							'widget_id' => $widget_id,
-							'widget_id_base' => $id_base,
-							'priority' => $i,
-						)
-					);
-					$wp_customize->add_control( $control );
-				}
+				assert( false !== is_active_widget( $registered_widget['callback'], $registered_widget['id'], false, false ) );
+				$control = new Widget_Form_WP_Customize_Control(
+					$wp_customize,
+					$setting_id,
+					array(
+						'label' => $registered_widget['name'],
+						'section' => $section_id,
+						'sidebar_id' => $sidebar_id,
+						'widget_id' => $widget_id,
+						'widget_id_base' => $id_base,
+						'priority' => $i,
+					)
+				);
+				$wp_customize->add_control( $control );
 			}
 		}
 
@@ -534,6 +536,7 @@ class Widget_Customizer {
 			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
 			'i18n' => array(
 				'save_btn_label' => _x( 'Update', 'button to save changes to a widget', 'widget-customizer' ),
 				'save_btn_tooltip' => _x( 'Save and preview changes before publishing them.', 'tooltip on the widget save button', 'widget-customizer' ),
@@ -545,6 +548,9 @@ class Widget_Customizer {
 			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
 			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
+		foreach ( $exports['registered_widgets'] as &$registered_widget ) {
+			unset( $registered_widget['callback'] ); // may not be JSON-serializeable
+		}
 
 		$wp_scripts->add_data(
 			'widget-customizer',
@@ -840,6 +846,7 @@ class Widget_Customizer {
 		global $wp_scripts;
 		$exports = array(
 			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
 			'i18n' => array(
 				'widget_tooltip' => __( 'Press shift and then click to edit widget in customizer...', 'widget-customizer' ),
 			),
@@ -851,6 +858,9 @@ class Widget_Customizer {
 			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
 			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
+		foreach ( $exports['registered_widgets'] as &$registered_widget ) {
+			unset( $registered_widget['callback'] ); // may not be JSON-serializeable
+		}
 		$wp_scripts->add_data(
 			'widget-customizer-preview',
 			'data',
@@ -869,8 +879,8 @@ class Widget_Customizer {
 		<script>
 		(function () {
 			/*global WidgetCustomizerPreview */
-			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( array_unique( self::$rendered_sidebars ) ) ?>;
-			WidgetCustomizerPreview.rendered_widgets = <?php echo json_encode( self::$rendered_widgets ); ?>;
+			WidgetCustomizerPreview.rendered_sidebars = <?php echo json_encode( array_fill_keys( array_unique( self::$rendered_sidebars ), true ) ) ?>;
+			WidgetCustomizerPreview.rendered_widgets = <?php echo json_encode( array_fill_keys( array_keys( self::$rendered_widgets ), true ) ); ?>;
 		}());
 		</script>
 		<?php
@@ -1025,6 +1035,7 @@ class Widget_Customizer {
 			$rendered_widget = null;
 			$sidebar_id = is_active_widget( $widget['callback'], $widget['id'], false, false );
 
+			// Render the widget if it is assigned to a sidebar (and not temporarily removed, for example by Widget Visibility)
 			if ( $sidebar_id ) {
 				$sidebar = $wp_registered_sidebars[$sidebar_id];
 				$params  = array_merge(
@@ -1041,8 +1052,6 @@ class Widget_Customizer {
 				);
 
 				$callback = $widget['callback'];
-
-				// @todo If the widget is not assigned to a sidebar (e.g. via Widget Visibility), we need to return nothing!
 
 				// Substitute HTML id and class attributes into before_widget
 				$classname_ = '';
