@@ -610,15 +610,22 @@ class Widget_Customizer {
 	}
 
 	/**
-	 * Make sure that a sidebars_widgets[x] only ever consists of an array of strings
+	 * Make sure that a sidebars_widgets[x] only ever consists of actual widget IDs.
 	 * Used as sanitize_callback for each sidebars_widgets setting.
 	 *
-	 * @param mixed $value
+	 * @param array $widget_ids
 	 * @return array
 	 */
-	static function sanitize_sidebar_widgets_option( $value ) {
-		$value = array_map( 'strval', (array) $value );
-		return $value;
+	static function sanitize_sidebar_widgets_option( $widget_ids ) {
+		global $wp_registered_widgets;
+		$widget_ids = array_map( 'strval', (array) $widget_ids );
+		$sanitized_widget_ids = array();
+		foreach ( $widget_ids as $widget_id ) {
+			if ( array_key_exists( $widget_id, $wp_registered_widgets ) ) {
+				$sanitized_widget_ids[] = $widget_id;
+			}
+		}
+		return $sanitized_widget_ids;
 	}
 
 	/**
