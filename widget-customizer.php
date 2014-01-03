@@ -379,7 +379,7 @@ class Widget_Customizer {
 		 * Register a setting for all widgets, including those which are active, inactive, and orphaned
 		 * since a widget may get suppressed from a sidebar via a plugin (like Widget Visibility).
 		 */
-		foreach ( array_keys( $GLOBALS['wp_registered_widgets'] ) as $widget_id ) {
+		foreach ( array_keys( $wp_registered_widgets ) as $widget_id ) {
 			$setting_id   = self::get_setting_id( $widget_id );
 			$setting_args = self::get_setting_args( $setting_id );
 			$wp_customize->add_setting( $setting_id, $setting_args );
@@ -392,7 +392,7 @@ class Widget_Customizer {
 			}
 			$is_registered_sidebar = isset( $GLOBALS['wp_registered_sidebars'][$sidebar_id] );
 			$is_inactive_widgets   = ( 'wp_inactive_widgets' === $sidebar_id );
-			$is_active_sidebar     = ( $is_registered_sidebar  && ! $is_inactive_widgets );
+			$is_active_sidebar     = ( $is_registered_sidebar && ! $is_inactive_widgets );
 
 			/**
 			 * Add setting for managing the sidebar's widgets
@@ -405,6 +405,7 @@ class Widget_Customizer {
 				} else {
 					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
 				}
+				$setting_args['sanitize_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets_option' );
 				$wp_customize->add_setting( $setting_id, $setting_args );
 				$new_setting_ids[] = $setting_id;
 
@@ -606,6 +607,18 @@ class Widget_Customizer {
 		$args = array_merge( $args, $overrides );
 		$args = apply_filters( 'widget_customizer_setting_args', $args, $id );
 		return $args;
+	}
+
+	/**
+	 * Make sure that a sidebars_widgets[x] only ever consists of an array of strings
+	 * Used as sanitize_callback for each sidebars_widgets setting.
+	 *
+	 * @param mixed $value
+	 * @return array
+	 */
+	static function sanitize_sidebar_widgets_option( $value ) {
+		$value = array_map( 'strval', (array) $value );
+		return $value;
 	}
 
 	/**
@@ -1144,8 +1157,7 @@ class Widget_Customizer {
 				$option = get_option( $option_name );
 				if ( ! empty( $widget_number ) ) {
 					$option[$widget_number] = $instance_override;
-				}
-				else {
+				} else {
 					$option = $instance_override;
 				}
 				update_option( $option_name, $option );
@@ -1164,8 +1176,7 @@ class Widget_Customizer {
 				foreach ( array_diff( array_keys( $_POST ), $preserved_keys ) as $deleted_key ) {
 					unset( $_POST[$deleted_key] );
 				}
-			}
-			else {
+			} else {
 				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
 					if ( $name === $id_base ) {
 						if ( ! is_callable( $control['callback'] ) ) {
@@ -1218,8 +1229,7 @@ class Widget_Customizer {
 			$options_transaction->rollback();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
-			}
-			else {
+			} else {
 				error_log( sprintf( '%s in %s: %s', get_class( $e ), __FUNCTION__, $e->getMessage() ) );
 				$message = $generic_error;
 			}
