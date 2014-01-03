@@ -146,6 +146,11 @@
 #available-widgets .widget {
 	position: static;
 }
+/* override widgets admin page rules in wp-admin/css/wp-admin.css */
+#widgets-left #available-widgets .widget {
+	float: none !important;
+	width: auto !important;
+}
 .add-new-widget b {
 	padding-left: 8px;
 }

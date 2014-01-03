@@ -566,6 +566,7 @@ class Widget_Customizer {
 	 */
 	static function output_widget_control_templates() {
 		?>
+		<div id="widgets-left"><!-- compatibility with JS which looks for widget templates here -->
 		<div id="available-widgets">
 			<div id="available-widgets-filter">
 				<input type="search" placeholder="<?php esc_attr_e( 'Find widgets&hellip;', 'widget-customizer' ) ?>">
@@ -583,7 +584,8 @@ class Widget_Customizer {
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
 			<?php endforeach; ?>
-		</div>
+		</div><!-- #available-widgets -->
+		</div><!-- #widgets-left -->
 		<?php
 	}
 
