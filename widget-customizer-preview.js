@@ -151,12 +151,10 @@ var WidgetCustomizerPreview = (function ($) {
 				var setting_id = widget_id_to_setting_id( widget_id );
 				var binder = function( value ) {
 					already_bound_widgets[widget_id] = true;
-					var update_count = 0;
 					value.bind( function( to, from ) {
 						// Workaround for http://core.trac.wordpress.org/ticket/26061;
-						// once fixed, eliminate initial_value, update_count, and this conditional
-						update_count += 1;
-						if ( 1 === update_count && _.isEqual( from, to ) ) {
+						// once fixed, this conditional can be eliminated
+						if ( _.isEqual( from, to ) ) {
 							return;
 						}
 
@@ -238,12 +236,10 @@ var WidgetCustomizerPreview = (function ($) {
 			$.each( self.rendered_sidebars, function ( sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				wp.customize( setting_id, function( value ) {
-					var update_count = 0;
 					value.bind( function( to, from ) {
 						// Workaround for http://core.trac.wordpress.org/ticket/26061;
-						// once fixed, eliminate initial_value, update_count, and this conditional
-						update_count += 1;
-						if ( 1 === update_count && _.isEqual( from, to ) ) {
+						// once fixed, this conditional can be eliminated
+						if ( _.isEqual( from, to ) ) {
 							return;
 						}
 

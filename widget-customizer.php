@@ -1159,8 +1159,8 @@ class Widget_Customizer {
 			/**
 			 * Perform the widget update
 			 */
-			if ( isset( $_POST['json_instance_override'] ) ) {
-				$instance_override = json_decode( filter_input( INPUT_POST, 'json_instance_override' ), true );
+			if ( isset( $_POST['instance_override'] ) ) {
+				$instance_override = json_decode( filter_input( INPUT_POST, 'instance_override' ), true );
 				$option = get_option( $option_name );
 				if ( ! empty( $widget_number ) ) {
 					$option[$widget_number] = $instance_override;

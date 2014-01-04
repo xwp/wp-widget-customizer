@@ -425,9 +425,8 @@ var WidgetCustomizer = (function ($) {
 			wp.customize.bind( 'saved', remember_saved_widget_id );
 
 			// Update widget whenever model changes
-			control.suppress_update = false;
 			control.setting.bind( function( to, from ) {
-				if ( ! _( from ).isEqual( to ) && ! control.suppress_update ) {
+				if ( ! _( from ).isEqual( to ) ) {
 					control.updateWidget( to );
 				}
 			});
@@ -520,22 +519,33 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
-		 * @param {object} [instance_override]  When the model changes, the instance is sent this way
-		 * @param {function} [success_callback]  Function which is called when the request finishes
+		 * Submit the widget form via Ajax and get back the updated instance,
+		 * along with the new widget control form to render.
+		 *
+		 * @param {object} [instance_override]  When the model changes, the instance is sent here, since recreating all of the _POST vars is a challenge
+		 * @param {function} [complete_callback]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
 		 */
-		updateWidget: function ( instance_override, success_callback ) {
+		updateWidget: function ( instance_override, complete_callback ) {
 			var control = this;
-			var data = control.container.find(':input').serialize();
+
+			// Short-circuit if there are no changes to the instance
+			if ( _( instance_override ).isEqual( control.setting() ) ) {
+				if ( complete_callback ) {
+					complete_callback.call( control, null, { no_change: true } );
+				}
+				return;
+			}
 
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
+			var data = control.container.find(':input').serialize();
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
 			if ( instance_override ) {
-				params.json_instance_override = JSON.stringify( instance_override );
+				params.instance_override = JSON.stringify( instance_override );
 			}
 			data += '&' + $.param( params );
 
@@ -543,25 +553,39 @@ var WidgetCustomizer = (function ($) {
 				if ( r.success ) {
 					control.container.find( '.widget-content' ).html( r.data.form );
 
-					if ( ! instance_override ) { // @todo why?
-						control.suppress_update = true; // We already updated it with r.data.form above
+					/**
+					 * If the old instance is identical to the new one, there is nothing new
+					 * needing to be rendered, and so we can preempt the event for the
+					 * preview finishing loading.
+					 */
+					var is_instance_identical = _( control.setting() ).isEqual( r.data.instance );
+					if ( is_instance_identical ) {
+						control.container.removeClass( 'previewer-loading' );
+					} else {
 						control.setting( r.data.instance );
-						control.suppress_update = false;
 					}
-					if ( success_callback ) {
-						success_callback.call( null, control );
+
+					if ( complete_callback ) {
+						complete_callback.call( control, null, { no_change: is_instance_identical, ajax_finished: true } );
 					}
-				}
-				else {
+				} else {
 					var message = 'FAIL';
 					if ( r.data && r.data.message ) {
 						message = r.data.message;
 					}
-					alert( message );
+					if ( complete_callback ) {
+						complete_callback.call( control, message );
+					} else {
+						alert( message );
+					}
 				}
 			});
 			jqxhr.fail( function (jqXHR, textStatus ) {
-				alert( textStatus );
+				if ( complete_callback ) {
+					complete_callback.call( control, textStatus );
+				} else {
+					alert( textStatus );
+				}
 			});
 			jqxhr.always( function () {
 				control.container.find( '.widget-content' ).prop( 'disabled', false );
@@ -606,6 +630,7 @@ var WidgetCustomizer = (function ($) {
 
 		/**
 		 * Expand or collapse the widget control
+		 *
 		 * @param {boolean|undefined} [do_expand] If not supplied, will be inverse of current visibility
 		 */
 		toggleForm: function ( do_expand ) {
