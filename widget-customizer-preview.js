@@ -209,12 +209,23 @@ var WidgetCustomizerPreview = (function ($) {
 								if ( sidebar_widgets.length === 1 ) {
 									throw new Error( 'Unexpected postMessage for adding first widget to sidebar; refresh must be used instead.' );
 								}
-								if ( position > 0 ) {
-									var before_widget = $( '#' + sidebar_widgets[ position - 1 ] );
+								var before_widget_ids = ( position !== 0 ? sidebar_widgets.slice( 0, position ) : [] );
+								var before_widget_selector = $.map( before_widget_ids, function ( widget_id ) {
+									return '#' + widget_id;
+								} ).join( ',' );
+								var before_widget = $( before_widget_selector ).last();
+								var after_widget_ids = sidebar_widgets.slice( position + 1 );
+								var after_widget_selector = $.map( after_widget_ids, function ( widget_id ) {
+									return '#' + widget_id;
+								} ).join( ',' );
+								var after_widget = $( after_widget_selector ).first();
+
+								if ( before_widget.length ) {
 									before_widget.after( new_widget );
-								} else {
-									var after_widget = $( '#' + sidebar_widgets[ position + 1 ] );
+								} else if ( after_widget.length ) {
 									after_widget.before( new_widget );
+								} else {
+									throw new Error( 'Unable to locate adjacent widget in sidebar.' );
 								}
 							}
 
