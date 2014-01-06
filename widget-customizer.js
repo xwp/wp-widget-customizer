@@ -424,9 +424,11 @@ var WidgetCustomizer = (function ($) {
 			wp.customize.bind( 'ready', remember_saved_widget_id );
 			wp.customize.bind( 'saved', remember_saved_widget_id );
 
+			control.is_widget_updating = false;
+
 			// Update widget whenever model changes
 			control.setting.bind( function( to, from ) {
-				if ( ! _( from ).isEqual( to ) ) {
+				if ( ! _( from ).isEqual( to ) && ! control.is_widget_updating ) {
 					control.updateWidget( to );
 				}
 			});
@@ -528,14 +530,6 @@ var WidgetCustomizer = (function ($) {
 		updateWidget: function ( instance_override, complete_callback ) {
 			var control = this;
 
-			// Short-circuit if there are no changes to the instance
-			if ( _( instance_override ).isEqual( control.setting() ) ) {
-				if ( complete_callback ) {
-					complete_callback.call( control, null, { no_change: true } );
-				}
-				return;
-			}
-
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
@@ -562,7 +556,9 @@ var WidgetCustomizer = (function ($) {
 					if ( is_instance_identical ) {
 						control.container.removeClass( 'previewer-loading' );
 					} else {
+						control.is_widget_updating = true; // suppress triggering another updateWidget
 						control.setting( r.data.instance );
+						control.is_widget_updating = false;
 					}
 
 					if ( complete_callback ) {
