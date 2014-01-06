@@ -481,15 +481,37 @@ class Widget_Customizer {
 	 * Covert a widget_id into its corresponding customizer setting id (option name)
 	 *
 	 * @param string $widget_id
+	 * @see _get_widget_id_base()
 	 * @return string
 	 */
 	static function get_setting_id( $widget_id ) {
-		preg_match( '/^(.*?)(?:-([0-9]+))?$/', $widget_id, $matches ); // see private _get_widget_id_base()
-		$setting_id = sprintf( 'widget_%s', $matches[1] );
-		if ( isset( $matches[2] ) ) {
-			$setting_id .= sprintf( '[%d]', $matches[2] );
+		$parsed_widget_id = self::parse_widget_id( $widget_id );
+		$setting_id = sprintf( 'widget_%s', $parsed_widget_id['id_base'] );
+		if ( ! is_null( $parsed_widget_id['number'] ) ) {
+			$setting_id .= sprintf( '[%d]', $parsed_widget_id['number'] );
 		}
 		return $setting_id;
+	}
+
+	/**
+	 * Covert a widget ID into its id_base and number components
+	 *
+	 * @param string $widget_id
+	 * @return array
+	 */
+	static function parse_widget_id( $widget_id ) {
+		$parsed = array(
+			'number' => null,
+			'id_base' => null,
+		);
+		if ( preg_match( '/^(.+)-(\d+)$/', $widget_id, $matches ) ) {
+			$parsed['id_base'] = $matches[1];
+			$parsed['number'] = $matches[2];
+		} else {
+			// likely an old single widget
+			$parsed['id_base'] = $widget_id;
+		}
+		return $parsed;
 	}
 
 	/**
