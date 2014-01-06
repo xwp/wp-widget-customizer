@@ -524,7 +524,7 @@ var WidgetCustomizer = (function ($) {
 		 * Submit the widget form via Ajax and get back the updated instance,
 		 * along with the new widget control form to render.
 		 *
-		 * @param {object} [instance_override]  When the model changes, the instance is sent here, since recreating all of the _POST vars is a challenge
+		 * @param {object|null} [instance_override]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
 		 * @param {function} [complete_callback]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
 		 */
 		updateWidget: function ( instance_override, complete_callback ) {
@@ -534,14 +534,33 @@ var WidgetCustomizer = (function ($) {
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
-			var data = control.container.find(':input').serialize();
+			var parsed_widget_id = parse_widget_id( control.params.widget_id );
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
+			params['widget-id'] = control.params.widget_id;
+			params.id_base = parsed_widget_id.id_base;
+			params.widget_number = parsed_widget_id.number || '';
+			var is_multi = ( null !== params.widget_number );
+			// @todo widget-width and widget-height?
+
+			var data = $.param( params );
+
 			if ( instance_override ) {
-				params.instance_override = JSON.stringify( instance_override );
+				instance_override = $.extend( true, {}, instance_override ); // deep clone
+
+				// Use proper keys multi widgets
+				if ( is_multi ) {
+					$.each( instance_override, function ( key, value ) {
+						delete instance_override[key];
+						key = 'widget-' + parsed_widget_id.id_base + '[' + parsed_widget_id.number + '][' + key + ']';
+						instance_override[key] = value;
+					} );
+				}
+				data += '&' + $.param( instance_override );
+			} else {
+				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
 			}
-			data += '&' + $.param( params );
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {

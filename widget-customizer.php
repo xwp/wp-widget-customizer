@@ -506,7 +506,7 @@ class Widget_Customizer {
 		);
 		if ( preg_match( '/^(.+)-(\d+)$/', $widget_id, $matches ) ) {
 			$parsed['id_base'] = $matches[1];
-			$parsed['number'] = $matches[2];
+			$parsed['number']  = $matches[2];
 		} else {
 			// likely an old single widget
 			$parsed['id_base'] = $widget_id;
@@ -1158,7 +1158,7 @@ class Widget_Customizer {
 			if ( ! current_user_can( 'edit_theme_options' ) ) {
 				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
 			}
-			if ( ! isset( $_POST['id_base'] ) ) {
+			if ( ! isset( $_POST['widget-id'] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Incomplete request', 'widget-customizer' ) );
 			}
 
@@ -1168,10 +1168,10 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$id_base       = filter_input( INPUT_POST, 'id_base' );
 			$widget_id     = filter_input( INPUT_POST, 'widget-id' );
-			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
-			$multi_number  = filter_input( INPUT_POST, 'multi_number', FILTER_VALIDATE_INT );
+			$parsed_id     = self::parse_widget_id( $widget_id );
+			$id_base       = $parsed_id['id_base'];
+			$widget_number = $parsed_id['number'];
 			$option_name   = 'widget_' . $id_base;
 
 			if ( isset( $_POST['widget-' . $id_base] ) && is_array( $_POST['widget-' . $id_base] ) && preg_match( '/__i__|%i%/', key( $_POST['widget-' . $id_base] ) ) ) {
@@ -1179,43 +1179,14 @@ class Widget_Customizer {
 			}
 
 			/**
-			 * Perform the widget update
+			 * Invoke the widget update callback
 			 */
-			if ( isset( $_POST['instance_override'] ) ) {
-				$instance_override = json_decode( filter_input( INPUT_POST, 'instance_override' ), true );
-				$option = get_option( $option_name );
-				if ( ! empty( $widget_number ) ) {
-					$option[$widget_number] = $instance_override;
-				} else {
-					$option = $instance_override;
-				}
-				update_option( $option_name, $option );
-
-				// Delete other $_POST fields to prevent old single widgets from obeying override
-				$preserved_keys = array(
-					'widget-id',
-					'id_base',
-					'widget-width',
-					'widget-height',
-					'widget_number',
-					'multi_number',
-					'add_new',
-					'action',
-				);
-				foreach ( array_diff( array_keys( $_POST ), $preserved_keys ) as $deleted_key ) {
-					unset( $_POST[$deleted_key] );
-				}
-			} else {
-				foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
-					if ( $name === $id_base ) {
-						if ( ! is_callable( $control['callback'] ) ) {
-							continue;
-						}
-						ob_start();
-						call_user_func_array( $control['callback'], $control['params'] );
-						ob_end_clean();
-						break;
-					}
+			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
+				if ( $name === $id_base && is_callable( $control['callback'] ) ) {
+					ob_start();
+					call_user_func_array( $control['callback'], $control['params'] );
+					ob_end_clean();
+					break;
 				}
 			}
 
@@ -1245,11 +1216,12 @@ class Widget_Customizer {
 			 * Obtain the widget instance
 			 */
 			$option = get_option( $option_name );
-			if ( $widget_number ) {
+			if ( null !== $widget_number ) {
 				$instance = $option[$widget_number];
 			} else {
 				$instance = $option;
 			}
+			// @todo php-serialize the $instance and fingerprint it so that this value can be used when sanitizing?
 
 			$options_transaction->rollback();
 			wp_send_json_success( compact( 'form', 'instance' ) );
