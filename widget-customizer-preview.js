@@ -181,7 +181,7 @@ var WidgetCustomizerPreview = (function ($) {
 							action: self.render_widget_ajax_action,
 							widget_id: widget_id,
 							setting_id: setting_id,
-							instance: JSON.stringify( to )
+							setting: JSON.stringify( to )
 						};
 						var customized = {};
 						customized[ sidebar_id_to_setting_id( sidebar_id ) ] = sidebar_widgets;
