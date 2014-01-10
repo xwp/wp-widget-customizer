@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" >
+<svg xmlns="http://www.w3.org/2000/svg">
+<metadata></metadata>
+<defs>
+<font id="widgeticonsregular" horiz-adv-x="2000" >
+<font-face units-per-em="2000" ascent="2000" descent="0" />
+<missing-glyph horiz-adv-x="500" />
+<glyph unicode="&#x25fc;" horiz-adv-x="500" d="M0 0z" />
+<glyph unicode="&#xf480;" d="M1800 1500h-1600v200h1600v-200zM1200 1100h-1000v200h1000v-200zM1800 1100h-400v200h400v-200zM800 700h-600v200h600v-200zM1800 700h-800v200h800v-200zM1400 300h-1200v200h1200v-200z" />
+<glyph unicode="&#xf481;" d="M1100 1200h-1000v400h1000v-400zM1900 1200h-700v400h700v-400zM700 800h-600v300h600v-300zM1900 800h-1100v300h1100v-300zM900 500h-800v200h800v-200zM1900 500h-900v200h900v-200zM600 300h-500v100h500v-100zM1100 300h-400v100h400v-100zM1400 300h-200v100h200 v-100zM1900 300h-400v100h400v-100z" />
+<glyph unicode="&#xf483;" d="M1900 1400h-1800v200h1800v-200zM1800 1300v-1000h-1600v1000h1600zM1300 1100h-600v-100h600v100z" />
+</font>
+</defs></svg> 

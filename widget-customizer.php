@@ -636,6 +636,7 @@ class Widget_Customizer {
 				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>" tabindex="0">
 					<?php if ( ! empty( $icon_url ) ): ?>
 						<img src="<?php echo esc_url( $icon_url ) ?>" alt="Icon" class="widget-icon">
+						<div class="widget-icon"></div>
 					<?php endif; ?>
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
