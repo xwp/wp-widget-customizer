@@ -628,16 +628,8 @@ class Widget_Customizer {
 				<input type="search" placeholder="<?php esc_attr_e( 'Find widgets&hellip;', 'widget-customizer' ) ?>">
 			</div>
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
-				<?php
-				$icon_path = sprintf( plugin_dir_path( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] );
-				$icon_url  = file_exists( $icon_path ) ? sprintf( plugin_dir_url( __FILE__ ) . 'icons/icon-%s.png', $available_widget['id_base'] ) : plugin_dir_url( __FILE__ ) . 'icons/icon-default.png';
-				$icon_url  = apply_filters( 'widget_icon_url', $icon_url, $available_widget['id'] );
-				?>
 				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>" tabindex="0">
-					<?php if ( ! empty( $icon_url ) ): ?>
-						<img src="<?php echo esc_url( $icon_url ) ?>" alt="Icon" class="widget-icon">
-						<div class="widget-icon"></div>
-					<?php endif; ?>
+					<div class="widget-icon"></div>
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
 			<?php endforeach; ?>
