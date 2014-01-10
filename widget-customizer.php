@@ -1178,12 +1178,16 @@ class Widget_Customizer {
 			||
 			empty( $value['instance_hash_key'] )
 			||
-			empty( $value['serialized_instance'] )
+			empty( $value['encoded_serialized_instance'] )
 		);
 		if ( $invalid ) {
 			return null;
 		}
-		$instance = unserialize( $value['serialized_instance'] );
+		$decoded = base64_decode( $value['encoded_serialized_instance'], true );
+		if ( false === $decoded ) {
+			return null;
+		}
+		$instance = unserialize( $decoded );
 		if ( false === $instance ) {
 			return null;
 		}
@@ -1203,8 +1207,9 @@ class Widget_Customizer {
 	 */
 	static function sanitize_widget_js_instance( $value ) {
 		if ( empty( $value['is_widget_customizer_js_value'] ) ) {
+			$serialized = serialize( $value );
 			$value = array(
-				'serialized_instance' => serialize( $value ),
+				'encoded_serialized_instance' => base64_encode( $serialized ),
 				'title' => empty( $value['title'] ) ? '' : $value['title'],
 				'is_widget_customizer_js_value' => true,
 				'instance_hash_key' => self::get_instance_hash_key( $value ),
