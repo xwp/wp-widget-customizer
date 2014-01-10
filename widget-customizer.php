@@ -1235,6 +1235,34 @@ class Widget_Customizer {
 			$option_name = 'widget_' . $parsed_id['id_base'];
 
 			/**
+			 * If a previously-sanitized instance is provided, populate the input vars
+			 * with its values so that the widget update callback will read this instance
+			 */
+			$added_input_vars = array();
+			if ( ! empty( $_POST['sanitized_widget_setting'] ) ) {
+				$sanitized_widget_setting = json_decode( wp_unslash( $_POST['sanitized_widget_setting'] ), true );
+				if ( empty( $sanitized_widget_setting ) ) {
+					throw new Widget_Customizer_Exception( 'Malformed sanitized_widget_setting' );
+				}
+				$instance = self::sanitize_widget_instance( $sanitized_widget_setting );
+				if ( is_null( $instance ) ) {
+					throw new Widget_Customizer_Exception( 'Unsanitary sanitized_widget_setting' );
+				}
+				if ( ! is_null( $parsed_id['number'] ) ) {
+					$value = array();
+					$value[$parsed_id['number']] = $instance;
+					$key = 'widget-' . $parsed_id['id_base'];
+					$_REQUEST[$key] = $_POST[$key] = wp_slash( $value );
+					$added_input_vars[] = $key;
+				} else {
+					foreach ( $instance as $key => $value ) {
+						$_REQUEST[$key] = $_POST[$key] = wp_slash( $value );
+						$added_input_vars[] = $key;
+					}
+				}
+			}
+
+			/**
 			 * Invoke the widget update callback
 			 */
 			foreach ( (array) $wp_registered_widget_updates as $name => $control ) {
@@ -1244,6 +1272,12 @@ class Widget_Customizer {
 					ob_end_clean();
 					break;
 				}
+			}
+
+			// Clean up any input vars that were manually added
+			foreach ( $added_input_vars as $key ) {
+				unset( $_POST[$key] );
+				unset( $_REQUEST[$key] );
 			}
 
 			/**

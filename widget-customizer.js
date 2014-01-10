@@ -541,23 +541,12 @@ var WidgetCustomizer = (function ($) {
 			params['widget-id'] = control.params.widget_id;
 			params.id_base = parsed_widget_id.id_base;
 			params.widget_number = parsed_widget_id.number || '';
-			var is_multi = ( null !== params.widget_number );
 			// @todo widget-width and widget-height?
 
 			var data = $.param( params );
 
 			if ( instance_override ) {
-				instance_override = $.extend( true, {}, instance_override ); // deep clone
-
-				// Use proper keys multi widgets
-				if ( is_multi ) {
-					$.each( instance_override, function ( key, value ) {
-						delete instance_override[key];
-						key = 'widget-' + parsed_widget_id.id_base + '[' + parsed_widget_id.number + '][' + key + ']';
-						instance_override[key] = value;
-					} );
-				}
-				data += '&' + $.param( instance_override );
+				data += '&' + $.param( { 'sanitized_widget_setting': JSON.stringify( instance_override ) } );
 			} else {
 				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
 			}
