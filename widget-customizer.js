@@ -1,4 +1,4 @@
-/*global wp, Backbone, _, jQuery, WidgetCustomizer_exports, alert */
+/*global wp, Backbone, _, jQuery, WidgetCustomizer_exports */
 /*exported WidgetCustomizer */
 var WidgetCustomizer = (function ($) {
 	'use strict';
@@ -392,7 +392,10 @@ var WidgetCustomizer = (function ($) {
 				widget_form_control.expandForm();
 
 				if ( is_existing_widget ) {
-					widget_form_control.updateWidget( widget_form_control.setting(), function () {
+					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
+						if ( error ) {
+							throw error;
+						}
 						form_autofocus();
 					} );
 				} else {
@@ -580,7 +583,7 @@ var WidgetCustomizer = (function ($) {
 					if ( complete_callback ) {
 						complete_callback.call( control, message );
 					} else {
-						alert( message );
+						throw new Error( message );
 					}
 				}
 			});
@@ -588,7 +591,7 @@ var WidgetCustomizer = (function ($) {
 				if ( complete_callback ) {
 					complete_callback.call( control, textStatus );
 				} else {
-					alert( textStatus );
+					throw new Error( textStatus );
 				}
 			});
 			jqxhr.always( function () {
