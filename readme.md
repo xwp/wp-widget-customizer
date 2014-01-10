@@ -13,7 +13,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 ## Description ##
 
-*NEW:* Widget icons are now vectorized fonts, and controls are faded-out for widgets hidden in the currently-previewed URL (e.g. via Jetpack's Widget Visibility). See [full changelog](http://wordpress.org/plugins/settings-revisions/changelog/).
+***NEW:*** Widget icons are now vectorized fonts, and controls are faded-out for widgets hidden in the currently-previewed URL (e.g. via Jetpack's Widget Visibility). See [full changelog](http://wordpress.org/plugins/widget-customizer/changelog/).
 
 **Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
 
