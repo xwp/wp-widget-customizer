@@ -857,7 +857,7 @@ var WidgetCustomizer = (function ($) {
 			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
 
 				// Only proceed with keypress if it is Enter or Spacebar
-				if ( event.type === 'keydown' && ( event.which !== 13 && event.which !== 32 ) ) {
+				if ( event.type === 'keypress' && ( event.which !== 13 && event.which !== 32 ) ) {
 					return;
 				}
 
