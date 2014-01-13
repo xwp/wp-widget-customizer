@@ -53,8 +53,6 @@
 
 .customize-control-widget_form .widget {
 	margin-bottom: 0;
-	margin-left: -10px;
-	margin-right: -10px;
 
 	/**
 	 * Prevent plugins (e.g. Widget Visibility in Jetpack) from forcing widget forms
