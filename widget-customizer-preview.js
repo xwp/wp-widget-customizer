@@ -4,12 +4,12 @@ var WidgetCustomizerPreview = (function ($) {
 	'use strict';
 
 	var self = {
-		rendered_sidebars: {},
+		rendered_sidebars: {}, // @todo Make rendered a property of the Backbone model
 		sidebars_eligible_for_post_message: {},
-		rendered_widgets: {},
+		rendered_widgets: {}, // @todo Make rendered a property of the Backbone model
 		widgets_eligible_for_post_message: {},
-		registered_sidebars: {},
-		registered_widgets: {},
+		registered_sidebars: [], // @todo Make a Backbone collection
+		registered_widgets: {}, // @todo Make array, Backbone collection
 		widget_selectors: [],
 		render_widget_ajax_action: null,
 		render_widget_nonce_value: null,
@@ -23,8 +23,8 @@ var WidgetCustomizerPreview = (function ($) {
 			this.livePreview();
 
 			self.preview.bind( 'active', function() {
-				self.preview.send( 'rendered-sidebars', self.rendered_sidebars );
-				self.preview.send( 'rendered-widgets', self.rendered_widgets );
+				self.preview.send( 'rendered-sidebars', self.rendered_sidebars ); // @todo Only send array of IDs
+				self.preview.send( 'rendered-widgets', self.rendered_widgets ); // @todo Only send array of IDs
 			} );
 		},
 
@@ -32,7 +32,7 @@ var WidgetCustomizerPreview = (function ($) {
 		 * Calculate the selector for the sidebar's widgets based on the registered sidebar's info
 		 */
 		buildWidgetSelectors: function () {
-			$.each( self.registered_sidebars, function ( id, sidebar ) {
+			$.each( self.registered_sidebars, function ( i, sidebar ) {
 				var widget_tpl = [
 					sidebar.before_widget.replace('%1$s', '').replace('%2$s', ''),
 					sidebar.before_title,

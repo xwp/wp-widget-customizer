@@ -585,21 +585,56 @@ class Widget_Customizer {
 			self::$widgets_eligible_for_post_message[$available_widget['id_base']] = ( 'postMessage' === self::get_widget_setting_transport( $available_widget['id_base'] ) );
 		}
 
+		$widget_reorder_nav_tpl = sprintf(
+			'<div class="widget-reorder-nav"><span class="move-widget" tabindex="0" title="%1$s">%2$s</span><span class="move-widget-down" tabindex="0" title="%3$s">%4$s</span><span class="move-widget-up" tabindex="0" title="%5$s">%6$s</span></div>',
+			esc_attr__( 'Move to another area...', 'widget-customizer' ),
+			esc_html__( 'Move to another area...', 'widget-customizer' ),
+			esc_attr__( 'Move down', 'widget-customizer' ),
+			esc_html__( 'Move down', 'widget-customizer' ),
+			esc_attr__( 'Move up', 'widget-customizer' ),
+			esc_html__( 'Move up', 'widget-customizer' )
+		);
+
+		$move_widget_area_tpl = str_replace(
+			array( '{description}', '{btn}' ),
+			array(
+				esc_html__( 'Select an area to move this widget into:', 'widget-customizer' ),
+				esc_html__( 'Move', 'widget-customizer' ),
+			),
+			'
+				<div class="move-widget-area">
+					<p class="description">{description}</p>
+					<ul class="widget-area-select">
+						<% _.each( sidebars, function ( sidebar ){ %>
+							<li class="" data-id="<%- sidebar.id %>" title="<%- sidebar.description %>" tabindex="0"><%- sidebar.name %></li>
+						<% }); %>
+					</ul>
+					<div class="move-widget-actions">
+						<button class="move-widget-btn button-secondary" type="button">{btn}</button>
+					</div>
+				</div>
+			'
+		);
+
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
 			'update_widget_ajax_action' => self::UPDATE_WIDGET_AJAX_ACTION,
 			'update_widget_nonce_value' => wp_create_nonce( self::UPDATE_WIDGET_AJAX_ACTION ),
 			'update_widget_nonce_post_key' => self::UPDATE_WIDGET_NONCE_POST_KEY,
-			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'registered_sidebars' => array_values( $GLOBALS['wp_registered_sidebars'] ),
 			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
+			'available_widgets' => $available_widgets, // @todo Merge this with registered_widgets
 			'i18n' => array(
 				'save_btn_label' => _x( 'Update', 'button to save changes to a widget', 'widget-customizer' ),
 				'save_btn_tooltip' => _x( 'Save and preview changes before publishing them.', 'tooltip on the widget save button', 'widget-customizer' ),
 				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customizer' ),
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
 			),
-			'available_widgets' => $available_widgets,
+			'tpl' => array(
+				'widget_reorder_nav' => $widget_reorder_nav_tpl,
+				'move_widget_area' => $move_widget_area_tpl,
+			),
 			'sidebars_eligible_for_post_message' => self::$sidebars_eligible_for_post_message,
 			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
 			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
@@ -930,7 +965,7 @@ class Widget_Customizer {
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
-			'registered_sidebars' => $GLOBALS['wp_registered_sidebars'],
+			'registered_sidebars' => array_values( $GLOBALS['wp_registered_sidebars'] ),
 			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
 			'i18n' => array(
 				'widget_tooltip' => __( 'Press shift and then click to edit widget in customizer...', 'widget-customizer' ),
