@@ -172,48 +172,68 @@ var WidgetCustomizer = (function ($) {
 				sidebar_widgets_add_control.before( final_control_containers );
 				control.applyCardinalOrderClassNames();
 
-				var must_refresh_preview = false;
-
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
-					if ( widget_form_control.params.sidebar_id !== control.params.sidebar_id ) {
-						must_refresh_preview = true;
-					}
+					// @todo We need to delete the widget from the old sidebar, and re-fetch via Ajax
 					widget_form_control.params.sidebar_id = control.params.sidebar_id;
 				} );
 
-				// Delete any widget form controls for removed widgets
+				// Cleanup after widget removal
 				_( removed_widget_ids ).each( function ( removed_widget_id ) {
-					var removed_control = self.getWidgetFormControlForWidget( removed_widget_id );
-					if ( ! removed_control ) {
-						return;
-					}
 
-					// Detect if widget control was dragged to another sidebar and abort
-					if ( ! $.contains( control.section_content[0], removed_control.container[0] ) ) {
-						return;
-					}
+					// Using setTimeout so that when moving a widget to another sidebar, the other sidebars_widgets settings get a chance to update
+					setTimeout( function () {
+						var is_present_in_another_sidebar = false;
 
-					wp.customize.control.remove( removed_control.id );
-					removed_control.container.remove();
+						// Check if the widget is in another sidebar
+						wp.customize.each( function ( other_setting ) {
+							if ( other_setting.id === control.setting.id || 0 !== other_setting.id.indexOf( 'sidebars_widgets[' ) || other_setting.id === 'sidebars_widgets[wp_inactive_widgets]' ) {
+								return;
+							}
+							var other_sidebar_widgets = other_setting();
+							var i = other_sidebar_widgets.indexOf( removed_widget_id );
+							if ( -1 !== i ) {
+								is_present_in_another_sidebar = true;
+							}
+						} );
 
-					// Move widget to inactive widgets sidebar (move it to trash) if it was not previously saved
-					if ( self.saved_widget_ids[removed_widget_id] ) {
-						var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
-						inactive_widgets.push( removed_widget_id );
-						wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
-					}
+						// If the widget is present in another sidebar, abort!
+						if ( is_present_in_another_sidebar ) {
+							return;
+						}
 
-					// Make old single widget available for adding again
-					var widget = self.available_widgets.findWhere({ id_base: removed_control.params.widget_id_base });
-					if ( widget && ! widget.get( 'is_multi' ) ) {
-						widget.set( 'is_disabled', false );
-					}
+						var removed_control = self.getWidgetFormControlForWidget( removed_widget_id );
+
+						// Detect if widget control was dragged to another sidebar
+						var was_dragged_to_another_sidebar = (
+							removed_control &&
+							$.contains( document, removed_control.container[0] ) &&
+							! $.contains( control.section_content[0], removed_control.container[0] )
+						);
+
+						// Delete any widget form controls for removed widgets
+						if ( removed_control && ! was_dragged_to_another_sidebar ) {
+							wp.customize.control.remove( removed_control.id );
+							removed_control.container.remove();
+						}
+
+						// Move widget to inactive widgets sidebar (move it to trash) if has been previously saved
+						// This prevents the inactive widgets sidebar from overflowing with throwaway widgets
+						if ( self.saved_widget_ids[removed_widget_id] ) {
+							var inactive_widgets = wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )().slice();
+							inactive_widgets.push( removed_widget_id );
+							wp.customize.value( 'sidebars_widgets[wp_inactive_widgets]' )( _( inactive_widgets ).unique() );
+						}
+
+						// Make old single widget available for adding again
+						var removed_id_base = parse_widget_id( removed_widget_id ).id_base;
+						var widget = self.available_widgets.findWhere( { id_base: removed_id_base } );
+						if ( widget && ! widget.get( 'is_multi' ) ) {
+							widget.set( 'is_disabled', false );
+						}
+					} );
+
 				} );
-
-				if ( must_refresh_preview ) {
-					self.previewer.refresh();
-				}
 			});
 
 			// Update the model with whether or not the sidebar is rendered
