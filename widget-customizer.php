@@ -1228,6 +1228,9 @@ class Widget_Customizer {
 	 * @return array
 	 */
 	static function sanitize_widget_instance( $value ) {
+		if ( $value === array() ) {
+			return $value;
+		}
 		$invalid = (
 			empty( $value['is_widget_customizer_js_value'] )
 			||
