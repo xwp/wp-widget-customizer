@@ -50,6 +50,22 @@ var WidgetCustomizerPreview = (function ($) {
 		},
 
 		/**
+		 * Obtain a widget instance if it was added to the provided sidebar
+		 * This addresses a race condition where a widget is moved between sidebars
+		 * We cannot use ID selector because jQuery will only return the first one
+		 * that matches. We have to resort to an [id] attribute selector
+		 *
+		 * @param {String} sidebar_id
+		 * @param {String} widget_id
+		 * @return {jQuery}
+		 */
+		getSidebarWidgetElement: function ( sidebar_id, widget_id ) {
+			return $( '[id=' + widget_id + ']' ).filter( function () {
+				return $( this ).data( 'widget_customizer_sidebar_id' ) === sidebar_id;
+			} );
+		},
+
+		/**
 		 *
 		 */
 		highlightControls: function() {
@@ -94,7 +110,7 @@ var WidgetCustomizerPreview = (function ($) {
 			}
 			var widget_ids = wp.customize( sidebar_id_to_setting_id( sidebar_id ) )();
 			var rendered_widget_ids = _( widget_ids ).filter( function ( widget_id ) {
-				return 0 !== $( '#' + widget_id ).length;
+				return 0 !== self.getSidebarWidgetElement( sidebar_id, widget_id ).length;
 			} );
 			if ( rendered_widget_ids.length === 0 ) {
 				return false;
@@ -194,8 +210,9 @@ var WidgetCustomizerPreview = (function ($) {
 								throw new Error( r.data && r.data.message ? r.data.message : 'FAIL' );
 							}
 
-							var old_widget = $( '#' + widget_id );
+							var old_widget = self.getSidebarWidgetElement( sidebar_id, widget_id );
 							var new_widget = $( r.data.rendered_widget );
+							new_widget.data( 'widget_customizer_sidebar_id', sidebar_id );
 							if ( new_widget.length && old_widget.length ) {
 								old_widget.replaceWith( new_widget );
 							} else if ( ! new_widget.length && old_widget.length ) {
@@ -209,16 +226,25 @@ var WidgetCustomizerPreview = (function ($) {
 								if ( sidebar_widgets.length === 1 ) {
 									throw new Error( 'Unexpected postMessage for adding first widget to sidebar; refresh must be used instead.' );
 								}
+
+								var get_widget_elements = function ( widget_ids ) {
+									var widget_elements = [];
+									_( widget_ids ).each( function ( widget_id ) {
+										var widget = self.getSidebarWidgetElement( sidebar_id, widget_id );
+										if ( widget.length ) {
+											widget_elements.push( widget[0] );
+										}
+									} );
+									return widget_elements;
+								};
+
 								var before_widget_ids = ( position !== 0 ? sidebar_widgets.slice( 0, position ) : [] );
-								var before_widget_selector = $.map( before_widget_ids, function ( widget_id ) {
-									return '#' + widget_id;
-								} ).join( ',' );
-								var before_widget = $( before_widget_selector ).last();
+								var before_widgets = jQuery().add( get_widget_elements( before_widget_ids ) );
+								var before_widget = before_widgets.last();
+
 								var after_widget_ids = sidebar_widgets.slice( position + 1 );
-								var after_widget_selector = $.map( after_widget_ids, function ( widget_id ) {
-									return '#' + widget_id;
-								} ).join( ',' );
-								var after_widget = $( after_widget_selector ).first();
+								var after_widgets = jQuery().add( get_widget_elements( after_widget_ids ) );
+								var after_widget = after_widgets.first();
 
 								if ( before_widget.length ) {
 									before_widget.after( new_widget );
@@ -230,7 +256,7 @@ var WidgetCustomizerPreview = (function ($) {
 							}
 
 							// Update widget visibility
-							self.rendered_widgets[widget_id] = ( 0 !== $( '#' + widget_id ).length );
+							self.rendered_widgets[widget_id] = ( 0 !== self.getSidebarWidgetElement( sidebar_id, widget_id ).length );
 
 							self.preview.send( 'rendered-widgets', self.rendered_widgets );
 							self.preview.send( 'widget-updated', widget_id );
@@ -247,6 +273,12 @@ var WidgetCustomizerPreview = (function ($) {
 			$.each( self.rendered_sidebars, function ( sidebar_id ) {
 				var setting_id = sidebar_id_to_setting_id( sidebar_id );
 				wp.customize( setting_id, function( value ) {
+					// Initially keep track of the sidebars with which widgets are associated.
+					// Henceforth we must always scope the widget_id by the associated sidebar_id (see self.getSidebarWidgetElement)
+					_( value() ).each( function ( widget_id ) {
+						$( '#' + widget_id ).data( 'widget_customizer_sidebar_id', sidebar_id );
+					} );
+
 					value.bind( function( to, from ) {
 						// Workaround for http://core.trac.wordpress.org/ticket/26061;
 						// once fixed, this conditional can be eliminated
@@ -254,11 +286,30 @@ var WidgetCustomizerPreview = (function ($) {
 							return;
 						}
 
-						// Sort widgets
-						// @todo instead of appending to the parent, we should append relative to the first widget found
-						$.each( to, function ( i, widget_id ) {
-							var widget = $( '#' + widget_id );
-							widget.parent().append( widget );
+						// Remove widgets (their DOM element and their setting) when removed from sidebar
+						$.each( from, function ( i, old_widget_id ) {
+							if ( -1 === to.indexOf( old_widget_id ) ) {
+								var setting_id = widget_id_to_setting_id( old_widget_id );
+								if ( wp.customize.has( setting_id ) ) {
+									wp.customize.remove( setting_id );
+									delete already_bound_widgets[setting_id];
+								}
+
+								// Delete the widget from the DOM if it wasn't added to its new location in the other sidebar
+								self.getSidebarWidgetElement( sidebar_id, old_widget_id ).remove();
+							}
+						} );
+
+						// Sort widgets: reorder relative to the first widget rendered
+						var first_rendered_widget_id = _( to ).find( function ( widget_id ) {
+							return 0 !== self.getSidebarWidgetElement( sidebar_id, widget_id ).length;
+						} );
+						var first_rendered_widget = self.getSidebarWidgetElement( sidebar_id, first_rendered_widget_id );
+						_.chain( to.slice(0) ).reverse().each( function ( widget_id ) {
+							if ( first_rendered_widget_id !== widget_id ) {
+								var widget = self.getSidebarWidgetElement( sidebar_id, widget_id );
+								first_rendered_widget.after( widget );
+							}
 						} );
 
 						// Create settings for newly-created widgets
@@ -283,18 +334,6 @@ var WidgetCustomizerPreview = (function ($) {
 								} else {
 									self.preview.send( 'refresh' );
 								}
-							}
-						} );
-
-						// Remove widgets (their DOM element and their setting) when removed from sidebar
-						$.each( from, function ( i, old_widget_id ) {
-							if ( -1 === to.indexOf( old_widget_id ) ) {
-								var setting_id = widget_id_to_setting_id( old_widget_id );
-								if ( wp.customize.has( setting_id ) ) {
-									wp.customize.remove( setting_id );
-									// @todo WARNING: If a widget is moved to another sidebar, we need to either not do this, or force a refresh when a widget is  moved to another sidebar
-								}
-								$( '#' + old_widget_id ).remove();
 							}
 						} );
 

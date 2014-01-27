@@ -458,13 +458,6 @@ var WidgetCustomizer = (function ($) {
 			} );
 			wp.customize.control.add( setting_id, widget_form_control );
 
-			// Add widget to this sidebar
-			var sidebar_widgets = control.setting().slice();
-			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
-				sidebar_widgets.push( widget_id );
-				control.setting( sidebar_widgets );
-			}
-
 			// Make sure widget is removed from the other sidebars
 			wp.customize.each( function ( other_setting ) {
 				if ( other_setting.id === control.setting.id ) {
@@ -480,6 +473,13 @@ var WidgetCustomizer = (function ($) {
 					other_setting( other_sidebar_widgets );
 				}
 			} );
+
+			// Add widget to this sidebar
+			var sidebar_widgets = control.setting().slice();
+			if ( -1 === sidebar_widgets.indexOf( widget_id ) ) {
+				sidebar_widgets.push( widget_id );
+				control.setting( sidebar_widgets );
+			}
 
 			var form_autofocus = function () {
 				var first_inside_input = widget_form_control.container.find( '.widget-inside :input:visible:first' );
@@ -962,8 +962,8 @@ var WidgetCustomizer = (function ($) {
 		 */
 		getPreviewWidgetElement: function () {
 			var control = this;
-			var iframe_contents = $('#customize-preview').find('iframe').contents();
-			return iframe_contents.find('#' + control.params.widget_id);
+			var widget_customizer_preview = self.getPreviewWindow().WidgetCustomizerPreview;
+			return widget_customizer_preview.getSidebarWidgetElement( control.params.sidebar_id, control.params.widget_id );
 		},
 
 		/**
