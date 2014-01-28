@@ -664,7 +664,6 @@ class Widget_Customizer {
 			</div>
 			<?php foreach ( self::get_available_widgets() as $available_widget ): ?>
 				<div id="widget-tpl-<?php echo esc_attr( $available_widget['id'] ) ?>" data-widget-id="<?php echo esc_attr( $available_widget['id'] ) ?>" class="widget-tpl <?php echo esc_attr( $available_widget['id'] ) ?>" tabindex="0">
-					<div class="widget-icon"></div>
 					<?php echo $available_widget['control_tpl']; // xss ok ?>
 				</div>
 			<?php endforeach; ?>
