@@ -557,15 +557,6 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
-			// Add the widget reordering elements to the widget control
-			control.container.find( '.widget-title-action' ).after( $( self.tpl.widget_reorder_nav ) );
-			var move_widget_area = $(
-				_.template( self.tpl.move_widget_area, {
-					sidebars: _( self.registered_sidebars.toArray() ).pluck( 'attributes' )
-				} )
-			);
-			control.container.find( '.widget-top' ).after( move_widget_area );
-
 			var save_btn = control.container.find( '.widget-control-save' );
 			save_btn.val( self.i18n.save_btn_label );
 			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
@@ -798,8 +789,7 @@ var WidgetCustomizer = (function ($) {
 			if ( do_expand ) {
 				control.container.trigger('expand');
 				inside.slideDown('fast');
-			}
-			else {
+			} else {
 				control.container.trigger('collapse');
 				inside.slideUp('fast', function() {
 					widget.css({'width':'', 'margin':''});
@@ -814,7 +804,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.setting.bind( function() {
 				control.updateInWidgetTitle();
-			});
+			} );
 			control.updateInWidgetTitle();
 		},
 
@@ -827,8 +817,7 @@ var WidgetCustomizer = (function ($) {
 			var in_widget_title = control.container.find('.in-widget-title');
 			if ( title ) {
 				in_widget_title.text( ': ' + title );
-			}
-			else {
+			} else {
 				in_widget_title.text( '' );
 			}
 		},
@@ -838,6 +827,50 @@ var WidgetCustomizer = (function ($) {
 		 */
 		setupReordering: function () {
 			var control = this;
+
+			/**
+			 * select the provided sidebar list item in the move widget area
+			 *
+			 * @param {jQuery} li
+			 */
+			var select_sidebar_item = function ( li ) {
+				li.siblings( '.selected' ).removeClass( 'selected' );
+				li.addClass( 'selected' );
+				var is_self_sidebar = ( li.data( 'id' ) === control.params.sidebar_id );
+				control.container.find( '.move-widget-btn' ).prop( 'disabled', is_self_sidebar );
+			};
+
+			/**
+			 * Add the widget reordering elements to the widget control
+			 */
+			control.container.find( '.widget-title-action' ).after( $( self.tpl.widget_reorder_nav ) );
+			var move_widget_area = $(
+				_.template( self.tpl.move_widget_area, {
+					sidebars: _( self.registered_sidebars.toArray() ).pluck( 'attributes' )
+				} )
+			);
+			control.container.find( '.widget-top' ).after( move_widget_area );
+
+			/**
+			 * Update available sidebars when their rendered state changes
+			 */
+			var update_available_sidebars = function () {
+				var sidebar_items = move_widget_area.find( 'li' );
+				var self_sidebar_item = sidebar_items.filter( function(){
+					return $( this ).data( 'id' ) === control.params.sidebar_id;
+				} );
+				sidebar_items.each( function () {
+					var li = $( this );
+					var sidebar_id = li.data( 'id' );
+					var sidebar_model = self.registered_sidebars.get( sidebar_id );
+					li.toggle( sidebar_model.get( 'is_rendered' ) );
+					if ( li.hasClass( 'selected' ) && ! sidebar_model.get( 'is_rendered' ) ) {
+						select_sidebar_item( self_sidebar_item );
+					}
+				} );
+			};
+			update_available_sidebars();
+			self.registered_sidebars.on( 'change:is_rendered', update_available_sidebars );
 
 			/**
 			 * Handle clicks for up/down/move on the reorder nav
@@ -877,16 +910,11 @@ var WidgetCustomizer = (function ($) {
 					return;
 				}
 				e.preventDefault();
-				$( this ).siblings( '.selected' ).removeClass( 'selected' );
-				$( this ).addClass( 'selected' );
-				var is_self_sidebar = ( $( this ).data( 'id' ) === control.params.sidebar_id );
-				control.container.find( '.move-widget-btn' ).prop( 'disabled', is_self_sidebar );
+				select_sidebar_item( $( this ) );
 			} );
-			// @todo show/hide sidebars when they are appear or are removed in the preview
 
 			/**
 			 * Move widget to another sidebar
-			 * @todo This is not yet properly resulting in the widget control being added to the new sidebar
 			 */
 			control.container.find( '.move-widget-btn' ).click( function () {
 				var old_sidebar_id = control.params.sidebar_id;
@@ -1096,7 +1124,7 @@ var WidgetCustomizer = (function ($) {
 	};
 
 	/**
-	 * @returns {DOMWindow}
+	 * @returns {Window}
 	 */
 	self.getPreviewWindow = function (){
 		return $( '#customize-preview' ).find( 'iframe' ).prop( 'contentWindow' );
