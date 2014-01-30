@@ -66,7 +66,7 @@ class Widget_Customizer {
 		'tewntyeleven' => false,
 		'tewntytwelve' => false,
 		'twentythirteen' => true,
-		'twentyfourteen' => false,
+		'twentyfourteen' => true,
 	);
 
 	/**
