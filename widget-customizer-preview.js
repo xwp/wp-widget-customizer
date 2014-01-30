@@ -179,14 +179,18 @@ var WidgetCustomizerPreview = (function ($) {
 							return;
 						}
 
+						var customized = {};
 						var sidebar_id = null;
-						var sidebar_widgets = [];
 						wp.customize.each( function ( setting, setting_id ) {
 							var matches = setting_id.match( /^sidebars_widgets\[(.+)\]/ );
-							if ( matches && setting().indexOf( widget_id ) !== -1 ) {
-								sidebar_id = matches[1];
-								sidebar_widgets = setting();
+							if ( ! matches ) {
+								return;
 							}
+							var other_sidebar_id = matches[1];
+							if ( setting().indexOf( widget_id ) !== -1 ) {
+								sidebar_id = other_sidebar_id;
+							}
+							customized[sidebar_id_to_setting_id( other_sidebar_id )] = setting();
 						} );
 						if ( ! sidebar_id ) {
 							throw new Error( 'Widget does not exist in a sidebar.' );
@@ -199,8 +203,7 @@ var WidgetCustomizerPreview = (function ($) {
 							setting_id: setting_id,
 							setting: JSON.stringify( to )
 						};
-						var customized = {};
-						customized[ sidebar_id_to_setting_id( sidebar_id ) ] = sidebar_widgets;
+
 						customized[setting_id] = to;
 						data.customized = JSON.stringify(customized);
 						data[self.render_widget_nonce_post_key] = self.render_widget_nonce_value;
@@ -286,16 +289,9 @@ var WidgetCustomizerPreview = (function ($) {
 							return;
 						}
 
-						// Remove widgets (their DOM element and their setting) when removed from sidebar
+						// Delete the widget from the DOM if it no longer exists in the sidebar
 						$.each( from, function ( i, old_widget_id ) {
 							if ( -1 === to.indexOf( old_widget_id ) ) {
-								var setting_id = widget_id_to_setting_id( old_widget_id );
-								if ( wp.customize.has( setting_id ) ) {
-									wp.customize.remove( setting_id );
-									delete already_bound_widgets[setting_id];
-								}
-
-								// Delete the widget from the DOM if it wasn't added to its new location in the other sidebar
 								self.getSidebarWidgetElement( sidebar_id, old_widget_id ).remove();
 							}
 						} );

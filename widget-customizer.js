@@ -168,13 +168,12 @@ var WidgetCustomizer = (function ($) {
 					return widget_form_controls.container[0];
 				} );
 
-				// Re-sort widget form controls
+				// Re-sort widget form controls (including widgets form other sidebars newly moved here)
 				sidebar_widgets_add_control.before( final_control_containers );
 				control.applyCardinalOrderClassNames();
 
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
-					// @todo We need to delete the widget from the old sidebar, and re-fetch via Ajax
 					widget_form_control.params.sidebar_id = control.params.sidebar_id;
 				} );
 

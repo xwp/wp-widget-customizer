@@ -269,10 +269,7 @@ class Widget_Customizer {
 		foreach ( self::$_customized as $setting_id => $value ) {
 			if ( preg_match( '/^sidebars_widgets\[(.+?)\]$/', $setting_id, $matches ) ) {
 				$sidebar_id = $matches[1];
-				if ( ! isset( $sidebars_widgets[$sidebar_id] ) ) {
-					$sidebars_widgets[$sidebar_id] = array();
-				}
-				$sidebars_widgets[$sidebar_id] = array_unique( array_merge( $value, $sidebars_widgets[$sidebar_id] ) );
+				$sidebars_widgets[$sidebar_id] = $value;
 			}
 		}
 		return $sidebars_widgets;
