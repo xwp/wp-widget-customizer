@@ -89,9 +89,7 @@ var WidgetCustomizerPreview = (function ($) {
 				e.preventDefault();
 				var control = parent.WidgetCustomizer.getWidgetFormControlForWidget( $(this).prop('id') );
 				if ( control ) {
-					control.expandControlSection();
-					control.expandForm();
-					control.container.find(':input:visible:first').focus();
+					control.focus();
 				}
 			});
 		},

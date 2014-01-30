@@ -752,11 +752,12 @@ var WidgetCustomizer = (function ($) {
 
 		/**
 		 * Expand the accordion section containing a control
+		 * @todo it would be nice if accordion had a proper API instead of having to trigger UI events on its elements
 		 */
 		expandControlSection: function () {
 			var section = this.container.closest( '.accordion-section' );
-			if ( ! section.hasClass('open') ) {
-				section.find('.accordion-section-title:first').trigger('click');
+			if ( ! section.hasClass( 'open' ) ) {
+				section.find( '.accordion-section-title:first' ).trigger( 'click' );
 			}
 		},
 
@@ -781,20 +782,31 @@ var WidgetCustomizer = (function ($) {
 		 */
 		toggleForm: function ( do_expand ) {
 			var control = this;
-			var widget = control.container.find('div.widget:first');
-			var inside = widget.find('.widget-inside:first');
+			var widget = control.container.find( 'div.widget:first' );
+			var inside = widget.find( '.widget-inside:first' );
 			if ( typeof do_expand === 'undefined' ) {
-				do_expand = ! inside.is(':visible');
+				do_expand = ! inside.is( ':visible' );
 			}
 			if ( do_expand ) {
-				control.container.trigger('expand');
-				inside.slideDown('fast');
+				control.container.trigger( 'expand' );
+				inside.slideDown( 'fast' );
 			} else {
-				control.container.trigger('collapse');
-				inside.slideUp('fast', function() {
-					widget.css({'width':'', 'margin':''});
-				});
+				control.container.trigger( 'collapse' );
+				inside.slideUp( 'fast', function() {
+					widget.css( {'width':'', 'margin':''} );
+				} );
 			}
+		},
+
+		/**
+		 * Expand the containing sidebar section, expand the form, and focus on
+		 * the first input in the control
+		 */
+		focus: function () {
+			var control = this;
+			control.expandControlSection();
+			control.expandForm();
+			control.container.find( ':focusable:first' ).focus();
 		},
 
 		/**
@@ -814,7 +826,7 @@ var WidgetCustomizer = (function ($) {
 		updateInWidgetTitle: function () {
 			var control = this;
 			var title = control.setting().title;
-			var in_widget_title = control.container.find('.in-widget-title');
+			var in_widget_title = control.container.find( '.in-widget-title' );
 			if ( title ) {
 				in_widget_title.text( ': ' + title );
 			} else {
@@ -917,6 +929,8 @@ var WidgetCustomizer = (function ($) {
 			 * Move widget to another sidebar
 			 */
 			control.container.find( '.move-widget-btn' ).click( function () {
+				control.getSidebarWidgetsControl().toggleReordering( false );
+
 				var old_sidebar_id = control.params.sidebar_id;
 				var new_sidebar_id = control.container.find( '.widget-area-select li.selected' ).data( 'id' );
 				var old_sidebar_widgets_setting = customize( 'sidebars_widgets[' + old_sidebar_id + ']' );
@@ -930,6 +944,8 @@ var WidgetCustomizer = (function ($) {
 
 				old_sidebar_widgets_setting( old_sidebar_widget_ids );
 				new_sidebar_widgets_setting( new_sidebar_widget_ids );
+
+				control.focus();
 			} );
 		},
 
