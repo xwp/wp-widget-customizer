@@ -7,17 +7,17 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 **Contributors:** [x-team](http://profiles.wordpress.org/x-team), [westonruter](http://profiles.wordpress.org/westonruter), [shaunandrews](http://profiles.wordpress.org/shaunandrews), [michael-arestad](http://profiles.wordpress.org/michael-arestad), [johnregan3](http://profiles.wordpress.org/johnregan3), [akeda](http://profiles.wordpress.org/akeda), [topher1kenobe](http://profiles.wordpress.org/topher1kenobe), [topquarky](http://profiles.wordpress.org/topquarky), [bobbravo2](http://profiles.wordpress.org/bobbravo2), [ricardocorreia](http://profiles.wordpress.org/ricardocorreia)  
 **Tags:** [customizer](http://wordpress.org/plugins/tags/customizer), [widgets](http://wordpress.org/plugins/tags/widgets), [sidebars](http://wordpress.org/plugins/tags/sidebars), [preview](http://wordpress.org/plugins/tags/preview)  
 **Requires at least:** 3.7  
-**Tested up to:** 3.8  
+**Tested up to:** 3.8.1  
 **Stable tag:** trunk (master)  
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)  
 
 ## Description ##
 
-***NEW:*** Widget icons are now vectorized fonts, and controls are faded-out for widgets hidden in the currently-previewed URL (e.g. via Jetpack's Widget Visibility). See [full changelog](http://wordpress.org/plugins/widget-customizer/changelog/).
+**This plugin is being developed as part of the Widgets UI Refresh feature-as-plugin group. Read the [Widget Customizer Feature-as-Plugin Merge Proposal](http://make.wordpress.org/core/2014/01/28/widget-customizer-feature-as-plugin-merge-proposal/).**
+
+***New:*** Keyboard-accessible means of reordering widgets within an area and reassigning widgets to other areas; drag-and-drop is still supported. See [full changelog](http://wordpress.org/plugins/widget-customizer/changelog/).
 
 **Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
-
-**This plugin is being developed as part of the Widgets UI Refresh feature-as-plugin group. We're hoping it will be accepted into WordPress Core for the 3.9 release, so we are targeting presentation for inclusion in the release at the beginning of the 3.9 development cycle tentatively in January 2014.**
 
 Widgets in WordPress provide an easy way to add functionality to predefined areas of your theme templates. However, once you add a widget to a sidebar you have to leave the WordPress admin to go back to the frontend to actually see how the updated widget appears in the sidebar on your site's public frontend. While you are making these changes and experimenting with a widget, it could be completely broken and everyone visiting your site will see this broken widget since there is no core way to preview changes made to widgets. But WordPress also provides an excellent way to preview changes to various settings on your site via the (Theme) Customizer. Changes made when using the Customizer are not visible to site visitors until you hit Save & Publish. So what if widgets could be edited in the Customizer? That's what this plugin makes possible.
 
@@ -80,6 +80,14 @@ The `sidebar-updated` and `widget-updated` events get triggered on `wp.customize
 ![I DON'T ALWAYS TEST MY WORDPRESS WIDGETS IN PRODUCTION, BUT WHEN I DO I USE THE WIDGET CUSTOMIZER PLUGIN](assets/screenshot-7.jpg)
 
 ## Changelog ##
+
+### 0.14 ###
+* Add keyboard-accessible means of reordering widgets. Fixes [#21](https://github.com/x-team/wp-widget-customizer/pull/21). Props [michael-arestad](http://profiles.wordpress.org/michael-arestad/).
+* Allow movement of widgets to other sidebars to be live-previewed (not needing page refresh). Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* Add widget icon defaults. PR [#75](https://github.com/x-team/wp-widget-customizer/pull/75). Props [michael-arestad](http://profiles.wordpress.org/michael-arestad/).
+* Bugfix for handling keypress in available widgets panel. PR [#72](https://github.com/x-team/wp-widget-customizer/pull/72). Props [knishiura-lab](https://github.com/knishiura-lab).
+* Add theme support for Twenty Fourteen. Props [westonruter](http://profiles.wordpress.org/westonruter/).
+* And [other changes](https://github.com/x-team/wp-widget-customizer/compare/0.13...0.14)...
 
 ### 0.13 ###
 * Widget addition panel now features the use of a vector font for the widget icons instead of using PNGs. Fixes [#69](https://github.com/x-team/wp-widget-customizer/issues/69). Props [michael-arestad](http://profiles.wordpress.org/michael-arestad/).

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Widget Customizer
  * Description: Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
- * Version:     0.13
+ * Version:     0.14
  * Author:      X-Team
  * Author URI:  http://x-team.com/wordpress/
  * License:     GPLv2+
