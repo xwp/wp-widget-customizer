@@ -143,6 +143,20 @@ class Widget_Customizer {
 		return self::get_plugin_meta( 'Version' );
 	}
 
+	/**
+	 * Get an unslashed post value, or return a default
+	 *
+	 * @param string $name
+	 * @param mixed $default
+	 * @return mixed
+	 */
+	static function get_post_value( $name, $default = null ) {
+		if ( ! isset( $_POST[$name] ) ) {
+			return $default;
+		}
+		return wp_unslash( $_POST[$name] );
+	}
+
 	protected static $_customized;
 	protected static $_prepreview_added_filters = array();
 
@@ -171,7 +185,7 @@ class Widget_Customizer {
 			&&
 			( ! is_admin() )
 			&&
-			( 'on' === filter_input( INPUT_POST, 'wp_customize' ) )
+			( 'on' === self::get_post_value( 'wp_customize' ) )
 			&&
 			check_ajax_referer( 'preview-customize_' . $wp_customize->get_stylesheet(), 'nonce', false )
 		);
@@ -179,7 +193,7 @@ class Widget_Customizer {
 		$is_ajax_widget_update = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
-			filter_input( INPUT_POST, 'action' ) === self::UPDATE_WIDGET_AJAX_ACTION
+			self::get_post_value( 'action' ) === self::UPDATE_WIDGET_AJAX_ACTION
 			&&
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
@@ -187,7 +201,7 @@ class Widget_Customizer {
 		$is_widget_render = (
 			isset( $_POST[self::RENDER_WIDGET_QUERY_VAR] )
 			&&
-			filter_input( INPUT_POST, 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
+			self::get_post_value( 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
 			&&
 			check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false )
 		);
@@ -195,7 +209,7 @@ class Widget_Customizer {
 		$is_ajax_customize_save = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
-			filter_input( INPUT_POST, 'action' ) === 'customize_save'
+			self::get_post_value( 'action' ) === 'customize_save'
 			&&
 			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
 		);
@@ -207,13 +221,13 @@ class Widget_Customizer {
 
 		// Input from customizer preview
 		if ( isset( $_POST['customized'] ) ) {
-			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
+			$customized = json_decode( self::get_post_value( 'customized' ), true );
 		}
 		// Input from ajax widget update request
 		else {
 			$customized    = array();
-			$id_base       = filter_input( INPUT_POST, 'id_base' );
-			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
+			$id_base       = self::get_post_value( 'id_base' );
+			$widget_number = (int) self::get_post_value( 'widget_number' );
 			$option_name   = 'widget_' . $id_base;
 			$customized[$option_name] = array();
 			if ( false !== $widget_number ) {
@@ -1107,7 +1121,7 @@ class Widget_Customizer {
 			if ( ! current_user_can( 'edit_theme_options' ) ) {
 				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
 			}
-			$widget_id = wp_unslash( $_POST['widget_id'] );
+			$widget_id = self::get_post_value( 'widget_id' );
 			if ( ! isset( $wp_registered_widgets[$widget_id] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Unable to find registered widget', 'widget-customizer' ) );
 			}
@@ -1116,7 +1130,7 @@ class Widget_Customizer {
 			if ( empty( $_POST['setting'] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Missing instance', 'widget-customizer' ) );
 			}
-			$setting = json_decode( wp_unslash( $_POST['setting'] ), true );
+			$setting = json_decode( self::get_post_value( 'setting' ), true );
 			if ( is_null( $setting ) ) {
 				throw new Widget_Customizer_Exception( __( 'JSON parse error', 'widget-customizer' ) );
 			}
@@ -1125,7 +1139,7 @@ class Widget_Customizer {
 				throw new Widget_Customizer_Exception( __( 'Unsanitary widget instance provided', 'widget-customizer' ) );
 			}
 
-			$setting_id = wp_unslash( $_POST['setting_id'] );
+			$setting_id = self::get_post_value( 'setting_id' );
 			if ( ! preg_match( '/^(.+?)(?:\[(\d+)])?$/', $setting_id, $matches ) ) {
 				throw new Widget_Customizer_Exception( __( 'Malformed setting', 'widget-customizer' ) );
 			}
@@ -1299,7 +1313,7 @@ class Widget_Customizer {
 			 */
 			$added_input_vars = array();
 			if ( ! empty( $_POST['sanitized_widget_setting'] ) ) {
-				$sanitized_widget_setting = json_decode( wp_unslash( $_POST['sanitized_widget_setting'] ), true );
+				$sanitized_widget_setting = json_decode( self::get_post_value( 'sanitized_widget_setting' ), true );
 				if ( empty( $sanitized_widget_setting ) ) {
 					throw new Widget_Customizer_Exception( 'Malformed sanitized_widget_setting' );
 				}
@@ -1410,7 +1424,7 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$widget_id = filter_input( INPUT_POST, 'widget-id' );
+			$widget_id = self::get_post_value( 'widget-id' );
 			$parsed_id = self::parse_widget_id( $widget_id );
 			$id_base   = $parsed_id['id_base'];
 
