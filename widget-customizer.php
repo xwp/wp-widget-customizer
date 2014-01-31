@@ -623,7 +623,7 @@ class Widget_Customizer {
 			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
 			'available_widgets' => $available_widgets, // @todo Merge this with registered_widgets
 			'i18n' => array(
-				'save_btn_label' => _x( 'Update', 'button to save changes to a widget', 'widget-customizer' ),
+				'save_btn_label' => _x( 'Preview', 'button to save changes to a widget', 'widget-customizer' ),
 				'save_btn_tooltip' => _x( 'Save and preview changes before publishing them.', 'tooltip on the widget save button', 'widget-customizer' ),
 				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customizer' ),
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
