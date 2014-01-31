@@ -17,6 +17,10 @@ class Sidebar_Widgets_WP_Customize_Control extends WP_Customize_Control {
 
 	public function render_content() {
 		?>
+		<span class="reorder-toggle" tabindex="0">
+			<span class="reorder"><?php esc_html_e( 'Reorder', 'widget-customizer' ) ?></span>
+			<span class="reorder-done"><?php esc_html_e( 'Done', 'widget-customizer' ) ?></span>
+		</span>
 		<span class="add-new-widget" tabindex="0">
 			<b><?php esc_html_e( 'Add a Widget', 'widget-customizer' ) ?></b>
 		</span>
