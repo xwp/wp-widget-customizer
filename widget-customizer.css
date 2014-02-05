@@ -112,9 +112,9 @@
 **/
 
 .reorder-toggle {
-	float: left;
-	clear: left;
-	margin: 14px 10px 0 10px;
+	float: right;
+	padding: 5px 10px;
+	margin-right: 10px;
 	text-decoration: none;
 	cursor: pointer;
 	outline: none;
@@ -294,48 +294,41 @@
 .add-new-widget {
 	cursor: pointer;
 	float: right;
-	clear: right;
-	padding: 13px 20px 10px 20px;
-	margin: 0px -20px -23px -20px;
-	text-align: right;
 	-webkit-transition: all 0.2s;
 	transition: all 0.2s;
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
 	user-select: none;
-}
-
-.add-new-widget:hover {
-	opacity: 0.8;
+	-moz-outline: none;
 	outline: none;
-}
-
-.add-new-widget:active {
-	opacity: 0.6;
-}
-
-.add-new-widget:focus {
-	outline: none;
-}
-
-.add-new-widget:focus b {
-	outline: 1px dotted;
 }
 
 .add-new-widget:before {
 	content: "\f132";
 	display: inline-block;
 	position: relative;
-	top: -2px;
-	padding: 4px 2px 1px 2px;
+		left: -2px;
+		top: -1px;
 	font: normal 16px/1 'dashicons';
 	vertical-align: middle;
-	border: 1px solid rgba(0,0,0,0.2);
-	border-radius: 80px;
 	-webkit-transition: all 0.2s;
 	transition: all 0.2s;
 	-webkit-font-smoothing: antialiased;
+}
+
+body.adding-widget .add-new-widget,
+body.adding-widget .add-new-widget:hover {
+	background: #EEE;
+	border-color: #999;
+	color: #333;
+	-webkit-box-shadow: inset 0 2px 5px -3px rgba(0, 0, 0, 0.5);
+	box-shadow: inset 0 2px 5px -3px rgba(0, 0, 0, 0.5);
+}
+body.adding-widget .add-new-widget:before {
+	-webkit-transform: rotate(45deg);
+	-ms-transform: rotate(45deg);
+	transform: rotate(45deg);
 }
 
 #available-widgets .widget {
@@ -346,10 +339,6 @@
 #widgets-left #available-widgets .widget {
 	float: none !important;
 	width: auto !important;
-}
-
-.add-new-widget b {
-	padding-left: 8px;
 }
 
 #available-widgets {
@@ -432,19 +421,6 @@
 #customize-preview {
 	-webkit-transition: all 0.2s;
 	transition: all 0.2s;
-}
-
-body.adding-widget {}
-body.adding-widget .add-new-widget {
-	color: rgb( 173, 6, 15 );
-}
-
-body.adding-widget .add-new-widget:before {
-	color: rgb( 173, 6, 15 );
-	border-color: rgba( 173, 6, 15, 1);
-	-webkit-transform: rotate(45deg);
-	-ms-transform: rotate(45deg);
-	transform: rotate(45deg);
 }
 
 body.adding-widget #available-widgets {
