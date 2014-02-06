@@ -701,14 +701,9 @@ var WidgetCustomizer = (function ($) {
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
-			var parsed_widget_id = parse_widget_id( control.params.widget_id );
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
-			params['widget-id'] = control.params.widget_id;
-			params.id_base = parsed_widget_id.id_base;
-			params.widget_number = parsed_widget_id.number || '';
-			// @todo widget-width and widget-height?
 
 			var data = $.param( params );
 
@@ -717,6 +712,7 @@ var WidgetCustomizer = (function ($) {
 			} else {
 				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
 			}
+			data += '&' + control.container.find( '.widget-content ~ :input' ).serialize();
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {
