@@ -54,7 +54,9 @@ var WidgetCustomizer = (function ($) {
 		name: null,
 		id_base: null,
 		transport: 'refresh',
-		params: []
+		params: [],
+		width: null,
+		height: null
 	});
 	var WidgetCollection = self.WidgetCollection = Backbone.Collection.extend({
 		model: Widget
@@ -573,6 +575,12 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
+			// Handle wide widgets
+			if ( control.params.is_wide ) {
+				control.container.addClass( 'wide-widget-control' );
+			}
+
+			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
 			save_btn.val( self.i18n.save_btn_label );
 			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
@@ -582,6 +590,7 @@ var WidgetCustomizer = (function ($) {
 				control.updateWidget();
 			});
 
+			// Configure close button
 			var close_btn = control.container.find( '.widget-control-close' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			close_btn.on( 'click', function ( e ) {
@@ -590,6 +599,7 @@ var WidgetCustomizer = (function ($) {
 				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
 			} );
 
+			// Configure remove button
 			var remove_btn = control.container.find( 'a.widget-control-remove' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			remove_btn.on( 'click', function ( e ) {
