@@ -577,14 +577,14 @@ var WidgetCustomizer = (function ($) {
 			save_btn.val( self.i18n.save_btn_label );
 			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
 			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
-			save_btn.on( 'click', function (e) {
+			save_btn.on( 'click', function ( e ) {
 				e.preventDefault();
 				control.updateWidget();
 			});
 
 			var close_btn = control.container.find( '.widget-control-close' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
-			close_btn.on( 'click', function (e) {
+			close_btn.on( 'click', function ( e ) {
 				e.preventDefault();
 				control.collapseForm();
 				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
@@ -592,7 +592,7 @@ var WidgetCustomizer = (function ($) {
 
 			var remove_btn = control.container.find( 'a.widget-control-remove' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
-			remove_btn.on( 'click', function (e) {
+			remove_btn.on( 'click', function ( e ) {
 				e.preventDefault();
 
 				// Find an adjacent element to add focus to when this widget goes away
@@ -618,17 +618,17 @@ var WidgetCustomizer = (function ($) {
 					sidebar_widget_ids.splice( i, 1 );
 					sidebars_widgets_control.setting( sidebar_widget_ids );
 					adjacent_focus_target.focus(); // keyboard accessibility
-				});
+				} );
 			} );
 
-			var update_form_as_saved = function () {
+			var replace_delete_with_remove = function () {
 				remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
 				remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
 			};
 			if ( control.params.is_new ) {
-				wp.customize.bind( 'saved', update_form_as_saved );
+				wp.customize.bind( 'saved', replace_delete_with_remove );
 			} else {
-				update_form_as_saved();
+				replace_delete_with_remove();
 			}
 
 			// Trigger widget form update when hitting Enter within an input
@@ -639,11 +639,12 @@ var WidgetCustomizer = (function ($) {
 			widget_content.on( 'blur', '*', function () {
 				control.last_focused_element_id = null;
 			} );
-			widget_content.on( 'keydown', 'input', function(e) {
+			widget_content.on( 'keydown', 'input', function( e ) {
 				if ( 13 === e.which ){ // Enter
 					var element_id_to_refocus = control.last_focused_element_id;
 					control.updateWidget( null, function () {
 						if ( element_id_to_refocus ) {
+							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
 							$( document.getElementById( element_id_to_refocus ) ).focus();
 						}
 					} );
