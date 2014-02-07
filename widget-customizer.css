@@ -590,3 +590,41 @@ body.adding-widget #customize-preview {
 /* twitter */
 #available-widgets [class*="tweet"] .widget-title:before,
 #available-widgets [class*="twitter"] .widget-title:before { content: "\f301"; }
+
+
+@media screen and (max-height: 700px) and (min-width: 981px) {
+	.customize-control {
+		margin-bottom: 0;
+	}
+	.widget-top {
+		border-none;
+		-webkit-box-shadow: none;
+		box-shadow: none;
+		margin-top: -1px;
+	}
+	.widget-top:hover {
+		position: relative;
+		z-index: 1;
+	}
+	.last-widget {
+		margin-bottom: 15px;
+	}
+	.widget-title h4 {
+		padding: 13px 15px;
+	}
+	.widget-top a.widget-action:after {
+		padding-top: 9px;
+	}
+	.widget-reorder-nav span {
+		height: 39px;
+	}
+	.widget-reorder-nav span:before {
+		line-height: 39px;
+	}
+	#customize-theme-controls .widget-area-select li {
+		padding: 9px 15px 11px 42px;
+	}
+	#customize-theme-controls .widget-area-select li:before {
+		top: 6px;
+	}
+}
