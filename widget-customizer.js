@@ -578,7 +578,18 @@ var WidgetCustomizer = (function ($) {
 			// Handle wide widgets
 			if ( control.params.is_wide ) {
 				control.container.addClass( 'wide-widget-control' );
+				control.container.find( '.widget-content:first' ).css( {
+					'min-width': control.params.width,
+					'min-height': control.params.height
+				} );
 			}
+			control.container.on( 'click keypress', function ( e ) {
+				$( '.customize-control-widget_form.focused-inside' ).not( control.container ).removeClass( 'focused-inside' );
+				var widget_inside = control.container.find( '.widget-inside:first' )[0];
+				if ( $.contains( widget_inside, e.target ) ) {
+					control.container.addClass( 'focused-inside' );
+				}
+			} );
 
 			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
@@ -824,12 +835,22 @@ var WidgetCustomizer = (function ($) {
 			}
 			if ( do_expand ) {
 				control.container.trigger( 'expand' );
-				inside.slideDown( 'fast' );
+				if ( control.params.is_wide ) {
+					inside.animate({ width: 'show' });
+				} else {
+					inside.slideDown( 'fast' );
+				}
+				control.container.addClass( 'expanded' );
 			} else {
 				control.container.trigger( 'collapse' );
-				inside.slideUp( 'fast', function() {
-					widget.css( {'width':'', 'margin':''} );
-				} );
+				if ( control.params.is_wide ) {
+					inside.animate({ width: 'hide' });
+				} else {
+					inside.slideUp( 'fast', function() {
+						widget.css( {'width':'', 'margin':''} );
+					} );
+				}
+				control.container.removeClass( 'expanded' );
 			}
 		},
 

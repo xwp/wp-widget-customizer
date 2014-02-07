@@ -536,7 +536,7 @@ class Widget_Customizer {
 		global $wp_registered_widget_controls;
 		$parsed_widget_id = self::parse_widget_id( $widget_id );
 		$width = $wp_registered_widget_controls[$widget_id]['width'];
-		$is_core = in_array( $parsed_widget_id, self::$core_widget_id_bases );
+		$is_core = in_array( $parsed_widget_id['id_base'], self::$core_widget_id_bases );
 		$is_wide = ( $width > 250 && ! $is_core );
 		$is_wide = apply_filters( 'is_wide_widget_in_customizer', $is_wide, $widget_id );
 		return $is_wide;

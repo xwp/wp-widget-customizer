@@ -25,6 +25,10 @@
 }
 
 
+.wp-full-overlay-sidebar {
+	overflow: visible;
+}
+
 /**
  * Hide all sidebar sections by default, only show them (via JS) once the
  * preview loads and we know whether the sidebars are used in the template.
@@ -61,13 +65,35 @@
 
 .customize-control-widget_form .widget {
 	margin-bottom: 0;
+}
 
+.customize-control-widget_form:not(.wide-widget-control) {
 	/**
 	 * Prevent plugins (e.g. Widget Visibility in Jetpack) from forcing widget forms
 	 * to be wide and so overflow the customizer panel
 	 */
 	left: auto !important;
 	max-width: 100%;
+}
+.customize-control-widget_form.wide-widget-control .widget-inside {
+	position: fixed;
+	left: 300px;
+	top: 25%;
+	padding: 20px;
+	border: 1px solid rgb(229, 229, 229);
+	z-index: -1;
+
+	-webkit-transition: background 0.2s;
+	transition: background 0.2s;
+}
+.customize-control-widget_form.wide-widget-control.expanded:hover .widget-title {
+	background: #eee;
+}
+.customize-control-widget_form.wide-widget-control.expanded:hover .widget-inside {
+	background: #eee;
+}
+.customize-control-widget_form.wide-widget-control.expanded.focused-inside .widget-title {
+	background: #ddd;
 }
 
 .widget-inside {
@@ -78,6 +104,18 @@
 
 .widget-top {
 	cursor: move;
+}
+
+.customize-control-widget_form.expanded a.widget-action:after {
+	content: "\f142";
+}
+
+.customize-control-widget_form.wide-widget-control a.widget-action:after {
+	content: "\f139";
+}
+
+.customize-control-widget_form.wide-widget-control.expanded a.widget-action:after {
+	content: "\f141";
 }
 
 .widget-title-action {
