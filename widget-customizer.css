@@ -597,7 +597,6 @@ body.adding-widget #customize-preview {
 		margin-bottom: 0;
 	}
 	.widget-top {
-		border-none;
 		-webkit-box-shadow: none;
 		box-shadow: none;
 		margin-top: -1px;
