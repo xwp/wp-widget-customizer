@@ -482,7 +482,10 @@ var WidgetCustomizer = (function ($) {
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type,
-					is_new: ! is_existing_widget
+					is_new: ! is_existing_widget,
+					width: widget.get( 'width' ),
+					height: widget.get( 'height' ),
+					is_wide: widget.get( 'is_wide' )
 				},
 				previewer: control.setting.previewer
 			} );
@@ -511,27 +514,17 @@ var WidgetCustomizer = (function ($) {
 				control.setting( sidebar_widgets );
 			}
 
-			var form_autofocus = function () {
-				var first_inside_input = widget_form_control.container.find( '.widget-inside :input:visible:first' );
-				if ( first_inside_input.length ) {
-					first_inside_input.focus();
-				} else {
-					widget_form_control.container.find( '.widget-top .widget-action:first' ).focus();
-				}
-			};
-
 			customize_control.slideDown(function () {
-				widget_form_control.expandForm();
-
 				if ( is_existing_widget ) {
+					widget_form_control.expandForm();
 					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
 						if ( error ) {
 							throw error;
 						}
-						form_autofocus();
+						widget_form_control.focus();
 					} );
 				} else {
-					form_autofocus();
+					widget_form_control.focus();
 				}
 			});
 
@@ -862,7 +855,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.expandControlSection();
 			control.expandForm();
-			control.container.find( ':focusable:first' ).focus();
+			control.container.find( ':focusable:first' ).focus().trigger( 'click' );
 		},
 
 		/**
