@@ -826,21 +826,43 @@ var WidgetCustomizer = (function ($) {
 			if ( typeof do_expand === 'undefined' ) {
 				do_expand = ! inside.is( ':visible' );
 			}
+
+			// Already expanded or collapsed, so noop
+			if ( control.container.hasClass( 'expanded' ) === do_expand ) {
+				return;
+			}
+
+			var complete;
 			if ( do_expand ) {
+				// Close all other widget controls before expanding this one
+				wp.customize.control.each( function ( other_control ) {
+					if ( control.params.type === other_control.params.type && control !== other_control ) {
+						other_control.collapseForm();
+					}
+				} );
+
 				control.container.trigger( 'expand' );
+				control.container.addClass( 'expanding' );
+				complete = function () {
+					control.container.removeClass( 'collapsing' );
+				};
 				if ( control.params.is_wide ) {
-					inside.animate({ width: 'show' });
+					inside.animate({ width: 'show' }, complete );
 				} else {
-					inside.slideDown( 'fast' );
+					inside.slideDown( 'fast', complete );
 				}
 				control.container.addClass( 'expanded' );
 			} else {
 				control.container.trigger( 'collapse' );
+				control.container.addClass( 'collapsing' );
+				complete = function () {
+					control.container.removeClass( 'collapsing' );
+				};
 				if ( control.params.is_wide ) {
-					inside.animate({ width: 'hide' });
+					inside.animate( { width: 'hide' }, complete );
 				} else {
 					inside.slideUp( 'fast', function() {
-						widget.css( {'width':'', 'margin':''} );
+						widget.css( {'width':'', 'margin':''}, complete );
 					} );
 				}
 				control.container.removeClass( 'expanded' );

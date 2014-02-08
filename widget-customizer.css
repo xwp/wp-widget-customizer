@@ -86,6 +86,10 @@
 	-webkit-transition: background 0.2s;
 	transition: background 0.2s;
 }
+.customize-control-widget_form.wide-widget-control.collapsing .widget-inside {
+	z-index: -2;
+}
+
 .customize-control-widget_form.wide-widget-control.expanded:hover .widget-title {
 	background: #eee;
 }
