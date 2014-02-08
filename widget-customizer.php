@@ -430,7 +430,8 @@ class Widget_Customizer {
 				} else {
 					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
 				}
-				$setting_args['sanitize_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_callback']    = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_js_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets_js_instance' );
 				$wp_customize->add_setting( $setting_id, $setting_args );
 				$new_setting_ids[] = $setting_id;
 
@@ -1312,6 +1313,19 @@ class Widget_Customizer {
 			);
 		}
 		return $value;
+	}
+
+	/**
+	 * Strip out widget IDs for widgets which are no longer registered, such
+	 * as the case when a plugin orphans a widget in a sidebar when it is deactivated.
+	 *
+	 * @param array $widget_ids
+	 * @return array
+	 */
+	static function sanitize_sidebar_widgets_js_instance( $widget_ids ) {
+		global $wp_registered_widgets;
+		$widget_ids = array_values( array_intersect( $widget_ids, array_keys( $wp_registered_widgets ) ) );
+		return $widget_ids;
 	}
 
 	/**
