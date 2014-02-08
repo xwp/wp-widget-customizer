@@ -77,7 +77,7 @@
 }
 .customize-control-widget_form.wide-widget-control .widget-inside {
 	position: fixed;
-	left: 300px;
+	left: 299px;
 	top: 25%;
 	padding: 20px;
 	border: 1px solid rgb(229, 229, 229);
@@ -85,6 +85,15 @@
 }
 .customize-control-widget_form.wide-widget-control.collapsing .widget-inside {
 	z-index: -2;
+}
+
+.customize-control-widget_form.wide-widget-control .widget-top {
+	-webkit-transition: background-color 0.4s;
+	transition: background-color 0.4s;
+}
+.customize-control-widget_form.wide-widget-control.expanding .widget-top,
+.customize-control-widget_form.wide-widget-control.expanded:not(.collapsing) .widget-top {
+	background-color: rgb(227, 227, 227);
 }
 
 .widget-inside {

@@ -570,11 +570,7 @@ var WidgetCustomizer = (function ($) {
 
 			// Handle wide widgets
 			if ( control.params.is_wide ) {
-				control.container.addClass( 'wide-widget-control' );
-				control.container.find( '.widget-content:first' ).css( {
-					'min-width': control.params.width,
-					'min-height': control.params.height
-				} );
+				control.setupWideWidget();
 			}
 
 			// Configure update button
@@ -768,6 +764,57 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
+		 * Add special behaviors for wide widget controls
+		 */
+		setupWideWidget: function () {
+			var control = this;
+			var widget_inside = control.container.find( '.widget-inside' );
+			var customize_sidebar = $( '.wp-full-overlay-sidebar-content:first' );
+			control.container.addClass( 'wide-widget-control' );
+
+			control.container.find( '.widget-content:first' ).css( {
+				'min-width': control.params.width,
+				'min-height': control.params.height
+			} );
+
+			/**
+			 * Keep the widget-inside positioned so the top of fixed-positioned
+			 * element is at the same top position as the widget-top. When the
+			 * widget-top is scrolled out of view, keep the widget-top in view;
+			 * likewise, don't allow the widget to drop off the bottom of the window.
+			 */
+			var position_widget = function () {
+				var offset_top = control.container.offset().top;
+				var height = widget_inside.outerHeight();
+				var top = Math.max( offset_top, 0 );
+				var max_top = $( window ).height() - height;
+				top = Math.min( top, max_top );
+				widget_inside.css( 'top', top );
+			};
+
+			control.container.on( 'expand', function () {
+				customize_sidebar.on( 'scroll', position_widget );
+				$( window ).on( 'resize', position_widget );
+				position_widget();
+			} );
+			control.container.on( 'collapsed', function () {
+				customize_sidebar.off( 'scroll', position_widget );
+				$( window ).off( 'resize', position_widget );
+			} );
+
+			// Reposition whenever a sidebar's widgets are changed
+			wp.customize.each( function ( setting ) {
+				if ( 0 === setting.id.indexOf( 'sidebars_widgets[' ) ) {
+					setting.bind( function () {
+						if ( control.container.hasClass( 'expanded' ) ) {
+							position_widget();
+						}
+					} );
+				}
+			} );
+		},
+
+		/**
 		 * Show/hide the control when clicking on the form title
 		 */
 		setupControlToggle: function() {
@@ -821,7 +868,7 @@ var WidgetCustomizer = (function ($) {
 			}
 
 			// Already expanded or collapsed, so noop
-			if ( control.container.hasClass( 'expanded' ) === do_expand ) {
+			if ( inside.is( ':visible' ) === do_expand ) {
 				return;
 			}
 
@@ -837,28 +884,31 @@ var WidgetCustomizer = (function ($) {
 				control.container.trigger( 'expand' );
 				control.container.addClass( 'expanding' );
 				complete = function () {
-					control.container.removeClass( 'collapsing' );
+					control.container.removeClass( 'expanding' );
+					control.container.addClass( 'expanded' );
+					control.container.trigger( 'expanded' );
 				};
 				if ( control.params.is_wide ) {
 					inside.animate({ width: 'show' }, complete );
 				} else {
 					inside.slideDown( 'fast', complete );
 				}
-				control.container.addClass( 'expanded' );
 			} else {
 				control.container.trigger( 'collapse' );
 				control.container.addClass( 'collapsing' );
 				complete = function () {
 					control.container.removeClass( 'collapsing' );
+					control.container.removeClass( 'expanded' );
+					control.container.trigger( 'collapsed' );
 				};
 				if ( control.params.is_wide ) {
 					inside.animate( { width: 'hide' }, complete );
 				} else {
 					inside.slideUp( 'fast', function() {
-						widget.css( {'width':'', 'margin':''}, complete );
+						widget.css( {'width':'', 'margin':''} );
+						complete();
 					} );
 				}
-				control.container.removeClass( 'expanded' );
 			}
 		},
 
