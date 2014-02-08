@@ -576,13 +576,6 @@ var WidgetCustomizer = (function ($) {
 					'min-height': control.params.height
 				} );
 			}
-			control.container.on( 'click keypress', function ( e ) {
-				$( '.customize-control-widget_form.focused-inside' ).not( control.container ).removeClass( 'focused-inside' );
-				var widget_inside = control.container.find( '.widget-inside:first' )[0];
-				if ( $.contains( widget_inside, e.target ) ) {
-					control.container.addClass( 'focused-inside' );
-				}
-			} );
 
 			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
