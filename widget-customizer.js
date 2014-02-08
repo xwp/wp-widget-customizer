@@ -1369,6 +1369,14 @@ var WidgetCustomizer = (function ($) {
 		open: function ( sidebars_widgets_control ) {
 			var panel = this;
 			panel.active_sidebar_widgets_control = sidebars_widgets_control;
+
+			// Wide widget controls appear over the preview, and so they need to be collapsed when the panel opens
+			_( sidebars_widgets_control.getWidgetFormControls() ).each( function ( control ) {
+				if ( control.params.is_wide ) {
+					control.collapseForm();
+				}
+			} );
+
 			$( 'body' ).addClass( 'adding-widget' );
 			panel.container.find( '.widget-tpl' ).removeClass( 'selected' );
 			panel.filter_input.focus();
