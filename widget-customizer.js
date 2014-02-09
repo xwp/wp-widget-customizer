@@ -131,17 +131,16 @@ var WidgetCustomizer = ( function ($) {
 			var control = this;
 			control.control_section = control.container.closest( '.control-section' );
 			control.section_content = control.container.closest( '.accordion-section-content' );
-			control.is_reordering = false;
-			control.setupModel();
-			control.setupSortable();
-			control.setupAddition();
-			control.applyCardinalOrderClassNames();
+			control._setupModel();
+			control._setupSortable();
+			control._setupAddition();
+			control._applyCardinalOrderClassNames();
 		},
 
 		/**
 		 * Update ordering of widget control forms when the setting is updated
 		 */
-		setupModel: function() {
+		_setupModel: function() {
 			var control = this;
 			var registered_sidebar = self.registered_sidebars.get( control.params.sidebar_id );
 
@@ -181,7 +180,7 @@ var WidgetCustomizer = ( function ($) {
 
 				// Re-sort widget form controls (including widgets form other sidebars newly moved here)
 				sidebar_widgets_add_control.before( final_control_containers );
-				control.applyCardinalOrderClassNames();
+				control._applyCardinalOrderClassNames();
 
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
@@ -272,28 +271,11 @@ var WidgetCustomizer = ( function ($) {
 		},
 
 		/**
-		 * Add classes to the widget_form controls to assist with styling
-		 */
-		applyCardinalOrderClassNames: function () {
-			var control = this;
-			control.section_content.find( '.customize-control-widget_form' )
-				.removeClass( 'first-widget' )
-				.removeClass( 'last-widget' )
-				.find( '.move-widget-down, .move-widget-up' ).prop( 'tabIndex', 0 );
-
-			control.section_content.find( '.customize-control-widget_form:first' )
-				.addClass( 'first-widget' )
-				.find( '.move-widget-up' ).prop( 'tabIndex', -1 );
-			control.section_content.find( '.customize-control-widget_form:last' )
-				.addClass( 'last-widget' )
-				.find( '.move-widget-down' ).prop( 'tabIndex', -1 );
-		},
-
-		/**
 		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
 		 */
-		setupSortable: function () {
+		_setupSortable: function () {
 			var control = this;
+			control.is_reordering = false;
 
 			/**
 			 * Update widget order setting when controls are re-ordered
@@ -316,7 +298,7 @@ var WidgetCustomizer = ( function ($) {
 			 * Expand other customizer sidebar section when dragging a control widget over it,
 			 * allowing the control to be dropped into another section
 			 */
-			control.control_section.find( '.accordion-section-title').droppable( {
+			control.control_section.find( '.accordion-section-title' ).droppable( {
 				accept: '.customize-control-widget_form',
 				over: function () {
 					if ( ! control.control_section.hasClass( 'open' ) ) {
@@ -340,6 +322,52 @@ var WidgetCustomizer = ( function ($) {
 			} );
 		},
 
+		/**
+		 * Set up UI for adding a new widget
+		 */
+		_setupAddition: function () {
+			var control = this;
+
+			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
+				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
+					return;
+				}
+
+				if ( control.section_content.hasClass( 'reordering' ) ) {
+					return;
+				}
+
+				// @todo Use an control.is_adding state
+				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
+					self.availableWidgetsPanel.open( control );
+				} else {
+					self.availableWidgetsPanel.close();
+				}
+			} );
+		},
+
+		/**
+		 * Add classes to the widget_form controls to assist with styling
+		 */
+		_applyCardinalOrderClassNames: function () {
+			var control = this;
+			control.section_content.find( '.customize-control-widget_form' )
+				.removeClass( 'first-widget' )
+				.removeClass( 'last-widget' )
+				.find( '.move-widget-down, .move-widget-up' ).prop( 'tabIndex', 0 );
+
+			control.section_content.find( '.customize-control-widget_form:first' )
+				.addClass( 'first-widget' )
+				.find( '.move-widget-up' ).prop( 'tabIndex', -1 );
+			control.section_content.find( '.customize-control-widget_form:last' )
+				.addClass( 'last-widget' )
+				.find( '.move-widget-down' ).prop( 'tabIndex', -1 );
+		},
+
+
+		/***********************************************************************
+		 * Begin public API methods
+		 **********************************************************************/
 
 		/**
 		 * Enable/disable the reordering UI
@@ -377,31 +405,6 @@ var WidgetCustomizer = ( function ($) {
 				return form_control;
 			} );
 			return form_controls;
-		},
-
-		/**
-		 *
-		 */
-		setupAddition: function () {
-			var control = this;
-
-			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
-				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
-					return;
-				}
-
-				if ( control.section_content.hasClass( 'reordering' ) ) {
-					return;
-				}
-
-				// @todo Use an control.is_adding state
-				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
-					self.availableWidgetsPanel.open( control );
-				} else {
-					self.availableWidgetsPanel.close();
-				}
-			} );
-
 		},
 
 		/**
@@ -925,11 +928,9 @@ var WidgetCustomizer = ( function ($) {
 			}
 		},
 
-
 		/***********************************************************************
 		 * Begin public API methods
 		 **********************************************************************/
-
 
 		/**
 		 * @return {wp.customize.controlConstructor.sidebar_widgets[]}
