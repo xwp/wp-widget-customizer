@@ -544,13 +544,6 @@ var WidgetCustomizer = ( function ($) {
 	customize.controlConstructor.widget_form = customize.Control.extend( {
 
 		/**
-		 * When submitting a widget form while an input is focused, keep track
-		 * of the the ID so that the element can be re-focused when the form
-		 * finished being updatd.
-		 */
-		last_focused_element_id: null,
-
-		/**
 		 * Set up the control
 		 */
 		ready: function() {
@@ -838,27 +831,26 @@ var WidgetCustomizer = ( function ($) {
 			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
 			save_btn.on( 'click', function ( e ) {
 				e.preventDefault();
-				control.updateWidget();
+				var element_id_to_refocus = null;
+				if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
+					element_id_to_refocus = $( document.activeElement ).prop( 'id' );
+				}
+
+				control.updateWidget( null, function () {
+					if ( element_id_to_refocus ) {
+						// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
+						$( document.getElementById( element_id_to_refocus ) ).focus();
+					}
+				} );
 			} );
 
-			// Trigger widget form update when hitting Enter within an input
-			var widget_content = control.container.find( '.widget-content' );
-			widget_content.on( 'focus', '[id]', function () {
-				control.last_focused_element_id = $( this ).prop( 'id' );
-			} );
-			widget_content.on( 'blur', '*', function () {
-				control.last_focused_element_id = null;
-			} );
-			widget_content.on( 'keydown', 'input', function( e ) {
+			/**
+			 * Trigger widget form update when hitting Enter within an input
+			 */
+			control.container.find( '.widget-content' ).on( 'keydown', 'input', function( e ) {
 				if ( 13 === e.which ){ // Enter
-					var element_id_to_refocus = control.last_focused_element_id;
-					control.updateWidget( null, function () {
-						if ( element_id_to_refocus ) {
-							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
-							$( document.getElementById( element_id_to_refocus ) ).focus();
-						}
-					} );
 					e.preventDefault();
+					control.container.find( '.widget-control-save' ).click();
 				}
 			} );
 
