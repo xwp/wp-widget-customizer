@@ -486,6 +486,7 @@ class Widget_Customizer {
 						'width' => $wp_registered_widget_controls[$widget_id]['width'],
 						'height' => $wp_registered_widget_controls[$widget_id]['height'],
 						'is_wide' => self::is_wide_widget( $widget_id ),
+						'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 					)
 				);
 				$wp_customize->add_control( $control );
@@ -768,10 +769,21 @@ class Widget_Customizer {
 	 * @return string {refresh|postMessage}
 	 */
 	static function get_widget_setting_transport( $id_base ) {
-		global $wp_registered_widgets, $wp_registered_widget_controls;
-		if ( ! current_theme_supports( 'widget-customizer' ) ) {
+		if ( ! current_theme_supports( 'widget-customizer' ) || ! self::is_widget_live_previewable( $id_base ) ) {
 			return 'refresh';
+		} else {
+			return 'postMessage';
 		}
+	}
+
+	/**
+	 * Return whether a widget supports being
+	 *
+	 * @param string $id_base
+	 * @return boolean
+	 */
+	static function is_widget_live_previewable( $id_base ) {
+		global $wp_registered_widgets, $wp_registered_widget_controls;
 		$live_previewable = false;
 
 		// Core widgets all have built-in support
@@ -791,7 +803,7 @@ class Widget_Customizer {
 
 		$live_previewable = apply_filters( 'customizer_widget_live_previewable', $live_previewable, $id_base );
 		$live_previewable = apply_filters( "customizer_widget_live_previewable_{$id_base}", $live_previewable );
-		return $live_previewable ? 'postMessage' : 'refresh';
+		return $live_previewable;
 	}
 
 	/**
@@ -886,6 +898,7 @@ class Widget_Customizer {
 					'width' => $wp_registered_widget_controls[$widget['id']]['width'],
 					'height' => $wp_registered_widget_controls[$widget['id']]['height'],
 					'is_wide' => self::is_wide_widget( $widget['id'] ),
+					'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 				)
 			);
 

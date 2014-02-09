@@ -485,7 +485,8 @@ var WidgetCustomizer = (function ($) {
 					is_new: ! is_existing_widget,
 					width: widget.get( 'width' ),
 					height: widget.get( 'height' ),
-					is_wide: widget.get( 'is_wide' )
+					is_wide: widget.get( 'is_wide' ),
+					is_live_previewable: widget.get( 'is_live_previewable' )
 				},
 				previewer: control.setting.previewer
 			} );
@@ -653,7 +654,7 @@ var WidgetCustomizer = (function ($) {
 					} );
 					e.preventDefault();
 				}
-			});
+			} );
 
 			// Remove loading indicators when the setting is saved and the preview updates
 			control.setting.previewer.channel.bind( 'synced', function () {
