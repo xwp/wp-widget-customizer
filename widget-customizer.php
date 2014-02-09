@@ -382,7 +382,7 @@ class Widget_Customizer {
 	 * @action customize_register
 	 */
 	static function customize_register( $wp_customize = null ) {
-		global $wp_registered_widgets;
+		global $wp_registered_widgets, $wp_registered_widget_controls;
 		if ( ! ( $wp_customize instanceof WP_Customize_Manager ) ) {
 			$wp_customize = $GLOBALS['wp_customize'];
 		}
@@ -430,7 +430,8 @@ class Widget_Customizer {
 				} else {
 					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
 				}
-				$setting_args['sanitize_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_callback']    = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_js_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets_js_instance' );
 				$wp_customize->add_setting( $setting_id, $setting_args );
 				$new_setting_ids[] = $setting_id;
 
@@ -482,6 +483,9 @@ class Widget_Customizer {
 						'widget_id' => $widget_id,
 						'widget_id_base' => $id_base,
 						'priority' => $i,
+						'width' => $wp_registered_widget_controls[$widget_id]['width'],
+						'height' => $wp_registered_widget_controls[$widget_id]['height'],
+						'is_wide' => self::is_wide_widget( $widget_id ),
 					)
 				);
 				$wp_customize->add_control( $control );
@@ -516,6 +520,27 @@ class Widget_Customizer {
 			$setting_id .= sprintf( '[%d]', $parsed_widget_id['number'] );
 		}
 		return $setting_id;
+	}
+
+	/**
+	 * Core widgets which may have controls wider than 250, but can still be
+	 * shown in the narrow customizer panel. The RSS and Text widgets in Core,
+	 * for example, have widths of 400 and yet they still render fine in the
+	 * customizer panel. This method will return all Core widgets as being
+	 * not wide, but this can be overridden with the is_wide_widget_in_customizer
+	 * filter.
+	 *
+	 * @param string $widget_id
+	 * @return bool
+	 */
+	static function is_wide_widget( $widget_id ) {
+		global $wp_registered_widget_controls;
+		$parsed_widget_id = self::parse_widget_id( $widget_id );
+		$width = $wp_registered_widget_controls[$widget_id]['width'];
+		$is_core = in_array( $parsed_widget_id['id_base'], self::$core_widget_id_bases );
+		$is_wide = ( $width > 250 && ! $is_core );
+		$is_wide = apply_filters( 'is_wide_widget_in_customizer', $is_wide, $widget_id );
+		return $is_wide;
 	}
 
 	/**
@@ -858,8 +883,12 @@ class Widget_Customizer {
 					'is_disabled' => $is_disabled,
 					'id_base' => $id_base,
 					'transport' => self::get_widget_setting_transport( $id_base ),
+					'width' => $wp_registered_widget_controls[$widget['id']]['width'],
+					'height' => $wp_registered_widget_controls[$widget['id']]['height'],
+					'is_wide' => self::is_wide_widget( $widget['id'] ),
 				)
 			);
+
 			$available_widgets[] = $available_widget;
 		}
 		return $available_widgets;
@@ -1284,6 +1313,19 @@ class Widget_Customizer {
 			);
 		}
 		return $value;
+	}
+
+	/**
+	 * Strip out widget IDs for widgets which are no longer registered, such
+	 * as the case when a plugin orphans a widget in a sidebar when it is deactivated.
+	 *
+	 * @param array $widget_ids
+	 * @return array
+	 */
+	static function sanitize_sidebar_widgets_js_instance( $widget_ids ) {
+		global $wp_registered_widgets;
+		$widget_ids = array_values( array_intersect( $widget_ids, array_keys( $wp_registered_widgets ) ) );
+		return $widget_ids;
 	}
 
 	/**

@@ -54,7 +54,9 @@ var WidgetCustomizer = (function ($) {
 		name: null,
 		id_base: null,
 		transport: 'refresh',
-		params: []
+		params: [],
+		width: null,
+		height: null
 	});
 	var WidgetCollection = self.WidgetCollection = Backbone.Collection.extend({
 		model: Widget
@@ -480,7 +482,10 @@ var WidgetCustomizer = (function ($) {
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type,
-					is_new: ! is_existing_widget
+					is_new: ! is_existing_widget,
+					width: widget.get( 'width' ),
+					height: widget.get( 'height' ),
+					is_wide: widget.get( 'is_wide' )
 				},
 				previewer: control.setting.previewer
 			} );
@@ -509,27 +514,17 @@ var WidgetCustomizer = (function ($) {
 				control.setting( sidebar_widgets );
 			}
 
-			var form_autofocus = function () {
-				var first_inside_input = widget_form_control.container.find( '.widget-inside :input:visible:first' );
-				if ( first_inside_input.length ) {
-					first_inside_input.focus();
-				} else {
-					widget_form_control.container.find( '.widget-top .widget-action:first' ).focus();
-				}
-			};
-
 			customize_control.slideDown(function () {
-				widget_form_control.expandForm();
-
 				if ( is_existing_widget ) {
+					widget_form_control.expandForm();
 					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
 						if ( error ) {
 							throw error;
 						}
-						form_autofocus();
+						widget_form_control.focus();
 					} );
 				} else {
-					form_autofocus();
+					widget_form_control.focus();
 				}
 			});
 
@@ -573,6 +568,12 @@ var WidgetCustomizer = (function ($) {
 				}
 			});
 
+			// Handle wide widgets
+			if ( control.params.is_wide ) {
+				control.setupWideWidget();
+			}
+
+			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
 			save_btn.val( self.i18n.save_btn_label );
 			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
@@ -582,6 +583,7 @@ var WidgetCustomizer = (function ($) {
 				control.updateWidget();
 			});
 
+			// Configure close button
 			var close_btn = control.container.find( '.widget-control-close' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			close_btn.on( 'click', function ( e ) {
@@ -590,6 +592,7 @@ var WidgetCustomizer = (function ($) {
 				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
 			} );
 
+			// Configure remove button
 			var remove_btn = control.container.find( 'a.widget-control-remove' );
 			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
 			remove_btn.on( 'click', function ( e ) {
@@ -701,14 +704,9 @@ var WidgetCustomizer = (function ($) {
 			control.container.addClass( 'previewer-loading' );
 			control.container.find( '.widget-content' ).prop( 'disabled', true );
 
-			var parsed_widget_id = parse_widget_id( control.params.widget_id );
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
-			params['widget-id'] = control.params.widget_id;
-			params.id_base = parsed_widget_id.id_base;
-			params.widget_number = parsed_widget_id.number || '';
-			// @todo widget-width and widget-height?
 
 			var data = $.param( params );
 
@@ -717,6 +715,7 @@ var WidgetCustomizer = (function ($) {
 			} else {
 				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
 			}
+			data += '&' + control.container.find( '.widget-content ~ :input' ).serialize();
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
 				if ( r.success ) {
@@ -762,6 +761,60 @@ var WidgetCustomizer = (function ($) {
 				control.container.find( '.widget-content' ).prop( 'disabled', false );
 				control.container.removeClass( 'widget-form-loading' );
 			});
+		},
+
+		/**
+		 * Add special behaviors for wide widget controls
+		 */
+		setupWideWidget: function () {
+			var control = this;
+			var widget_inside = control.container.find( '.widget-inside' );
+			var customize_sidebar = $( '.wp-full-overlay-sidebar-content:first' );
+			control.container.addClass( 'wide-widget-control' );
+
+			control.container.find( '.widget-content:first' ).css( {
+				'min-width': control.params.width,
+				'min-height': control.params.height
+			} );
+
+			/**
+			 * Keep the widget-inside positioned so the top of fixed-positioned
+			 * element is at the same top position as the widget-top. When the
+			 * widget-top is scrolled out of view, keep the widget-top in view;
+			 * likewise, don't allow the widget to drop off the bottom of the window.
+			 */
+			var position_widget = function () {
+				var offset_top = control.container.offset().top;
+				var height = widget_inside.outerHeight();
+				var top = Math.max( offset_top, 0 );
+				var max_top = $( window ).height() - height;
+				top = Math.min( top, max_top );
+				widget_inside.css( 'top', top );
+			};
+
+			var theme_controls_container = $( '#customize-theme-controls' );
+			control.container.on( 'expand', function () {
+				customize_sidebar.on( 'scroll', position_widget );
+				$( window ).on( 'resize', position_widget );
+				theme_controls_container.on( 'expanded collapsed', position_widget );
+				position_widget();
+			} );
+			control.container.on( 'collapsed', function () {
+				customize_sidebar.off( 'scroll', position_widget );
+				theme_controls_container.off( 'expanded collapsed', position_widget );
+				$( window ).off( 'resize', position_widget );
+			} );
+
+			// Reposition whenever a sidebar's widgets are changed
+			wp.customize.each( function ( setting ) {
+				if ( 0 === setting.id.indexOf( 'sidebars_widgets[' ) ) {
+					setting.bind( function () {
+						if ( control.container.hasClass( 'expanded' ) ) {
+							position_widget();
+						}
+					} );
+				}
+			} );
 		},
 
 		/**
@@ -816,14 +869,49 @@ var WidgetCustomizer = (function ($) {
 			if ( typeof do_expand === 'undefined' ) {
 				do_expand = ! inside.is( ':visible' );
 			}
+
+			// Already expanded or collapsed, so noop
+			if ( inside.is( ':visible' ) === do_expand ) {
+				return;
+			}
+
+			var complete;
 			if ( do_expand ) {
+				// Close all other widget controls before expanding this one
+				wp.customize.control.each( function ( other_control ) {
+					if ( control.params.type === other_control.params.type && control !== other_control ) {
+						other_control.collapseForm();
+					}
+				} );
+
 				control.container.trigger( 'expand' );
-				inside.slideDown( 'fast' );
+				control.container.addClass( 'expanding' );
+				complete = function () {
+					control.container.removeClass( 'expanding' );
+					control.container.addClass( 'expanded' );
+					control.container.trigger( 'expanded' );
+				};
+				if ( control.params.is_wide ) {
+					inside.animate( { width: 'show' }, 'fast', complete );
+				} else {
+					inside.slideDown( 'fast', complete );
+				}
 			} else {
 				control.container.trigger( 'collapse' );
-				inside.slideUp( 'fast', function() {
-					widget.css( {'width':'', 'margin':''} );
-				} );
+				control.container.addClass( 'collapsing' );
+				complete = function () {
+					control.container.removeClass( 'collapsing' );
+					control.container.removeClass( 'expanded' );
+					control.container.trigger( 'collapsed' );
+				};
+				if ( control.params.is_wide ) {
+					inside.animate( { width: 'hide' }, 'fast', complete );
+				} else {
+					inside.slideUp( 'fast', function() {
+						widget.css( { width:'', margin:'' } );
+						complete();
+					} );
+				}
 			}
 		},
 
@@ -835,7 +923,7 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.expandControlSection();
 			control.expandForm();
-			control.container.find( ':focusable:first' ).focus();
+			control.container.find( ':focusable:first' ).focus().trigger( 'click' );
 		},
 
 		/**
@@ -1349,6 +1437,14 @@ var WidgetCustomizer = (function ($) {
 		open: function ( sidebars_widgets_control ) {
 			var panel = this;
 			panel.active_sidebar_widgets_control = sidebars_widgets_control;
+
+			// Wide widget controls appear over the preview, and so they need to be collapsed when the panel opens
+			_( sidebars_widgets_control.getWidgetFormControls() ).each( function ( control ) {
+				if ( control.params.is_wide ) {
+					control.collapseForm();
+				}
+			} );
+
 			$( 'body' ).addClass( 'adding-widget' );
 			panel.container.find( '.widget-tpl' ).removeClass( 'selected' );
 			panel.filter_input.focus();
