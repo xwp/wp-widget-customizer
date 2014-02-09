@@ -792,13 +792,16 @@ var WidgetCustomizer = (function ($) {
 				widget_inside.css( 'top', top );
 			};
 
+			var theme_controls_container = $( '#customize-theme-controls' );
 			control.container.on( 'expand', function () {
 				customize_sidebar.on( 'scroll', position_widget );
 				$( window ).on( 'resize', position_widget );
+				theme_controls_container.on( 'expanded collapsed', position_widget );
 				position_widget();
 			} );
 			control.container.on( 'collapsed', function () {
 				customize_sidebar.off( 'scroll', position_widget );
+				theme_controls_container.off( 'expanded collapsed', position_widget );
 				$( window ).off( 'resize', position_widget );
 			} );
 
@@ -889,7 +892,7 @@ var WidgetCustomizer = (function ($) {
 					control.container.trigger( 'expanded' );
 				};
 				if ( control.params.is_wide ) {
-					inside.animate({ width: 'show' }, complete );
+					inside.animate( { width: 'show' }, 'fast', complete );
 				} else {
 					inside.slideDown( 'fast', complete );
 				}
@@ -902,10 +905,10 @@ var WidgetCustomizer = (function ($) {
 					control.container.trigger( 'collapsed' );
 				};
 				if ( control.params.is_wide ) {
-					inside.animate( { width: 'hide' }, complete );
+					inside.animate( { width: 'hide' }, 'fast', complete );
 				} else {
 					inside.slideUp( 'fast', function() {
-						widget.css( {'width':'', 'margin':''} );
+						widget.css( { width:'', margin:'' } );
 						complete();
 					} );
 				}
