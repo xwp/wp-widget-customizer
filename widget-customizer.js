@@ -571,6 +571,7 @@ var WidgetCustomizer = ( function ($) {
 			wp.customize.bind( 'ready', remember_saved_widget_id );
 			wp.customize.bind( 'saved', remember_saved_widget_id );
 
+			control._update_count = 0;
 			control.is_widget_updating = false;
 
 			// Update widget whenever model changes
@@ -824,6 +825,9 @@ var WidgetCustomizer = ( function ($) {
 		_setupUpdateUI: function () {
 			var control = this;
 
+			control.container.toggleClass( 'is-live-previewable', control.params.is_live_previewable );
+			var widget_content = control.container.find( '.widget-content' );
+
 			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
 			save_btn.val( self.i18n.save_btn_label );
@@ -831,28 +835,39 @@ var WidgetCustomizer = ( function ($) {
 			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
 			save_btn.on( 'click', function ( e ) {
 				e.preventDefault();
-				var element_id_to_refocus = null;
-				if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
-					element_id_to_refocus = $( document.activeElement ).prop( 'id' );
-				}
-
-				control.updateWidget( null, function () {
-					if ( element_id_to_refocus ) {
-						// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
-						$( document.getElementById( element_id_to_refocus ) ).focus();
-					}
-				} );
+				control.updateWidget();
 			} );
+
+			var trigger_save = _.debounce( function () {
+				// For compatibility with other plugins, we trigger a click event
+				control.container.find( '.widget-control-save' ).click();
+			}, 250 );
 
 			/**
 			 * Trigger widget form update when hitting Enter within an input
 			 */
 			control.container.find( '.widget-content' ).on( 'keydown', 'input', function( e ) {
-				if ( 13 === e.which ){ // Enter
+				if ( 13 === e.which ) { // Enter
 					e.preventDefault();
 					control.container.find( '.widget-control-save' ).click();
+					// @todo This should force the field update even if document.activeElement
 				}
 			} );
+
+			if ( control.params.is_live_previewable ) {
+				widget_content.on( 'change input propertychange', ':input', function ( e ) {
+					var input = $( this );
+					var is_valid = ( this.checkValidity && this.checkValidity() );
+					if ( e.type === 'change' || is_valid ) {
+						if ( is_valid ) {
+							input.removeClass( 'client-invalid' );
+						}
+						trigger_save();
+					} else if ( this.checkValidity && ! this.checkValidity() ) {
+						input.addClass( 'client-invalid' );
+					}
+				} );
+			}
 
 			// Remove loading indicators when the setting is saved and the preview updates
 			control.setting.previewer.channel.bind( 'synced', function () {
@@ -920,6 +935,48 @@ var WidgetCustomizer = ( function ($) {
 			}
 		},
 
+		/**
+		 * Iterate over supplied inputs and create a signature string for all of them together.
+		 * This string can be used to compare whether or not the form has all of the same fields.
+		 *
+		 * @param {jQuery} inputs
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputsSignature: function ( inputs ) {
+			var inputs_signatures = _( inputs ).map( function ( input ) {
+				input = $( input );
+				var signature_parts;
+				if ( input.is( 'option' ) ) {
+					signature_parts = [ input.prop( 'nodeName' ), input.prop( 'value' ) ];
+				} else if ( input.is( ':checkbox, :radio' ) ) {
+					signature_parts = [ input.prop( 'type' ), input.attr( 'id' ), input.attr( 'name' ), input.prop( 'value' ) ];
+				} else {
+					signature_parts = [ input.prop( 'nodeName' ), input.attr( 'id' ), input.attr( 'name' ), input.attr( 'type' ) ];
+				}
+				return signature_parts.join( ',' );
+			} );
+			return inputs_signatures.join( ';' );
+		},
+
+		/**
+		 * Get the property that represents the state of an input.
+		 *
+		 * @param {jQuery|DOMElement} input
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputStatePropertyName: function ( input ) {
+			input = $( input );
+			if ( input.is( ':radio, :checkbox' ) ) {
+				return 'checked';
+			} else if ( input.is( 'option' ) ) {
+				return 'selected';
+			} else {
+				return 'value';
+			}
+		},
+
 		/***********************************************************************
 		 * Begin public API methods
 		 **********************************************************************/
@@ -947,26 +1004,90 @@ var WidgetCustomizer = ( function ($) {
 		updateWidget: function ( instance_override, complete_callback ) {
 			var control = this;
 
+			control._update_count += 1;
+			var update_number = control._update_count;
+
+			var widget_content = control.container.find( '.widget-content' );
+
+			var element_id_to_refocus = null;
+			if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
+				element_id_to_refocus = $( document.activeElement ).prop( 'id' );
+			}
+
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
-			control.container.find( '.widget-content' ).prop( 'disabled', true );
+
+			if ( ! control.params.is_live_previewable ) {
+				widget_content.prop( 'disabled', true );
+			}
 
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
 
 			var data = $.param( params );
+			var inputs = widget_content.find( ':input, option' );
+
+			// Store the value we're submitting in data so that when the response comes back,
+			// we know if it got sanitized; if there is no difference in the sanitized value,
+			// then we do not need to touch the UI and mess up the user's ongoing editing.
+			inputs.each( function () {
+				var input = $( this );
+				var property = control._getInputStatePropertyName( this );
+				input.data( 'state' + update_number, input.prop( property ) );
+			} );
 
 			if ( instance_override ) {
 				data += '&' + $.param( { 'sanitized_widget_setting': JSON.stringify( instance_override ) } );
 			} else {
-				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
+				data += '&' + inputs.serialize();
 			}
-			data += '&' + control.container.find( '.widget-content ~ :input' ).serialize();
+			data += '&' + widget_content.find( '~ :input' ).serialize();
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function ( r ) {
 				if ( r.success ) {
-					control.container.find( '.widget-content' ).html( r.data.form );
+					var sanitized_form = $( '<div>' + r.data.form + '</div>' );
+					var sanitized_inputs = sanitized_form.find( ':input, option' );
+					var has_same_inputs_in_response = control._getInputsSignature( inputs ) === control._getInputsSignature( sanitized_inputs );
+
+					if ( control.params.is_live_previewable && has_same_inputs_in_response ) {
+						inputs.each( function ( i ) {
+							var input = $( this );
+							var sanitized_input = $( sanitized_inputs[i] );
+							var property = control._getInputStatePropertyName( this );
+							var state = input.data( 'state' + update_number );
+							var sanitized_state = sanitized_input.prop( property );
+							input.data( 'sanitized', sanitized_state );
+
+							if ( state !== sanitized_state ) {
+
+								// Only update now if not currently focused on it,
+								// so that we don't cause the cursor
+								// it will be updated upon the change event
+								if ( ! input.is( document.activeElement ) ) {
+									input.prop( property, sanitized_state );
+									input.removeClass( 'server-invalid' );
+									input.removeClass( 'client-invalid' );
+									// @todo Yellowfade?
+								} else {
+									input.addClass( 'server-invalid' );
+								}
+
+							} else {
+								input.removeClass( 'server-invalid' );
+								input.removeClass( 'client-invalid' );
+							}
+						} );
+					} else {
+						widget_content.html( r.data.form );
+						// @todo yellowfade all widget-inside?
+						if ( element_id_to_refocus ) {
+							// @todo Prevent focus() from doing a select()
+							// @todo try to preserve cursor location after replacing value
+							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
+							$( document.getElementById( element_id_to_refocus ) ).focus();
+						}
+					}
 
 					/**
 					 * If the old instance is identical to the new one, there is nothing new
@@ -1005,8 +1126,14 @@ var WidgetCustomizer = ( function ($) {
 				}
 			} );
 			jqxhr.always( function () {
-				control.container.find( '.widget-content' ).prop( 'disabled', false );
-				control.container.removeClass( 'widget-form-loading' );
+				if ( ! control.params.is_live_previewable ) {
+					widget_content.prop( 'disabled', false );
+					control.container.removeClass( 'widget-form-loading' );
+				}
+
+				inputs.each( function () {
+					$( this ).removeData( 'state' + update_number );
+				} );
 			} );
 		},
 
