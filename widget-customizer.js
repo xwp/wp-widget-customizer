@@ -897,15 +897,8 @@ var WidgetCustomizer = ( function ($) {
 			// Handle widgets that support live previews
 			if ( control.params.is_live_previewable ) {
 				widget_content.on( 'change input propertychange', ':input', function ( e ) {
-					var input = $( this );
-					var is_valid = ( this.checkValidity && this.checkValidity() );
-					if ( e.type === 'change' || is_valid ) {
-						if ( is_valid ) {
-							input.removeClass( 'client-invalid' );
-						}
+					if ( e.type === 'change' || ( this.checkValidity && this.checkValidity() ) ) {
 						trigger_save();
-					} else if ( this.checkValidity && ! this.checkValidity() ) {
-						input.addClass( 'client-invalid' );
 					}
 				} );
 			}
@@ -1124,17 +1117,10 @@ var WidgetCustomizer = ( function ($) {
 								// it will be updated upon the change event
 								if ( args.ignore_active_element || ! input.is( document.activeElement ) ) {
 									input.prop( property, sanitized_state );
-									input.removeClass( 'server-invalid' );
-									input.removeClass( 'client-invalid' );
-									// @todo Yellowfade?
-								} else {
-									input.addClass( 'server-invalid' );
 								}
 								control.hook( 'unsanitaryField', input, sanitized_state, state );
 
 							} else {
-								input.removeClass( 'server-invalid' );
-								input.removeClass( 'client-invalid' );
 								control.hook( 'sanitaryField', input, state );
 							}
 						} );

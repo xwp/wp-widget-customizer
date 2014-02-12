@@ -50,17 +50,6 @@
 	opacity: 0.5;
 }
 
-.customize-control-widget_form .widget-content input,
-.customize-control-widget_form .widget-content select,
-.customize-control-widget_form .widget-content textarea {
-	-webkit-transition: background-color 0.2s;
-	transition: background-color 0.2s;
-}
-.customize-control-widget_form .widget-content .client-invalid,
-.customize-control-widget_form .widget-content .server-invalid {
-	background-color: #ffeeee;
-}
-
 
 .customize-control-widget_form.is-live-previewable .widget-control-save {
 	display: none;
