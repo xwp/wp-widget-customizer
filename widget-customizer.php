@@ -54,6 +54,7 @@ class Widget_Customizer {
 		'search',
 		'tag_cloud',
 		'text',
+		'widget_twentyfourteen_ephemera',
 	);
 
 	/**
