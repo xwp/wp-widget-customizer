@@ -559,6 +559,46 @@ var WidgetCustomizer = ( function ($) {
 			control._setupHighlightEffects();
 			control._setupUpdateUI();
 			control._setupRemoveUI();
+			control.hook( 'init' );
+		},
+
+		/**
+		 * Hooks for widgets to support living in the customizer control
+		 */
+		hooks: {
+			_default: {},
+			rss: {
+				formUpdated: function ( serialized_form ) {
+					var control = this;
+					var old_widget_error = control.container.find( '.widget-error:first' );
+					var new_widget_error = serialized_form.find( '.widget-error:first' );
+					if ( old_widget_error.length && new_widget_error.length ) {
+						old_widget_error.replaceWith( new_widget_error );
+					} else if ( old_widget_error.length ) {
+						old_widget_error.remove();
+					} else if ( new_widget_error.length ) {
+						control.container.find( '.widget-content' ).prepend( new_widget_error );
+					}
+				}
+			}
+		},
+
+		/**
+		 * Trigger an 'action' which a specific widget type can handle
+		 *
+		 * @param name
+		 */
+		hook: function ( name ) {
+			var args = Array.prototype.slice.call( arguments, 1 );
+			var handler;
+			if ( this.hooks[this.params.widget_id_base] && this.hooks[this.params.widget_id_base][name] ) {
+				handler = this.hooks[this.params.widget_id_base][name];
+			} else if ( this.hooks._default[name] ) {
+				handler = this.hooks._default[name];
+			}
+			if ( handler ) {
+				handler.apply( this, args );
+			}
 		},
 
 		/**
@@ -1063,6 +1103,8 @@ var WidgetCustomizer = ( function ($) {
 			var jqxhr = $.post( wp.ajax.settings.url, data, function ( r ) {
 				if ( r.success ) {
 					var sanitized_form = $( '<div>' + r.data.form + '</div>' );
+					control.hook( 'formUpdate', sanitized_form );
+
 					var sanitized_inputs = sanitized_form.find( ':input, option' );
 					var has_same_inputs_in_response = control._getInputsSignature( inputs ) === control._getInputsSignature( sanitized_inputs );
 
@@ -1088,15 +1130,17 @@ var WidgetCustomizer = ( function ($) {
 								} else {
 									input.addClass( 'server-invalid' );
 								}
+								control.hook( 'unsanitaryField', input, sanitized_state, state );
 
 							} else {
 								input.removeClass( 'server-invalid' );
 								input.removeClass( 'client-invalid' );
+								control.hook( 'sanitaryField', input, state );
 							}
 						} );
+						control.hook( 'formUpdated', sanitized_form );
 					} else {
-						widget_content.html( r.data.form );
-						// @todo yellowfade all widget-inside?
+						widget_content.html( sanitized_form.html() );
 						if ( element_id_to_refocus ) {
 							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
 							$( document.getElementById( element_id_to_refocus ) )
@@ -1106,6 +1150,7 @@ var WidgetCustomizer = ( function ($) {
 								} )
 								.focus();
 						}
+						control.hook( 'formRefreshed' );
 					}
 
 					/**
