@@ -521,11 +521,14 @@ var WidgetCustomizer = ( function ($) {
 			customize_control.slideDown( function () {
 				if ( is_existing_widget ) {
 					widget_form_control.expandForm();
-					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
-						if ( error ) {
-							throw error;
+					widget_form_control.updateWidget( {
+						instance: widget_form_control.setting(),
+						complete: function ( error ) {
+							if ( error ) {
+								throw error;
+							}
+							widget_form_control.focus();
 						}
-						widget_form_control.focus();
 					} );
 				} else {
 					widget_form_control.focus();
@@ -544,13 +547,6 @@ var WidgetCustomizer = ( function ($) {
 	customize.controlConstructor.widget_form = customize.Control.extend( {
 
 		/**
-		 * When submitting a widget form while an input is focused, keep track
-		 * of the the ID so that the element can be re-focused when the form
-		 * finished being updatd.
-		 */
-		last_focused_element_id: null,
-
-		/**
 		 * Set up the control
 		 */
 		ready: function() {
@@ -563,6 +559,46 @@ var WidgetCustomizer = ( function ($) {
 			control._setupHighlightEffects();
 			control._setupUpdateUI();
 			control._setupRemoveUI();
+			control.hook( 'init' );
+		},
+
+		/**
+		 * Hooks for widgets to support living in the customizer control
+		 */
+		hooks: {
+			_default: {},
+			rss: {
+				formUpdated: function ( serialized_form ) {
+					var control = this;
+					var old_widget_error = control.container.find( '.widget-error:first' );
+					var new_widget_error = serialized_form.find( '.widget-error:first' );
+					if ( old_widget_error.length && new_widget_error.length ) {
+						old_widget_error.replaceWith( new_widget_error );
+					} else if ( old_widget_error.length ) {
+						old_widget_error.remove();
+					} else if ( new_widget_error.length ) {
+						control.container.find( '.widget-content' ).prepend( new_widget_error );
+					}
+				}
+			}
+		},
+
+		/**
+		 * Trigger an 'action' which a specific widget type can handle
+		 *
+		 * @param name
+		 */
+		hook: function ( name ) {
+			var args = Array.prototype.slice.call( arguments, 1 );
+			var handler;
+			if ( this.hooks[this.params.widget_id_base] && this.hooks[this.params.widget_id_base][name] ) {
+				handler = this.hooks[this.params.widget_id_base][name];
+			} else if ( this.hooks._default[name] ) {
+				handler = this.hooks._default[name];
+			}
+			if ( handler ) {
+				handler.apply( this, args );
+			}
 		},
 
 		/**
@@ -578,12 +614,13 @@ var WidgetCustomizer = ( function ($) {
 			wp.customize.bind( 'ready', remember_saved_widget_id );
 			wp.customize.bind( 'saved', remember_saved_widget_id );
 
+			control._update_count = 0;
 			control.is_widget_updating = false;
 
 			// Update widget whenever model changes
 			control.setting.bind( function( to, from ) {
 				if ( ! _( from ).isEqual( to ) && ! control.is_widget_updating ) {
-					control.updateWidget( to );
+					control.updateWidget( { instance: to } );
 				}
 			} );
 		},
@@ -831,6 +868,9 @@ var WidgetCustomizer = ( function ($) {
 		_setupUpdateUI: function () {
 			var control = this;
 
+			control.container.toggleClass( 'is-live-previewable', control.params.is_live_previewable );
+			var widget_content = control.container.find( '.widget-content' );
+
 			// Configure update button
 			var save_btn = control.container.find( '.widget-control-save' );
 			save_btn.val( self.i18n.save_btn_label );
@@ -841,26 +881,27 @@ var WidgetCustomizer = ( function ($) {
 				control.updateWidget();
 			} );
 
+			var trigger_save = _.debounce( function () {
+				// @todo For compatibility with other plugins, should we trigger a click event? What about form submit event?
+				control.updateWidget();
+			}, 250 );
+
 			// Trigger widget form update when hitting Enter within an input
-			var widget_content = control.container.find( '.widget-content' );
-			widget_content.on( 'focus', '[id]', function () {
-				control.last_focused_element_id = $( this ).prop( 'id' );
-			} );
-			widget_content.on( 'blur', '*', function () {
-				control.last_focused_element_id = null;
-			} );
-			widget_content.on( 'keydown', 'input', function( e ) {
-				if ( 13 === e.which ){ // Enter
-					var element_id_to_refocus = control.last_focused_element_id;
-					control.updateWidget( null, function () {
-						if ( element_id_to_refocus ) {
-							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
-							$( document.getElementById( element_id_to_refocus ) ).focus();
-						}
-					} );
+			control.container.find( '.widget-content' ).on( 'keydown', 'input', function( e ) {
+				if ( 13 === e.which ) { // Enter
 					e.preventDefault();
+					control.updateWidget( { ignore_active_element: true } );
 				}
 			} );
+
+			// Handle widgets that support live previews
+			if ( control.params.is_live_previewable ) {
+				widget_content.on( 'change input propertychange', ':input', function ( e ) {
+					if ( e.type === 'change' || ( this.checkValidity && this.checkValidity() ) ) {
+						trigger_save();
+					}
+				} );
+			}
 
 			// Remove loading indicators when the setting is saved and the preview updates
 			control.setting.previewer.channel.bind( 'synced', function () {
@@ -928,6 +969,48 @@ var WidgetCustomizer = ( function ($) {
 			}
 		},
 
+		/**
+		 * Iterate over supplied inputs and create a signature string for all of them together.
+		 * This string can be used to compare whether or not the form has all of the same fields.
+		 *
+		 * @param {jQuery} inputs
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputsSignature: function ( inputs ) {
+			var inputs_signatures = _( inputs ).map( function ( input ) {
+				input = $( input );
+				var signature_parts;
+				if ( input.is( 'option' ) ) {
+					signature_parts = [ input.prop( 'nodeName' ), input.prop( 'value' ) ];
+				} else if ( input.is( ':checkbox, :radio' ) ) {
+					signature_parts = [ input.prop( 'type' ), input.attr( 'id' ), input.attr( 'name' ), input.prop( 'value' ) ];
+				} else {
+					signature_parts = [ input.prop( 'nodeName' ), input.attr( 'id' ), input.attr( 'name' ), input.attr( 'type' ) ];
+				}
+				return signature_parts.join( ',' );
+			} );
+			return inputs_signatures.join( ';' );
+		},
+
+		/**
+		 * Get the property that represents the state of an input.
+		 *
+		 * @param {jQuery|DOMElement} input
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputStatePropertyName: function ( input ) {
+			input = $( input );
+			if ( input.is( ':radio, :checkbox' ) ) {
+				return 'checked';
+			} else if ( input.is( 'option' ) ) {
+				return 'selected';
+			} else {
+				return 'value';
+			}
+		},
+
 		/***********************************************************************
 		 * Begin public API methods
 		 **********************************************************************/
@@ -949,32 +1032,112 @@ var WidgetCustomizer = ( function ($) {
 		 * Submit the widget form via Ajax and get back the updated instance,
 		 * along with the new widget control form to render.
 		 *
-		 * @param {object|null} [instance_override]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
-		 * @param {function} [complete_callback]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
+		 * @param {object} [args]
+		 * @param {Object|null} [args.instance=null]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
+		 * @param {Function|null} [args.complete=null]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
+		 * @param {Boolean} [args.ignore_active_element=false] Whether or not updating a field will be deferred if focus is still on the element.
 		 */
-		updateWidget: function ( instance_override, complete_callback ) {
+		updateWidget: function ( args ) {
 			var control = this;
+			args = $.extend( {
+				instance: null,
+				complete: null,
+				ignore_active_element: false
+			}, args );
+			var instance_override = args.instance;
+			var complete_callback = args.complete;
+
+			control._update_count += 1;
+			var update_number = control._update_count;
+
+			var widget_content = control.container.find( '.widget-content' );
+
+			var element_id_to_refocus = null;
+			var active_input_selection_start = null;
+			var active_input_selection_end = null;
+			// @todo Support more selectors than IDs?
+			if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
+				element_id_to_refocus = $( document.activeElement ).prop( 'id' );
+				// @todo IE8 support: http://stackoverflow.com/a/4207763/93579
+				active_input_selection_start = $( document.activeElement ).prop( 'selectionStart' );
+				active_input_selection_end = $( document.activeElement ).prop( 'selectionEnd' );
+			}
 
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
-			control.container.find( '.widget-content' ).prop( 'disabled', true );
+
+			if ( ! control.params.is_live_previewable ) {
+				widget_content.prop( 'disabled', true );
+			}
 
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
 
 			var data = $.param( params );
+			var inputs = widget_content.find( ':input, option' );
+
+			// Store the value we're submitting in data so that when the response comes back,
+			// we know if it got sanitized; if there is no difference in the sanitized value,
+			// then we do not need to touch the UI and mess up the user's ongoing editing.
+			inputs.each( function () {
+				var input = $( this );
+				var property = control._getInputStatePropertyName( this );
+				input.data( 'state' + update_number, input.prop( property ) );
+			} );
 
 			if ( instance_override ) {
 				data += '&' + $.param( { 'sanitized_widget_setting': JSON.stringify( instance_override ) } );
 			} else {
-				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
+				data += '&' + inputs.serialize();
 			}
-			data += '&' + control.container.find( '.widget-content ~ :input' ).serialize();
+			data += '&' + widget_content.find( '~ :input' ).serialize();
 
 			var jqxhr = $.post( wp.ajax.settings.url, data, function ( r ) {
 				if ( r.success ) {
-					control.container.find( '.widget-content' ).html( r.data.form );
+					var sanitized_form = $( '<div>' + r.data.form + '</div>' );
+					control.hook( 'formUpdate', sanitized_form );
+
+					var sanitized_inputs = sanitized_form.find( ':input, option' );
+					var has_same_inputs_in_response = control._getInputsSignature( inputs ) === control._getInputsSignature( sanitized_inputs );
+
+					if ( control.params.is_live_previewable && has_same_inputs_in_response ) {
+						inputs.each( function ( i ) {
+							var input = $( this );
+							var sanitized_input = $( sanitized_inputs[i] );
+							var property = control._getInputStatePropertyName( this );
+							var state = input.data( 'state' + update_number );
+							var sanitized_state = sanitized_input.prop( property );
+							input.data( 'sanitized', sanitized_state );
+
+							if ( state !== sanitized_state ) {
+
+								// Only update now if not currently focused on it,
+								// so that we don't cause the cursor
+								// it will be updated upon the change event
+								if ( args.ignore_active_element || ! input.is( document.activeElement ) ) {
+									input.prop( property, sanitized_state );
+								}
+								control.hook( 'unsanitaryField', input, sanitized_state, state );
+
+							} else {
+								control.hook( 'sanitaryField', input, state );
+							}
+						} );
+						control.hook( 'formUpdated', sanitized_form );
+					} else {
+						widget_content.html( sanitized_form.html() );
+						if ( element_id_to_refocus ) {
+							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
+							$( document.getElementById( element_id_to_refocus ) )
+								.prop( {
+									selectionStart: active_input_selection_start,
+									selectionEnd: active_input_selection_end
+								} )
+								.focus();
+						}
+						control.hook( 'formRefreshed' );
+					}
 
 					/**
 					 * If the old instance is identical to the new one, there is nothing new
@@ -1013,8 +1176,14 @@ var WidgetCustomizer = ( function ($) {
 				}
 			} );
 			jqxhr.always( function () {
-				control.container.find( '.widget-content' ).prop( 'disabled', false );
-				control.container.removeClass( 'widget-form-loading' );
+				if ( ! control.params.is_live_previewable ) {
+					widget_content.prop( 'disabled', false );
+					control.container.removeClass( 'widget-form-loading' );
+				}
+
+				inputs.each( function () {
+					$( this ).removeData( 'state' + update_number );
+				} );
 			} );
 		},
 
