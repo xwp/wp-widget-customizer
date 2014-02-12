@@ -1,6 +1,6 @@
 /*global wp, Backbone, _, jQuery, WidgetCustomizer_exports */
 /*exported WidgetCustomizer */
-var WidgetCustomizer = (function ($) {
+var WidgetCustomizer = ( function ($) {
 	'use strict';
 
 	var customize = wp.customize;
@@ -8,7 +8,12 @@ var WidgetCustomizer = (function ($) {
 		update_widget_ajax_action: null,
 		update_widget_nonce_value: null,
 		update_widget_nonce_post_key: null,
-		i18n: {},
+		i18n: {
+			save_btn_label: '',
+			save_btn_tooltip: '',
+			remove_btn_label: '',
+			remove_btn_tooltip: ''
+		},
 		available_widgets: [], // available widgets for instantiating
 		registered_widgets: [], // all widgets registered
 		active_sidebar_control: null,
@@ -17,9 +22,13 @@ var WidgetCustomizer = (function ($) {
 		current_theme_supports: false,
 		previewer: null,
 		saved_widget_ids: {},
-		registered_sidebars: []
+		registered_sidebars: [],
+		tpl: {
+			move_widget_area: '',
+			widget_reorder_nav: ''
+		}
 	};
-	$.extend(self, WidgetCustomizer_exports);
+	$.extend( self, WidgetCustomizer_exports );
 
 	// Lots of widgets expect this old ajaxurl global to be available
 	if ( typeof window.ajaxurl === 'undefined' ) {
@@ -33,7 +42,7 @@ var WidgetCustomizer = (function ($) {
 	/**
 	 * Set up model
 	 */
-	var Widget = self.Widget = Backbone.Model.extend({
+	var Widget = self.Widget = Backbone.Model.extend( {
 		id: null,
 		temp_id: null,
 		classname: null,
@@ -45,14 +54,16 @@ var WidgetCustomizer = (function ($) {
 		name: null,
 		id_base: null,
 		transport: 'refresh',
-		params: []
-	});
-	var WidgetCollection = self.WidgetCollection = Backbone.Collection.extend({
+		params: [],
+		width: null,
+		height: null
+	} );
+	var WidgetCollection = self.WidgetCollection = Backbone.Collection.extend( {
 		model: Widget
-	});
+	} );
 	self.available_widgets = new WidgetCollection( self.available_widgets );
 
-	var Sidebar = self.Sidebar = Backbone.Model.extend({
+	var Sidebar = self.Sidebar = Backbone.Model.extend( {
 		after_title: null,
 		after_widget: null,
 		before_title: null,
@@ -62,10 +73,10 @@ var WidgetCustomizer = (function ($) {
 		id: null,
 		name: null,
 		is_rendered: false
-	});
-	var SidebarCollection = self.SidebarCollection = Backbone.Collection.extend({
+	} );
+	var SidebarCollection = self.SidebarCollection = Backbone.Collection.extend( {
 		model: Sidebar
-	});
+	} );
 	self.registered_sidebars = new SidebarCollection( self.registered_sidebars );
 
 	/**
@@ -111,7 +122,7 @@ var WidgetCustomizer = (function ($) {
 	 * Sidebar Widgets control
 	 * Note that 'sidebar_widgets' must match the Sidebar_Widgets_WP_Customize_Control::$type
 	 */
-	customize.controlConstructor.sidebar_widgets = customize.Control.extend({
+	customize.controlConstructor.sidebar_widgets = customize.Control.extend( {
 
 		/**
 		 * Set up the control
@@ -120,17 +131,16 @@ var WidgetCustomizer = (function ($) {
 			var control = this;
 			control.control_section = control.container.closest( '.control-section' );
 			control.section_content = control.container.closest( '.accordion-section-content' );
-			control.is_reordering = false;
-			control.setupModel();
-			control.setupSortable();
-			control.setupAddition();
-			control.applyCardinalOrderClassNames();
+			control._setupModel();
+			control._setupSortable();
+			control._setupAddition();
+			control._applyCardinalOrderClassNames();
 		},
 
 		/**
 		 * Update ordering of widget control forms when the setting is updated
 		 */
-		setupModel: function() {
+		_setupModel: function() {
 			var control = this;
 			var registered_sidebar = self.registered_sidebars.get( control.params.sidebar_id );
 
@@ -140,7 +150,7 @@ var WidgetCustomizer = (function ($) {
 				// Filter out any persistent widget_ids for widgets which have been deactivated
 				new_widget_ids = _( new_widget_ids ).filter( function ( new_widget_id ) {
 					var parsed_widget_id = parse_widget_id( new_widget_id );
-					return !! self.available_widgets.findWhere({ id_base: parsed_widget_id.id_base } );
+					return !! self.available_widgets.findWhere( { id_base: parsed_widget_id.id_base } );
 				} );
 
 				var widget_form_controls = _( new_widget_ids ).map( function ( widget_id ) {
@@ -152,14 +162,14 @@ var WidgetCustomizer = (function ($) {
 				} );
 
 				// Sort widget controls to their new positions
-				widget_form_controls.sort(function ( a, b ) {
+				widget_form_controls.sort( function ( a, b ) {
 					var a_index = new_widget_ids.indexOf( a.params.widget_id );
 					var b_index = new_widget_ids.indexOf( b.params.widget_id );
 					if ( a_index === b_index ) {
 						return 0;
 					}
 					return a_index < b_index ? -1 : 1;
-				});
+				} );
 
 				var sidebar_widgets_add_control = control.section_content.find( '.customize-control-sidebar_widgets' );
 
@@ -170,7 +180,7 @@ var WidgetCustomizer = (function ($) {
 
 				// Re-sort widget form controls (including widgets form other sidebars newly moved here)
 				sidebar_widgets_add_control.before( final_control_containers );
-				control.applyCardinalOrderClassNames();
+				control._applyCardinalOrderClassNames();
 
 				// If the widget was dragged into the sidebar, make sure the sidebar_id param is updated
 				_( widget_form_controls ).each( function ( widget_form_control ) {
@@ -233,7 +243,7 @@ var WidgetCustomizer = (function ($) {
 					} );
 
 				} );
-			});
+			} );
 
 			// Update the model with whether or not the sidebar is rendered
 			self.previewer.bind( 'rendered-sidebars', function ( rendered_sidebars ) {
@@ -261,9 +271,85 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
+		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
+		 */
+		_setupSortable: function () {
+			var control = this;
+			control.is_reordering = false;
+
+			/**
+			 * Update widget order setting when controls are re-ordered
+			 */
+			control.section_content.sortable( {
+				items: '> .customize-control-widget_form',
+				handle: '.widget-top',
+				axis: 'y',
+				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
+				update: function () {
+					var widget_container_ids = control.section_content.sortable( 'toArray' );
+					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
+						return $( '#' + widget_container_id ).find( ':input[name=widget-id]' ).val();
+					} );
+					control.setting( widget_ids );
+				}
+			} );
+
+			/**
+			 * Expand other customizer sidebar section when dragging a control widget over it,
+			 * allowing the control to be dropped into another section
+			 */
+			control.control_section.find( '.accordion-section-title' ).droppable( {
+				accept: '.customize-control-widget_form',
+				over: function () {
+					if ( ! control.control_section.hasClass( 'open' ) ) {
+						control.control_section.addClass( 'open' );
+						control.section_content.toggle( false ).slideToggle( 150, function () {
+							control.section_content.sortable( 'refreshPositions' );
+						} );
+					}
+				}
+			} );
+
+			/**
+			 * Keyboard-accessible reordering
+			 */
+			control.container.find( '.reorder-toggle' ).on( 'click keydown', function( event ) {
+				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
+					return;
+				}
+
+				control.toggleReordering( ! control.is_reordering );
+			} );
+		},
+
+		/**
+		 * Set up UI for adding a new widget
+		 */
+		_setupAddition: function () {
+			var control = this;
+
+			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
+				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
+					return;
+				}
+
+				if ( control.section_content.hasClass( 'reordering' ) ) {
+					return;
+				}
+
+				// @todo Use an control.is_adding state
+				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
+					self.availableWidgetsPanel.open( control );
+				} else {
+					self.availableWidgetsPanel.close();
+				}
+			} );
+		},
+
+		/**
 		 * Add classes to the widget_form controls to assist with styling
 		 */
-		applyCardinalOrderClassNames: function () {
+		_applyCardinalOrderClassNames: function () {
 			var control = this;
 			control.section_content.find( '.customize-control-widget_form' )
 				.removeClass( 'first-widget' )
@@ -278,57 +364,10 @@ var WidgetCustomizer = (function ($) {
 				.find( '.move-widget-down' ).prop( 'tabIndex', -1 );
 		},
 
-		/**
-		 * Allow widgets in sidebar to be re-ordered, and for the order to be previewed
-		 */
-		setupSortable: function () {
-			var control = this;
 
-			/**
-			 * Update widget order setting when controls are re-ordered
-			 */
-			control.section_content.sortable({
-				items: '> .customize-control-widget_form',
-				handle: '.widget-top',
-				axis: 'y',
-				connectWith: '.accordion-section-content:has(.customize-control-sidebar_widgets)',
-				update: function () {
-					var widget_container_ids = control.section_content.sortable('toArray');
-					var widget_ids = $.map( widget_container_ids, function ( widget_container_id ) {
-						return $('#' + widget_container_id).find(':input[name=widget-id]').val();
-					});
-					control.setting( widget_ids );
-				}
-			});
-
-			/**
-			 * Expand other customizer sidebar section when dragging a control widget over it,
-			 * allowing the control to be dropped into another section
-			 */
-			control.control_section.find( '.accordion-section-title').droppable({
-				accept: '.customize-control-widget_form',
-				over: function () {
-					if ( ! control.control_section.hasClass('open') ) {
-						control.control_section.addClass('open');
-						control.section_content.toggle(false).slideToggle(150, function () {
-							control.section_content.sortable( 'refreshPositions' );
-						});
-					}
-				}
-			});
-
-			/**
-			 * Keyboard-accessible reordering
-			 */
-			control.container.find( '.reorder-toggle' ).on( 'click keydown', function( event ) {
-				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
-					return;
-				}
-
-				control.toggleReordering( ! control.is_reordering );
-			} );
-		},
-
+		/***********************************************************************
+		 * Begin public API methods
+		 **********************************************************************/
 
 		/**
 		 * Enable/disable the reordering UI
@@ -353,7 +392,7 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
-		 * @return {Array(wp.customize.controlConstructor.widget_form)}
+		 * @return {wp.customize.controlConstructor.widget_form[]}
 		 */
 		getWidgetFormControls: function () {
 			var control = this;
@@ -369,31 +408,6 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
-		 *
-		 */
-		setupAddition: function () {
-			var control = this;
-
-			control.container.find( '.add-new-widget' ).on( 'click keydown', function( event ) {
-				if ( event.type === 'keydown' && ! ( event.which === 13 || event.which === 32 ) ) { // Enter or Spacebar
-					return;
-				}
-
-				if ( control.section_content.hasClass( 'reordering' ) ) {
-					return;
-				}
-
-				// @todo Use an control.is_adding state
-				if ( ! $( 'body' ).hasClass( 'adding-widget' ) ) {
-					self.availableWidgetsPanel.open( control );
-				} else {
-					self.availableWidgetsPanel.close();
-				}
-			} );
-
-		},
-
-		/**
 		 * @param {string} widget_id or an id_base for adding a previously non-existing widget
 		 * @returns {object} widget_form control instance
 		 */
@@ -402,7 +416,7 @@ var WidgetCustomizer = (function ($) {
 			var parsed_widget_id = parse_widget_id( widget_id );
 			var widget_number = parsed_widget_id.number;
 			var widget_id_base = parsed_widget_id.id_base;
-			var widget = self.available_widgets.findWhere({id_base: widget_id_base});
+			var widget = self.available_widgets.findWhere( {id_base: widget_id_base} );
 			if ( ! widget ) {
 				throw new Error( 'Widget unexpectedly not found.' );
 			}
@@ -416,17 +430,17 @@ var WidgetCustomizer = (function ($) {
 				widget_number = widget.get( 'multi_number' );
 			}
 
-			var control_html = $( '#widget-tpl-' + widget.get('id') ).html();
+			var control_html = $( '#widget-tpl-' + widget.get( 'id' ) ).html();
 			if ( widget.get( 'is_multi' ) ) {
-				control_html = control_html.replace(/<[^<>]+>/g, function (m) {
+				control_html = control_html.replace( /<[^<>]+>/g, function ( m ) {
 					return m.replace( /__i__|%i%/g, widget_number );
-				});
+				} );
 			} else {
 				widget.set( 'is_disabled', true ); // Prevent single widget from being added again now
 			}
 
 			var customize_control_type = 'widget_form';
-			var customize_control = $('<li></li>');
+			var customize_control = $( '<li></li>' );
 			customize_control.addClass( 'customize-control' );
 			customize_control.addClass( 'customize-control-' + customize_control_type );
 			customize_control.append( $( control_html ) );
@@ -435,10 +449,10 @@ var WidgetCustomizer = (function ($) {
 				customize_control.find( 'input[name="widget_number"]' ).val( widget_number );
 				customize_control.find( 'input[name="multi_number"]' ).val( widget_number );
 			}
-			widget_id = customize_control.find('[name="widget-id"]' ).val();
+			widget_id = customize_control.find( '[name="widget-id"]' ).val();
 			customize_control.hide(); // to be slid-down below
 
-			var setting_id = 'widget_' + widget.get('id_base');
+			var setting_id = 'widget_' + widget.get( 'id_base' );
 			if ( widget.get( 'is_multi' ) ) {
 				setting_id += '[' + widget_number + ']';
 			}
@@ -471,7 +485,11 @@ var WidgetCustomizer = (function ($) {
 					widget_id: widget_id,
 					widget_id_base: widget.get( 'id_base' ),
 					type: customize_control_type,
-					is_new: ! is_existing_widget
+					is_new: ! is_existing_widget,
+					width: widget.get( 'width' ),
+					height: widget.get( 'height' ),
+					is_wide: widget.get( 'is_wide' ),
+					is_live_previewable: widget.get( 'is_live_previewable' )
 				},
 				previewer: control.setting.previewer
 			} );
@@ -500,45 +518,93 @@ var WidgetCustomizer = (function ($) {
 				control.setting( sidebar_widgets );
 			}
 
-			var form_autofocus = function () {
-				var first_inside_input = widget_form_control.container.find( '.widget-inside :input:visible:first' );
-				if ( first_inside_input.length ) {
-					first_inside_input.focus();
-				} else {
-					widget_form_control.container.find( '.widget-top .widget-action:first' ).focus();
-				}
-			};
-
-			customize_control.slideDown(function () {
-				widget_form_control.expandForm();
-
+			customize_control.slideDown( function () {
 				if ( is_existing_widget ) {
-					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
-						if ( error ) {
-							throw error;
+					widget_form_control.expandForm();
+					widget_form_control.updateWidget( {
+						instance: widget_form_control.setting(),
+						complete: function ( error ) {
+							if ( error ) {
+								throw error;
+							}
+							widget_form_control.focus();
 						}
-						form_autofocus();
 					} );
 				} else {
-					form_autofocus();
+					widget_form_control.focus();
 				}
-			});
+			} );
 
 			return widget_form_control;
 		}
 
-	});
+	} );
 
 	/**
 	 * Widget Form control
 	 * Note that 'widget_form' must match the Widget_Form_WP_Customize_Control::$type
 	 */
-	customize.controlConstructor.widget_form = customize.Control.extend({
+	customize.controlConstructor.widget_form = customize.Control.extend( {
 
 		/**
 		 * Set up the control
 		 */
 		ready: function() {
+			var control = this;
+			control._setupModel();
+			control._setupWideWidget();
+			control._setupControlToggle();
+			control._setupWidgetTitle();
+			control._setupReorderUI();
+			control._setupHighlightEffects();
+			control._setupUpdateUI();
+			control._setupRemoveUI();
+			control.hook( 'init' );
+		},
+
+		/**
+		 * Hooks for widgets to support living in the customizer control
+		 */
+		hooks: {
+			_default: {},
+			rss: {
+				formUpdated: function ( serialized_form ) {
+					var control = this;
+					var old_widget_error = control.container.find( '.widget-error:first' );
+					var new_widget_error = serialized_form.find( '.widget-error:first' );
+					if ( old_widget_error.length && new_widget_error.length ) {
+						old_widget_error.replaceWith( new_widget_error );
+					} else if ( old_widget_error.length ) {
+						old_widget_error.remove();
+					} else if ( new_widget_error.length ) {
+						control.container.find( '.widget-content' ).prepend( new_widget_error );
+					}
+				}
+			}
+		},
+
+		/**
+		 * Trigger an 'action' which a specific widget type can handle
+		 *
+		 * @param name
+		 */
+		hook: function ( name ) {
+			var args = Array.prototype.slice.call( arguments, 1 );
+			var handler;
+			if ( this.hooks[this.params.widget_id_base] && this.hooks[this.params.widget_id_base][name] ) {
+				handler = this.hooks[this.params.widget_id_base][name];
+			} else if ( this.hooks._default[name] ) {
+				handler = this.hooks._default[name];
+			}
+			if ( handler ) {
+				handler.apply( this, args );
+			}
+		},
+
+		/**
+		 * Handle changes to the setting
+		 */
+		_setupModel: function () {
 			var control = this;
 
 			// Remember saved widgets so we know which to trash (move to inactive widgets sidebar)
@@ -548,199 +614,81 @@ var WidgetCustomizer = (function ($) {
 			wp.customize.bind( 'ready', remember_saved_widget_id );
 			wp.customize.bind( 'saved', remember_saved_widget_id );
 
+			control._update_count = 0;
 			control.is_widget_updating = false;
 
 			// Update widget whenever model changes
 			control.setting.bind( function( to, from ) {
 				if ( ! _( from ).isEqual( to ) && ! control.is_widget_updating ) {
-					control.updateWidget( to );
+					control.updateWidget( { instance: to } );
 				}
-			});
+			} );
+		},
 
-			var save_btn = control.container.find( '.widget-control-save' );
-			save_btn.val( self.i18n.save_btn_label );
-			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
-			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
-			save_btn.on( 'click', function (e) {
-				e.preventDefault();
-				control.updateWidget();
-			});
+		/**
+		 * Add special behaviors for wide widget controls
+		 */
+		_setupWideWidget: function () {
+			var control = this;
+			if ( ! control.params.is_wide ) {
+				return;
+			}
+			var widget_inside = control.container.find( '.widget-inside' );
+			var customize_sidebar = $( '.wp-full-overlay-sidebar-content:first' );
+			control.container.addClass( 'wide-widget-control' );
 
-			var close_btn = control.container.find( '.widget-control-close' );
-			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
-			close_btn.on( 'click', function (e) {
-				e.preventDefault();
-				control.collapseForm();
-				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
+			control.container.find( '.widget-content:first' ).css( {
+				'min-width': control.params.width,
+				'min-height': control.params.height
 			} );
 
-			var remove_btn = control.container.find( 'a.widget-control-remove' );
-			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
-			remove_btn.on( 'click', function (e) {
-				e.preventDefault();
-
-				// Find an adjacent element to add focus to when this widget goes away
-				var adjacent_focus_target;
-				if ( control.container.next().is( '.customize-control-widget_form' ) ) {
-					adjacent_focus_target = control.container.next().find( '.widget-action:first' );
-				} else if ( control.container.prev().is( '.customize-control-widget_form' ) ) {
-					adjacent_focus_target = control.container.prev().find( '.widget-action:first' );
-				} else {
-					adjacent_focus_target = control.container.next( '.customize-control-sidebar_widgets' ).find( '.add-new-widget:first' );
-				}
-
-				control.container.slideUp( function() {
-					var sidebars_widgets_control = self.getSidebarWidgetControlContainingWidget( control.params.widget_id );
-					if ( ! sidebars_widgets_control ) {
-						throw new Error( 'Unable to find sidebars_widgets_control' );
-					}
-					var sidebar_widget_ids = sidebars_widgets_control.setting().slice();
-					var i = sidebar_widget_ids.indexOf( control.params.widget_id );
-					if ( -1 === i ) {
-						throw new Error( 'Widget is not in sidebar' );
-					}
-					sidebar_widget_ids.splice( i, 1 );
-					sidebars_widgets_control.setting( sidebar_widget_ids );
-					adjacent_focus_target.focus(); // keyboard accessibility
-				});
-			} );
-
-			var update_form_as_saved = function () {
-				remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
-				remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
+			/**
+			 * Keep the widget-inside positioned so the top of fixed-positioned
+			 * element is at the same top position as the widget-top. When the
+			 * widget-top is scrolled out of view, keep the widget-top in view;
+			 * likewise, don't allow the widget to drop off the bottom of the window.
+			 */
+			var position_widget = function () {
+				var offset_top = control.container.offset().top;
+				var height = widget_inside.outerHeight();
+				var top = Math.max( offset_top, 0 );
+				var max_top = $( window ).height() - height;
+				top = Math.min( top, max_top );
+				widget_inside.css( 'top', top );
 			};
-			if ( control.params.is_new ) {
-				wp.customize.bind( 'saved', update_form_as_saved );
-			} else {
-				update_form_as_saved();
-			}
 
-			// Trigger widget form update when hitting Enter within an input
-			control.container.find( '.widget-content' ).on( 'keydown', 'input', function(e) {
-				if ( 13 === e.which ){ // Enter
-					control.updateWidget();
-					e.preventDefault();
-				}
-			});
-
-			// Remove loading indicators when the setting is saved and the preview updates
-			control.setting.previewer.channel.bind( 'synced', function () {
-				control.container.removeClass( 'previewer-loading' );
-			});
-			self.previewer.bind( 'widget-updated', function ( updated_widget_id ) {
-				if ( updated_widget_id === control.params.widget_id ) {
-					control.container.removeClass( 'previewer-loading' );
-				}
+			var theme_controls_container = $( '#customize-theme-controls' );
+			control.container.on( 'expand', function () {
+				customize_sidebar.on( 'scroll', position_widget );
+				$( window ).on( 'resize', position_widget );
+				theme_controls_container.on( 'expanded collapsed', position_widget );
+				position_widget();
+			} );
+			control.container.on( 'collapsed', function () {
+				customize_sidebar.off( 'scroll', position_widget );
+				theme_controls_container.off( 'expanded collapsed', position_widget );
+				$( window ).off( 'resize', position_widget );
 			} );
 
-			// Update widget control to indicate whether it is currently rendered (cf. Widget Visibility)
-			self.previewer.bind( 'rendered-widgets', function ( rendered_widgets ) {
-				var is_rendered = !! rendered_widgets[control.params.widget_id];
-				control.container.toggleClass( 'widget-rendered', is_rendered );
+			// Reposition whenever a sidebar's widgets are changed
+			wp.customize.each( function ( setting ) {
+				if ( 0 === setting.id.indexOf( 'sidebars_widgets[' ) ) {
+					setting.bind( function () {
+						if ( control.container.hasClass( 'expanded' ) ) {
+							position_widget();
+						}
+					} );
+				}
 			} );
-
-			control.setupControlToggle();
-			control.setupWidgetTitle();
-			control.setupReordering();
-			control.editingEffects();
 		},
 
 		/**
-		 * @return {Array(wp.customize.controlConstructor.sidebar_widgets)}
+		 * Show/hide the control when clicking on the form title, when clicking
+		 * the close button
 		 */
-		getSidebarWidgetsControl: function () {
+		_setupControlToggle: function() {
 			var control = this;
-			var setting_id = 'sidebars_widgets[' + control.params.sidebar_id + ']';
-			var sidebar_widgets_control = customize.control( setting_id );
-			if ( ! sidebar_widgets_control ) {
-				throw new Error( 'Unable to locate sidebar_widgets control for ' + control.params.sidebar_id );
-			}
-			return sidebar_widgets_control;
-		},
-
-		/**
-		 * Submit the widget form via Ajax and get back the updated instance,
-		 * along with the new widget control form to render.
-		 *
-		 * @param {object|null} [instance_override]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
-		 * @param {function} [complete_callback]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
-		 */
-		updateWidget: function ( instance_override, complete_callback ) {
-			var control = this;
-
-			control.container.addClass( 'widget-form-loading' );
-			control.container.addClass( 'previewer-loading' );
-			control.container.find( '.widget-content' ).prop( 'disabled', true );
-
-			var parsed_widget_id = parse_widget_id( control.params.widget_id );
-			var params = {};
-			params.action = self.update_widget_ajax_action;
-			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
-			params['widget-id'] = control.params.widget_id;
-			params.id_base = parsed_widget_id.id_base;
-			params.widget_number = parsed_widget_id.number || '';
-			// @todo widget-width and widget-height?
-
-			var data = $.param( params );
-
-			if ( instance_override ) {
-				data += '&' + $.param( { 'sanitized_widget_setting': JSON.stringify( instance_override ) } );
-			} else {
-				data += '&' + control.container.find( '.widget-content' ).find( ':input' ).serialize();
-			}
-
-			var jqxhr = $.post( wp.ajax.settings.url, data, function (r) {
-				if ( r.success ) {
-					control.container.find( '.widget-content' ).html( r.data.form );
-
-					/**
-					 * If the old instance is identical to the new one, there is nothing new
-					 * needing to be rendered, and so we can preempt the event for the
-					 * preview finishing loading.
-					 */
-					var is_instance_identical = _( control.setting() ).isEqual( r.data.instance );
-					if ( is_instance_identical ) {
-						control.container.removeClass( 'previewer-loading' );
-					} else {
-						control.is_widget_updating = true; // suppress triggering another updateWidget
-						control.setting( r.data.instance );
-						control.is_widget_updating = false;
-					}
-
-					if ( complete_callback ) {
-						complete_callback.call( control, null, { no_change: is_instance_identical, ajax_finished: true } );
-					}
-				} else {
-					var message = 'FAIL';
-					if ( r.data && r.data.message ) {
-						message = r.data.message;
-					}
-					if ( complete_callback ) {
-						complete_callback.call( control, message );
-					} else {
-						throw new Error( message );
-					}
-				}
-			});
-			jqxhr.fail( function (jqXHR, textStatus ) {
-				if ( complete_callback ) {
-					complete_callback.call( control, textStatus );
-				} else {
-					throw new Error( textStatus );
-				}
-			});
-			jqxhr.always( function () {
-				control.container.find( '.widget-content' ).prop( 'disabled', false );
-				control.container.removeClass( 'widget-form-loading' );
-			});
-		},
-
-		/**
-		 * Show/hide the control when clicking on the form title
-		 */
-		setupControlToggle: function() {
-			var control = this;
-			control.container.find('.widget-top').on( 'click', function (e) {
+			control.container.find( '.widget-top' ).on( 'click', function ( e ) {
 				e.preventDefault();
 				var sidebar_widgets_control = control.getSidebarWidgetsControl();
 				if ( sidebar_widgets_control.is_reordering ) {
@@ -748,96 +696,38 @@ var WidgetCustomizer = (function ($) {
 				}
 				control.toggleForm();
 			} );
-		},
 
-		/**
-		 * Expand the accordion section containing a control
-		 * @todo it would be nice if accordion had a proper API instead of having to trigger UI events on its elements
-		 */
-		expandControlSection: function () {
-			var section = this.container.closest( '.accordion-section' );
-			if ( ! section.hasClass( 'open' ) ) {
-				section.find( '.accordion-section-title:first' ).trigger( 'click' );
-			}
-		},
-
-		/**
-		 * Expand the widget form control
-		 */
-		expandForm: function () {
-			this.toggleForm( true );
-		},
-
-		/**
-		 * Collapse the widget form control
-		 */
-		collapseForm: function () {
-			this.toggleForm( false );
-		},
-
-		/**
-		 * Expand or collapse the widget control
-		 *
-		 * @param {boolean|undefined} [do_expand] If not supplied, will be inverse of current visibility
-		 */
-		toggleForm: function ( do_expand ) {
-			var control = this;
-			var widget = control.container.find( 'div.widget:first' );
-			var inside = widget.find( '.widget-inside:first' );
-			if ( typeof do_expand === 'undefined' ) {
-				do_expand = ! inside.is( ':visible' );
-			}
-			if ( do_expand ) {
-				control.container.trigger( 'expand' );
-				inside.slideDown( 'fast' );
-			} else {
-				control.container.trigger( 'collapse' );
-				inside.slideUp( 'fast', function() {
-					widget.css( {'width':'', 'margin':''} );
-				} );
-			}
-		},
-
-		/**
-		 * Expand the containing sidebar section, expand the form, and focus on
-		 * the first input in the control
-		 */
-		focus: function () {
-			var control = this;
-			control.expandControlSection();
-			control.expandForm();
-			control.container.find( ':focusable:first' ).focus();
+			var close_btn = control.container.find( '.widget-control-close' );
+			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
+			close_btn.on( 'click', function ( e ) {
+				e.preventDefault();
+				control.collapseForm();
+				control.container.find( '.widget-top .widget-action:first' ).focus(); // keyboard accessibility
+			} );
 		},
 
 		/**
 		 * Update the title of the form if a title field is entered
 		 */
-		setupWidgetTitle: function () {
+		_setupWidgetTitle: function () {
 			var control = this;
-			control.setting.bind( function() {
-				control.updateInWidgetTitle();
-			} );
-			control.updateInWidgetTitle();
-		},
-
-		/**
-		 * Set the widget control title based on any title setting
-		 */
-		updateInWidgetTitle: function () {
-			var control = this;
-			var title = control.setting().title;
-			var in_widget_title = control.container.find( '.in-widget-title' );
-			if ( title ) {
-				in_widget_title.text( ': ' + title );
-			} else {
-				in_widget_title.text( '' );
-			}
+			var update_title = function () {
+				var title = control.setting().title;
+				var in_widget_title = control.container.find( '.in-widget-title' );
+				if ( title ) {
+					in_widget_title.text( ': ' + title );
+				} else {
+					in_widget_title.text( '' );
+				}
+			};
+			control.setting.bind( update_title );
+			update_title();
 		},
 
 		/**
 		 * Set up the widget-reorder-nav
 		 */
-		setupReordering: function () {
+		_setupReorderUI: function () {
 			var control = this;
 
 			/**
@@ -950,6 +840,448 @@ var WidgetCustomizer = (function ($) {
 		},
 
 		/**
+		 * Highlight widgets in preview when interacted with in the customizer
+		 */
+		_setupHighlightEffects: function() {
+			var control = this;
+
+			// Highlight whenever hovering or clicking over the form
+			control.container.on( 'mouseenter click', function () {
+				control.highlightPreviewWidget();
+			} );
+
+			// Highlight when the setting is updated
+			control.setting.bind( function () {
+				control.scrollPreviewWidgetIntoView();
+				control.highlightPreviewWidget();
+			} );
+
+			// Highlight when the widget form is expanded
+			control.container.on( 'expand', function () {
+				control.scrollPreviewWidgetIntoView();
+			} );
+		},
+
+		/**
+		 * Set up event handlers for widget updating
+		 */
+		_setupUpdateUI: function () {
+			var control = this;
+
+			control.container.toggleClass( 'is-live-previewable', control.params.is_live_previewable );
+			var widget_content = control.container.find( '.widget-content' );
+
+			// Configure update button
+			var save_btn = control.container.find( '.widget-control-save' );
+			save_btn.val( self.i18n.save_btn_label );
+			save_btn.attr( 'title', self.i18n.save_btn_tooltip );
+			save_btn.removeClass( 'button-primary' ).addClass( 'button-secondary' );
+			save_btn.on( 'click', function ( e ) {
+				e.preventDefault();
+				control.updateWidget();
+			} );
+
+			var trigger_save = _.debounce( function () {
+				// @todo For compatibility with other plugins, should we trigger a click event? What about form submit event?
+				control.updateWidget();
+			}, 250 );
+
+			// Trigger widget form update when hitting Enter within an input
+			control.container.find( '.widget-content' ).on( 'keydown', 'input', function( e ) {
+				if ( 13 === e.which ) { // Enter
+					e.preventDefault();
+					control.updateWidget( { ignore_active_element: true } );
+				}
+			} );
+
+			// Handle widgets that support live previews
+			if ( control.params.is_live_previewable ) {
+				widget_content.on( 'change input propertychange', ':input', function ( e ) {
+					if ( e.type === 'change' || ( this.checkValidity && this.checkValidity() ) ) {
+						trigger_save();
+					}
+				} );
+			}
+
+			// Remove loading indicators when the setting is saved and the preview updates
+			control.setting.previewer.channel.bind( 'synced', function () {
+				control.container.removeClass( 'previewer-loading' );
+			} );
+			self.previewer.bind( 'widget-updated', function ( updated_widget_id ) {
+				if ( updated_widget_id === control.params.widget_id ) {
+					control.container.removeClass( 'previewer-loading' );
+				}
+			} );
+
+			// Update widget control to indicate whether it is currently rendered (cf. Widget Visibility)
+			self.previewer.bind( 'rendered-widgets', function ( rendered_widgets ) {
+				var is_rendered = !! rendered_widgets[control.params.widget_id];
+				control.container.toggleClass( 'widget-rendered', is_rendered );
+			} );
+		},
+
+		/**
+		 * Set up event handlers for widget removal
+		 */
+		_setupRemoveUI: function () {
+			var control = this;
+
+			// Configure remove button
+			var remove_btn = control.container.find( 'a.widget-control-remove' );
+			// @todo Hitting Enter on this link does nothing; will be resolved in core with <http://core.trac.wordpress.org/ticket/26633>
+			remove_btn.on( 'click', function ( e ) {
+				e.preventDefault();
+
+				// Find an adjacent element to add focus to when this widget goes away
+				var adjacent_focus_target;
+				if ( control.container.next().is( '.customize-control-widget_form' ) ) {
+					adjacent_focus_target = control.container.next().find( '.widget-action:first' );
+				} else if ( control.container.prev().is( '.customize-control-widget_form' ) ) {
+					adjacent_focus_target = control.container.prev().find( '.widget-action:first' );
+				} else {
+					adjacent_focus_target = control.container.next( '.customize-control-sidebar_widgets' ).find( '.add-new-widget:first' );
+				}
+
+				control.container.slideUp( function() {
+					var sidebars_widgets_control = self.getSidebarWidgetControlContainingWidget( control.params.widget_id );
+					if ( ! sidebars_widgets_control ) {
+						throw new Error( 'Unable to find sidebars_widgets_control' );
+					}
+					var sidebar_widget_ids = sidebars_widgets_control.setting().slice();
+					var i = sidebar_widget_ids.indexOf( control.params.widget_id );
+					if ( -1 === i ) {
+						throw new Error( 'Widget is not in sidebar' );
+					}
+					sidebar_widget_ids.splice( i, 1 );
+					sidebars_widgets_control.setting( sidebar_widget_ids );
+					adjacent_focus_target.focus(); // keyboard accessibility
+				} );
+			} );
+
+			var replace_delete_with_remove = function () {
+				remove_btn.text( self.i18n.remove_btn_label ); // wp_widget_control() outputs the link as "Delete"
+				remove_btn.attr( 'title', self.i18n.remove_btn_tooltip );
+			};
+			if ( control.params.is_new ) {
+				wp.customize.bind( 'saved', replace_delete_with_remove );
+			} else {
+				replace_delete_with_remove();
+			}
+		},
+
+		/**
+		 * Iterate over supplied inputs and create a signature string for all of them together.
+		 * This string can be used to compare whether or not the form has all of the same fields.
+		 *
+		 * @param {jQuery} inputs
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputsSignature: function ( inputs ) {
+			var inputs_signatures = _( inputs ).map( function ( input ) {
+				input = $( input );
+				var signature_parts;
+				if ( input.is( 'option' ) ) {
+					signature_parts = [ input.prop( 'nodeName' ), input.prop( 'value' ) ];
+				} else if ( input.is( ':checkbox, :radio' ) ) {
+					signature_parts = [ input.prop( 'type' ), input.attr( 'id' ), input.attr( 'name' ), input.prop( 'value' ) ];
+				} else {
+					signature_parts = [ input.prop( 'nodeName' ), input.attr( 'id' ), input.attr( 'name' ), input.attr( 'type' ) ];
+				}
+				return signature_parts.join( ',' );
+			} );
+			return inputs_signatures.join( ';' );
+		},
+
+		/**
+		 * Get the property that represents the state of an input.
+		 *
+		 * @param {jQuery|DOMElement} input
+		 * @returns {string}
+		 * @private
+		 */
+		_getInputStatePropertyName: function ( input ) {
+			input = $( input );
+			if ( input.is( ':radio, :checkbox' ) ) {
+				return 'checked';
+			} else if ( input.is( 'option' ) ) {
+				return 'selected';
+			} else {
+				return 'value';
+			}
+		},
+
+		/***********************************************************************
+		 * Begin public API methods
+		 **********************************************************************/
+
+		/**
+		 * @return {wp.customize.controlConstructor.sidebar_widgets[]}
+		 */
+		getSidebarWidgetsControl: function () {
+			var control = this;
+			var setting_id = 'sidebars_widgets[' + control.params.sidebar_id + ']';
+			var sidebar_widgets_control = customize.control( setting_id );
+			if ( ! sidebar_widgets_control ) {
+				throw new Error( 'Unable to locate sidebar_widgets control for ' + control.params.sidebar_id );
+			}
+			return sidebar_widgets_control;
+		},
+
+		/**
+		 * Submit the widget form via Ajax and get back the updated instance,
+		 * along with the new widget control form to render.
+		 *
+		 * @param {object} [args]
+		 * @param {Object|null} [args.instance=null]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
+		 * @param {Function|null} [args.complete=null]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
+		 * @param {Boolean} [args.ignore_active_element=false] Whether or not updating a field will be deferred if focus is still on the element.
+		 */
+		updateWidget: function ( args ) {
+			var control = this;
+			args = $.extend( {
+				instance: null,
+				complete: null,
+				ignore_active_element: false
+			}, args );
+			var instance_override = args.instance;
+			var complete_callback = args.complete;
+
+			control._update_count += 1;
+			var update_number = control._update_count;
+
+			var widget_content = control.container.find( '.widget-content' );
+
+			var element_id_to_refocus = null;
+			var active_input_selection_start = null;
+			var active_input_selection_end = null;
+			// @todo Support more selectors than IDs?
+			if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
+				element_id_to_refocus = $( document.activeElement ).prop( 'id' );
+				// @todo IE8 support: http://stackoverflow.com/a/4207763/93579
+				active_input_selection_start = $( document.activeElement ).prop( 'selectionStart' );
+				active_input_selection_end = $( document.activeElement ).prop( 'selectionEnd' );
+			}
+
+			control.container.addClass( 'widget-form-loading' );
+			control.container.addClass( 'previewer-loading' );
+
+			if ( ! control.params.is_live_previewable ) {
+				widget_content.prop( 'disabled', true );
+			}
+
+			var params = {};
+			params.action = self.update_widget_ajax_action;
+			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
+
+			var data = $.param( params );
+			var inputs = widget_content.find( ':input, option' );
+
+			// Store the value we're submitting in data so that when the response comes back,
+			// we know if it got sanitized; if there is no difference in the sanitized value,
+			// then we do not need to touch the UI and mess up the user's ongoing editing.
+			inputs.each( function () {
+				var input = $( this );
+				var property = control._getInputStatePropertyName( this );
+				input.data( 'state' + update_number, input.prop( property ) );
+			} );
+
+			if ( instance_override ) {
+				data += '&' + $.param( { 'sanitized_widget_setting': JSON.stringify( instance_override ) } );
+			} else {
+				data += '&' + inputs.serialize();
+			}
+			data += '&' + widget_content.find( '~ :input' ).serialize();
+
+			var jqxhr = $.post( wp.ajax.settings.url, data, function ( r ) {
+				if ( r.success ) {
+					var sanitized_form = $( '<div>' + r.data.form + '</div>' );
+					control.hook( 'formUpdate', sanitized_form );
+
+					var sanitized_inputs = sanitized_form.find( ':input, option' );
+					var has_same_inputs_in_response = control._getInputsSignature( inputs ) === control._getInputsSignature( sanitized_inputs );
+
+					if ( control.params.is_live_previewable && has_same_inputs_in_response ) {
+						inputs.each( function ( i ) {
+							var input = $( this );
+							var sanitized_input = $( sanitized_inputs[i] );
+							var property = control._getInputStatePropertyName( this );
+							var state = input.data( 'state' + update_number );
+							var sanitized_state = sanitized_input.prop( property );
+							input.data( 'sanitized', sanitized_state );
+
+							if ( state !== sanitized_state ) {
+
+								// Only update now if not currently focused on it,
+								// so that we don't cause the cursor
+								// it will be updated upon the change event
+								if ( args.ignore_active_element || ! input.is( document.activeElement ) ) {
+									input.prop( property, sanitized_state );
+								}
+								control.hook( 'unsanitaryField', input, sanitized_state, state );
+
+							} else {
+								control.hook( 'sanitaryField', input, state );
+							}
+						} );
+						control.hook( 'formUpdated', sanitized_form );
+					} else {
+						widget_content.html( sanitized_form.html() );
+						if ( element_id_to_refocus ) {
+							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
+							$( document.getElementById( element_id_to_refocus ) )
+								.prop( {
+									selectionStart: active_input_selection_start,
+									selectionEnd: active_input_selection_end
+								} )
+								.focus();
+						}
+						control.hook( 'formRefreshed' );
+					}
+
+					/**
+					 * If the old instance is identical to the new one, there is nothing new
+					 * needing to be rendered, and so we can preempt the event for the
+					 * preview finishing loading.
+					 */
+					var is_instance_identical = _( control.setting() ).isEqual( r.data.instance );
+					if ( is_instance_identical ) {
+						control.container.removeClass( 'previewer-loading' );
+					} else {
+						control.is_widget_updating = true; // suppress triggering another updateWidget
+						control.setting( r.data.instance );
+						control.is_widget_updating = false;
+					}
+
+					if ( complete_callback ) {
+						complete_callback.call( control, null, { no_change: is_instance_identical, ajax_finished: true } );
+					}
+				} else {
+					var message = 'FAIL';
+					if ( r.data && r.data.message ) {
+						message = r.data.message;
+					}
+					if ( complete_callback ) {
+						complete_callback.call( control, message );
+					} else {
+						throw new Error( message );
+					}
+				}
+			} );
+			jqxhr.fail( function ( jqXHR, textStatus ) {
+				if ( complete_callback ) {
+					complete_callback.call( control, textStatus );
+				} else {
+					throw new Error( textStatus );
+				}
+			} );
+			jqxhr.always( function () {
+				if ( ! control.params.is_live_previewable ) {
+					widget_content.prop( 'disabled', false );
+					control.container.removeClass( 'widget-form-loading' );
+				}
+
+				inputs.each( function () {
+					$( this ).removeData( 'state' + update_number );
+				} );
+			} );
+		},
+
+		/**
+		 * Expand the accordion section containing a control
+		 * @todo it would be nice if accordion had a proper API instead of having to trigger UI events on its elements
+		 */
+		expandControlSection: function () {
+			var section = this.container.closest( '.accordion-section' );
+			if ( ! section.hasClass( 'open' ) ) {
+				section.find( '.accordion-section-title:first' ).trigger( 'click' );
+			}
+		},
+
+		/**
+		 * Expand the widget form control
+		 */
+		expandForm: function () {
+			this.toggleForm( true );
+		},
+
+		/**
+		 * Collapse the widget form control
+		 */
+		collapseForm: function () {
+			this.toggleForm( false );
+		},
+
+		/**
+		 * Expand or collapse the widget control
+		 *
+		 * @param {boolean|undefined} [do_expand] If not supplied, will be inverse of current visibility
+		 */
+		toggleForm: function ( do_expand ) {
+			var control = this;
+			var widget = control.container.find( 'div.widget:first' );
+			var inside = widget.find( '.widget-inside:first' );
+			if ( typeof do_expand === 'undefined' ) {
+				do_expand = ! inside.is( ':visible' );
+			}
+
+			// Already expanded or collapsed, so noop
+			if ( inside.is( ':visible' ) === do_expand ) {
+				return;
+			}
+
+			var complete;
+			if ( do_expand ) {
+				// Close all other widget controls before expanding this one
+				wp.customize.control.each( function ( other_control ) {
+					if ( control.params.type === other_control.params.type && control !== other_control ) {
+						other_control.collapseForm();
+					}
+				} );
+
+				control.container.trigger( 'expand' );
+				control.container.addClass( 'expanding' );
+				complete = function () {
+					control.container.removeClass( 'expanding' );
+					control.container.addClass( 'expanded' );
+					control.container.trigger( 'expanded' );
+				};
+				if ( control.params.is_wide ) {
+					inside.animate( { width: 'show' }, 'fast', complete );
+				} else {
+					inside.slideDown( 'fast', complete );
+				}
+			} else {
+				control.container.trigger( 'collapse' );
+				control.container.addClass( 'collapsing' );
+				complete = function () {
+					control.container.removeClass( 'collapsing' );
+					control.container.removeClass( 'expanded' );
+					control.container.trigger( 'collapsed' );
+				};
+				if ( control.params.is_wide ) {
+					inside.animate( { width: 'hide' }, 'fast', complete );
+				} else {
+					inside.slideUp( 'fast', function() {
+						widget.css( { width:'', margin:'' } );
+						complete();
+					} );
+				}
+			}
+		},
+
+		/**
+		 * Expand the containing sidebar section, expand the form, and focus on
+		 * the first input in the control
+		 */
+		focus: function () {
+			var control = this;
+			control.expandControlSection();
+			control.expandForm();
+			control.container.find( ':focusable:first' ).focus().trigger( 'click' );
+		},
+
+		/**
 		 * Get the position (index) of the widget in the containing sidebar
 		 *
 		 * @throws Error
@@ -1000,7 +1332,7 @@ var WidgetCustomizer = (function ($) {
 		/**
 		 * Toggle visibility of the widget move area
 		 *
-		 * @param {Boolean} toggle
+		 * @param {Boolean} [toggle]
 		 */
 		toggleWidgetMoveArea: function ( toggle ) {
 			var control = this;
@@ -1042,17 +1374,16 @@ var WidgetCustomizer = (function ($) {
 		highlightSectionAndControl: function() {
 			var control = this;
 			var target_element;
-			if ( control.container.is(':hidden') ) {
-				target_element = control.container.closest('.control-section');
-			}
-			else {
+			if ( control.container.is( ':hidden' ) ) {
+				target_element = control.container.closest( '.control-section' );
+			} else {
 				target_element = control.container;
 			}
 
-			$('.widget-customizer-highlighted').removeClass('widget-customizer-highlighted');
-			target_element.addClass('widget-customizer-highlighted');
+			$( '.widget-customizer-highlighted' ).removeClass( 'widget-customizer-highlighted' );
+			target_element.addClass( 'widget-customizer-highlighted' );
 			setTimeout( function () {
-				target_element.removeClass('widget-customizer-highlighted');
+				target_element.removeClass( 'widget-customizer-highlighted' );
 			}, 500 );
 		},
 
@@ -1062,38 +1393,15 @@ var WidgetCustomizer = (function ($) {
 		highlightPreviewWidget: function () {
 			var control = this;
 			var widget_el = control.getPreviewWidgetElement();
-			var root_el = widget_el.closest('html');
-			root_el.find('.widget-customizer-highlighted-widget').removeClass('widget-customizer-highlighted-widget');
-			widget_el.addClass('widget-customizer-highlighted-widget');
+			var root_el = widget_el.closest( 'html' );
+			root_el.find( '.widget-customizer-highlighted-widget' ).removeClass( 'widget-customizer-highlighted-widget' );
+			widget_el.addClass( 'widget-customizer-highlighted-widget' );
 			setTimeout( function () {
-				widget_el.removeClass('widget-customizer-highlighted-widget');
+				widget_el.removeClass( 'widget-customizer-highlighted-widget' );
 			}, 500 );
-		},
-
-		/**
-		 * Highlight widgets in the preview when
-		 */
-		editingEffects: function() {
-			var control = this;
-
-			// Highlight whenever hovering or clicking over the form
-			control.container.on( 'mouseenter click', function () {
-				control.highlightPreviewWidget();
-			});
-
-			// Highlight when the setting is updated
-			control.setting.bind( function() {
-				control.scrollPreviewWidgetIntoView();
-				control.highlightPreviewWidget();
-			});
-
-			// Highlight when the widget form is expanded
-			control.container.on( 'expand', function () {
-				control.scrollPreviewWidgetIntoView();
-			});
-
 		}
-	});
+
+	} );
 
 	/**
 	 * Capture the instance of the Previewer since it is private
@@ -1119,7 +1427,7 @@ var WidgetCustomizer = (function ($) {
 			if ( control.params.type === 'sidebar_widgets' && -1 !== control.setting().indexOf( widget_id ) ) {
 				found_control = control;
 			}
-		});
+		} );
 		return found_control;
 	};
 
@@ -1135,7 +1443,7 @@ var WidgetCustomizer = (function ($) {
 			if ( control.params.type === 'widget_form' && control.params.widget_id === widget_id ) {
 				found_control = control;
 			}
-		});
+		} );
 		return found_control;
 	};
 
@@ -1152,21 +1460,25 @@ var WidgetCustomizer = (function ($) {
 	self.availableWidgetsPanel = {
 		active_sidebar_widgets_control: null,
 		selected_widget_tpl: null,
+		container: null,
+		filter_input: null,
 
 		/**
 		 * Set up event listeners
 		 */
 		setup: function () {
 			var panel = this;
+			panel.container = $( '#available-widgets' );
+			panel.filter_input = $( '#available-widgets-filter' ).find( 'input' );
 
 			var update_available_widgets_list = function () {
-				self.available_widgets.each(function ( widget ) {
+				self.available_widgets.each( function ( widget ) {
 					var widget_tpl = $( '#widget-tpl-' + widget.id );
 					widget_tpl.toggle( ! widget.get( 'is_disabled' ) );
 					if ( widget.get( 'is_disabled' ) && widget_tpl.is( panel.selected_widget_tpl ) ) {
 						panel.selected_widget_tpl = null;
 					}
-				});
+				} );
 			};
 
 			self.available_widgets.on( 'change', update_available_widgets_list );
@@ -1188,7 +1500,7 @@ var WidgetCustomizer = (function ($) {
 			} );
 
 			// Submit a selection when clicked or keypressed
-			$( '#available-widgets .widget-tpl' ).on( 'click keypress', function( event ) {
+			panel.container.find( '.widget-tpl' ).on( 'click keypress', function( event ) {
 
 				// Only proceed with keypress if it is Enter or Spacebar
 				if ( event.type === 'keypress' && ( event.which !== 13 && event.which !== 32 ) ) {
@@ -1198,13 +1510,13 @@ var WidgetCustomizer = (function ($) {
 				panel.submit( this );
 			} );
 
-			$( '#available-widgets' ).liveFilter(
+			panel.container.liveFilter(
 				'#available-widgets-filter input',
 				'.widget-tpl',
 				{
 					filterChildSelector: '.widget-title h4',
 					after: function () {
-						var filter_val = $( '#available-widgets-filter input' ).val();
+						var filter_val = panel.filter_input.val();
 
 						// Remove a widget from being selected if it is no longer visible
 						if ( panel.selected_widget_tpl && ! panel.selected_widget_tpl.is( ':visible' ) ) {
@@ -1220,7 +1532,7 @@ var WidgetCustomizer = (function ($) {
 
 						// If a filter has been entered and a widget hasn't been selected, select the first one shown
 						if ( ! panel.selected_widget_tpl && filter_val ) {
-							var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
+							var first_visible_widget = panel.container.find( '> .widget-tpl:visible:first' );
 							if ( first_visible_widget.length ) {
 								panel.select( first_visible_widget );
 							}
@@ -1231,20 +1543,19 @@ var WidgetCustomizer = (function ($) {
 			);
 
 			// Select a widget when it is focused on
-			$( '#available-widgets > .widget-tpl' ).on( 'focus', function () {
+			panel.container.find( ' > .widget-tpl' ).on( 'focus', function () {
 				panel.select( this );
 			} );
 
-			$( '#available-widgets' ).on( 'keydown', function ( event ) {
+			panel.container.on( 'keydown', function ( event ) {
 				var is_enter = ( event.which === 13 );
 				var is_esc = ( event.which === 27 );
 				var is_down = ( event.which === 40 );
 				var is_up = ( event.which === 38 );
 				var selected_widget_tpl = null;
-				var first_visible_widget = $( '#available-widgets > .widget-tpl:visible:first' );
-				var last_visible_widget = $( '#available-widgets > .widget-tpl:visible:last' );
-				var filter_input = $( '#available-widgets-filter input' );
-				var is_input_focused = $( event.target ).is( filter_input );
+				var first_visible_widget = panel.container.find( '> .widget-tpl:visible:first' );
+				var last_visible_widget = panel.container.find( '> .widget-tpl:visible:last' );
+				var is_input_focused = $( event.target ).is( panel.filter_input );
 
 				if ( is_down || is_up ) {
 					if ( is_down ) {
@@ -1264,13 +1575,13 @@ var WidgetCustomizer = (function ($) {
 					if ( selected_widget_tpl ) {
 						selected_widget_tpl.focus();
 					} else {
-						filter_input.focus();
+						panel.filter_input.focus();
 					}
 					return;
 				}
 
 				// If enter pressed but nothing entered, don't do anything
-				if ( is_enter && ! filter_input.val() ) {
+				if ( is_enter && ! panel.filter_input.val() ) {
 					return;
 				}
 
@@ -1297,13 +1608,13 @@ var WidgetCustomizer = (function ($) {
 			if ( ! widget_tpl ) {
 				widget_tpl = panel.selected_widget_tpl;
 			}
-			if ( ! widget_tpl ) {
+			if ( ! widget_tpl || ! panel.active_sidebar_widgets_control ) {
 				return;
 			}
 			panel.select( widget_tpl );
 
 			var widget_id = $( panel.selected_widget_tpl ).data( 'widget-id' );
-			var widget = self.available_widgets.findWhere({id: widget_id});
+			var widget = self.available_widgets.findWhere( {id: widget_id} );
 			if ( ! widget ) {
 				throw new Error( 'Widget unexpectedly not found.' );
 			}
@@ -1315,24 +1626,34 @@ var WidgetCustomizer = (function ($) {
 		 * @param sidebars_widgets_control
 		 */
 		open: function ( sidebars_widgets_control ) {
-			this.active_sidebar_widgets_control = sidebars_widgets_control;
+			var panel = this;
+			panel.active_sidebar_widgets_control = sidebars_widgets_control;
+
+			// Wide widget controls appear over the preview, and so they need to be collapsed when the panel opens
+			_( sidebars_widgets_control.getWidgetFormControls() ).each( function ( control ) {
+				if ( control.params.is_wide ) {
+					control.collapseForm();
+				}
+			} );
+
 			$( 'body' ).addClass( 'adding-widget' );
-			$( '#available-widgets .widget-tpl' ).removeClass( 'selected' );
-			$( '#available-widgets-filter input' ).focus();
+			panel.container.find( '.widget-tpl' ).removeClass( 'selected' );
+			panel.filter_input.focus();
 		},
 
 		/**
 		 * Hide the panel
 		 */
 		close: function ( options ) {
+			var panel = this;
 			options = options || {};
-			if ( options.return_focus && this.active_sidebar_widgets_control ) {
-				this.active_sidebar_widgets_control.container.find( '.add-new-widget' ).focus();
+			if ( options.return_focus && panel.active_sidebar_widgets_control ) {
+				panel.active_sidebar_widgets_control.container.find( '.add-new-widget' ).focus();
 			}
-			this.active_sidebar_widgets_control = null;
-			this.selected_widget_tpl = null;
+			panel.active_sidebar_widgets_control = null;
+			panel.selected_widget_tpl = null;
 			$( 'body' ).removeClass( 'adding-widget' );
-			$( '#available-widgets-filter input' ).val( '' );
+			panel.filter_input.val( '' );
 		}
 	};
 

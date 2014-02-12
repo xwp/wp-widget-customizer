@@ -9,10 +9,14 @@ class Widget_Form_WP_Customize_Control extends WP_Customize_Control {
 	public $widget_id_base;
 	public $sidebar_id;
 	public $is_new = false;
+	public $width;
+	public $height;
+	public $is_wide = false;
+	public $is_live_previewable = false;
 
 	public function to_json() {
 		parent::to_json();
-		$exported_properties = array( 'widget_id', 'widget_id_base', 'sidebar_id' );
+		$exported_properties = array( 'widget_id', 'widget_id_base', 'sidebar_id', 'width', 'height', 'is_wide', 'is_live_previewable' );
 		foreach ( $exported_properties as $key ) {
 			$this->json[$key] = $this->$key;
 		}

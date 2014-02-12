@@ -54,6 +54,7 @@ class Widget_Customizer {
 		'search',
 		'tag_cloud',
 		'text',
+		'widget_twentyfourteen_ephemera',
 	);
 
 	/**
@@ -143,6 +144,20 @@ class Widget_Customizer {
 		return self::get_plugin_meta( 'Version' );
 	}
 
+	/**
+	 * Get an unslashed post value, or return a default
+	 *
+	 * @param string $name
+	 * @param mixed $default
+	 * @return mixed
+	 */
+	static function get_post_value( $name, $default = null ) {
+		if ( ! isset( $_POST[$name] ) ) {
+			return $default;
+		}
+		return wp_unslash( $_POST[$name] );
+	}
+
 	protected static $_customized;
 	protected static $_prepreview_added_filters = array();
 
@@ -171,7 +186,7 @@ class Widget_Customizer {
 			&&
 			( ! is_admin() )
 			&&
-			( 'on' === filter_input( INPUT_POST, 'wp_customize' ) )
+			( 'on' === self::get_post_value( 'wp_customize' ) )
 			&&
 			check_ajax_referer( 'preview-customize_' . $wp_customize->get_stylesheet(), 'nonce', false )
 		);
@@ -179,7 +194,7 @@ class Widget_Customizer {
 		$is_ajax_widget_update = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
-			filter_input( INPUT_POST, 'action' ) === self::UPDATE_WIDGET_AJAX_ACTION
+			self::get_post_value( 'action' ) === self::UPDATE_WIDGET_AJAX_ACTION
 			&&
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
@@ -187,7 +202,7 @@ class Widget_Customizer {
 		$is_widget_render = (
 			isset( $_POST[self::RENDER_WIDGET_QUERY_VAR] )
 			&&
-			filter_input( INPUT_POST, 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
+			self::get_post_value( 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
 			&&
 			check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false )
 		);
@@ -195,7 +210,7 @@ class Widget_Customizer {
 		$is_ajax_customize_save = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
-			filter_input( INPUT_POST, 'action' ) === 'customize_save'
+			self::get_post_value( 'action' ) === 'customize_save'
 			&&
 			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
 		);
@@ -207,13 +222,13 @@ class Widget_Customizer {
 
 		// Input from customizer preview
 		if ( isset( $_POST['customized'] ) ) {
-			$customized = json_decode( wp_unslash( $_POST['customized'] ), true );
+			$customized = json_decode( self::get_post_value( 'customized' ), true );
 		}
 		// Input from ajax widget update request
 		else {
 			$customized    = array();
-			$id_base       = filter_input( INPUT_POST, 'id_base' );
-			$widget_number = filter_input( INPUT_POST, 'widget_number', FILTER_VALIDATE_INT );
+			$id_base       = self::get_post_value( 'id_base' );
+			$widget_number = (int) self::get_post_value( 'widget_number' );
 			$option_name   = 'widget_' . $id_base;
 			$customized[$option_name] = array();
 			if ( false !== $widget_number ) {
@@ -368,7 +383,7 @@ class Widget_Customizer {
 	 * @action customize_register
 	 */
 	static function customize_register( $wp_customize = null ) {
-		global $wp_registered_widgets;
+		global $wp_registered_widgets, $wp_registered_widget_controls;
 		if ( ! ( $wp_customize instanceof WP_Customize_Manager ) ) {
 			$wp_customize = $GLOBALS['wp_customize'];
 		}
@@ -416,7 +431,8 @@ class Widget_Customizer {
 				} else {
 					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
 				}
-				$setting_args['sanitize_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_callback']    = array( __CLASS__, 'sanitize_sidebar_widgets' );
+				$setting_args['sanitize_js_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets_js_instance' );
 				$wp_customize->add_setting( $setting_id, $setting_args );
 				$new_setting_ids[] = $setting_id;
 
@@ -468,6 +484,10 @@ class Widget_Customizer {
 						'widget_id' => $widget_id,
 						'widget_id_base' => $id_base,
 						'priority' => $i,
+						'width' => $wp_registered_widget_controls[$widget_id]['width'],
+						'height' => $wp_registered_widget_controls[$widget_id]['height'],
+						'is_wide' => self::is_wide_widget( $widget_id ),
+						'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 					)
 				);
 				$wp_customize->add_control( $control );
@@ -502,6 +522,27 @@ class Widget_Customizer {
 			$setting_id .= sprintf( '[%d]', $parsed_widget_id['number'] );
 		}
 		return $setting_id;
+	}
+
+	/**
+	 * Core widgets which may have controls wider than 250, but can still be
+	 * shown in the narrow customizer panel. The RSS and Text widgets in Core,
+	 * for example, have widths of 400 and yet they still render fine in the
+	 * customizer panel. This method will return all Core widgets as being
+	 * not wide, but this can be overridden with the is_wide_widget_in_customizer
+	 * filter.
+	 *
+	 * @param string $widget_id
+	 * @return bool
+	 */
+	static function is_wide_widget( $widget_id ) {
+		global $wp_registered_widget_controls;
+		$parsed_widget_id = self::parse_widget_id( $widget_id );
+		$width = $wp_registered_widget_controls[$widget_id]['width'];
+		$is_core = in_array( $parsed_widget_id['id_base'], self::$core_widget_id_bases );
+		$is_wide = ( $width > 250 && ! $is_core );
+		$is_wide = apply_filters( 'is_wide_widget_in_customizer', $is_wide, $widget_id );
+		return $is_wide;
 	}
 
 	/**
@@ -623,7 +664,7 @@ class Widget_Customizer {
 			'registered_widgets' => $GLOBALS['wp_registered_widgets'],
 			'available_widgets' => $available_widgets, // @todo Merge this with registered_widgets
 			'i18n' => array(
-				'save_btn_label' => _x( 'Update', 'button to save changes to a widget', 'widget-customizer' ),
+				'save_btn_label' => _x( 'Apply', 'button to save changes to a widget', 'widget-customizer' ),
 				'save_btn_tooltip' => _x( 'Save and preview changes before publishing them.', 'tooltip on the widget save button', 'widget-customizer' ),
 				'remove_btn_label' => _x( 'Remove', 'link to move a widget to the inactive widgets sidebar', 'widget-customizer' ),
 				'remove_btn_tooltip' => _x( 'Trash widget by moving it to the inactive widgets sidebar.', 'tooltip on btn a widget to move it to the inactive widgets sidebar', 'widget-customizer' ),
@@ -729,10 +770,21 @@ class Widget_Customizer {
 	 * @return string {refresh|postMessage}
 	 */
 	static function get_widget_setting_transport( $id_base ) {
-		global $wp_registered_widgets, $wp_registered_widget_controls;
-		if ( ! current_theme_supports( 'widget-customizer' ) ) {
+		if ( ! current_theme_supports( 'widget-customizer' ) || ! self::is_widget_live_previewable( $id_base ) ) {
 			return 'refresh';
+		} else {
+			return 'postMessage';
 		}
+	}
+
+	/**
+	 * Return whether a widget supports being
+	 *
+	 * @param string $id_base
+	 * @return boolean
+	 */
+	static function is_widget_live_previewable( $id_base ) {
+		global $wp_registered_widgets, $wp_registered_widget_controls;
 		$live_previewable = false;
 
 		// Core widgets all have built-in support
@@ -752,7 +804,7 @@ class Widget_Customizer {
 
 		$live_previewable = apply_filters( 'customizer_widget_live_previewable', $live_previewable, $id_base );
 		$live_previewable = apply_filters( "customizer_widget_live_previewable_{$id_base}", $live_previewable );
-		return $live_previewable ? 'postMessage' : 'refresh';
+		return $live_previewable;
 	}
 
 	/**
@@ -844,8 +896,13 @@ class Widget_Customizer {
 					'is_disabled' => $is_disabled,
 					'id_base' => $id_base,
 					'transport' => self::get_widget_setting_transport( $id_base ),
+					'width' => $wp_registered_widget_controls[$widget['id']]['width'],
+					'height' => $wp_registered_widget_controls[$widget['id']]['height'],
+					'is_wide' => self::is_wide_widget( $widget['id'] ),
+					'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 				)
 			);
+
 			$available_widgets[] = $available_widget;
 		}
 		return $available_widgets;
@@ -1107,7 +1164,7 @@ class Widget_Customizer {
 			if ( ! current_user_can( 'edit_theme_options' ) ) {
 				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
 			}
-			$widget_id = wp_unslash( $_POST['widget_id'] );
+			$widget_id = self::get_post_value( 'widget_id' );
 			if ( ! isset( $wp_registered_widgets[$widget_id] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Unable to find registered widget', 'widget-customizer' ) );
 			}
@@ -1116,7 +1173,7 @@ class Widget_Customizer {
 			if ( empty( $_POST['setting'] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Missing instance', 'widget-customizer' ) );
 			}
-			$setting = json_decode( wp_unslash( $_POST['setting'] ), true );
+			$setting = json_decode( self::get_post_value( 'setting' ), true );
 			if ( is_null( $setting ) ) {
 				throw new Widget_Customizer_Exception( __( 'JSON parse error', 'widget-customizer' ) );
 			}
@@ -1125,7 +1182,7 @@ class Widget_Customizer {
 				throw new Widget_Customizer_Exception( __( 'Unsanitary widget instance provided', 'widget-customizer' ) );
 			}
 
-			$setting_id = wp_unslash( $_POST['setting_id'] );
+			$setting_id = self::get_post_value( 'setting_id' );
 			if ( ! preg_match( '/^(.+?)(?:\[(\d+)])?$/', $setting_id, $matches ) ) {
 				throw new Widget_Customizer_Exception( __( 'Malformed setting', 'widget-customizer' ) );
 			}
@@ -1273,6 +1330,19 @@ class Widget_Customizer {
 	}
 
 	/**
+	 * Strip out widget IDs for widgets which are no longer registered, such
+	 * as the case when a plugin orphans a widget in a sidebar when it is deactivated.
+	 *
+	 * @param array $widget_ids
+	 * @return array
+	 */
+	static function sanitize_sidebar_widgets_js_instance( $widget_ids ) {
+		global $wp_registered_widgets;
+		$widget_ids = array_values( array_intersect( $widget_ids, array_keys( $wp_registered_widgets ) ) );
+		return $widget_ids;
+	}
+
+	/**
 	 * Find and invoke the widget update and control callbacks. Requires that
 	 * $_POST be populated with the instance data.
 	 *
@@ -1299,7 +1369,7 @@ class Widget_Customizer {
 			 */
 			$added_input_vars = array();
 			if ( ! empty( $_POST['sanitized_widget_setting'] ) ) {
-				$sanitized_widget_setting = json_decode( wp_unslash( $_POST['sanitized_widget_setting'] ), true );
+				$sanitized_widget_setting = json_decode( self::get_post_value( 'sanitized_widget_setting' ), true );
 				if ( empty( $sanitized_widget_setting ) ) {
 					throw new Widget_Customizer_Exception( 'Malformed sanitized_widget_setting' );
 				}
@@ -1344,11 +1414,11 @@ class Widget_Customizer {
 			 */
 			if ( 0 !== $options_transaction->count() ) {
 				if ( count( $options_transaction->options ) > 1 ) {
-					throw new Widget_Customizer_Exception( sprintf( 'Widget %$1s unexpectedly updated more than one option.', $widget_id ) );
+					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s unexpectedly updated more than one option.', $widget_id ) );
 				}
 				$updated_option_name = key( $options_transaction->options );
 				if ( $updated_option_name !== $option_name ) {
-					throw new Widget_Customizer_Exception( sprintf( 'Widget %$1s updated option "%$2s", but expected "%$3s".', $widget_id, $updated_option_name, $option_name ) );
+					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s updated option "%2$s", but expected "%3$s".', $widget_id, $updated_option_name, $option_name ) );
 				}
 			}
 
@@ -1410,7 +1480,7 @@ class Widget_Customizer {
 			do_action( 'widgets.php' );
 			do_action( 'sidebar_admin_setup' );
 
-			$widget_id = filter_input( INPUT_POST, 'widget-id' );
+			$widget_id = self::get_post_value( 'widget-id' );
 			$parsed_id = self::parse_widget_id( $widget_id );
 			$id_base   = $parsed_id['id_base'];
 

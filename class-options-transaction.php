@@ -10,8 +10,13 @@ class Options_Transaction {
 	 */
 	public $options = array();
 
+	protected $_ignore_transients = true;
 	protected $_is_current = false;
 	protected $_operations = array();
+
+	function __construct( $ignore_transients = true ) {
+		$this->_ignore_transients = $ignore_transients;
+	}
 
 	/**
 	 * Determine whether or not the transaction is open
@@ -19,6 +24,14 @@ class Options_Transaction {
 	 */
 	function is_current() {
 		return $this->_is_current;
+	}
+
+	/**
+	 * @param $option_name
+	 * @return boolean
+	 */
+	function is_option_ignored( $option_name ) {
+		return ( $this->_ignore_transients && 0 === strpos( $option_name, '_transient_' ) );
 	}
 
 	/**
@@ -46,6 +59,9 @@ class Options_Transaction {
 	 * @param $new_value
 	 */
 	function _capture_added_option( $option_name, $new_value ) {
+		if ( $this->is_option_ignored( $option_name ) ) {
+			return;
+		}
 		$this->options[$option_name] = $new_value;
 		$operation = 'add';
 		$this->_operations[] = compact( 'operation', 'option_name', 'new_value' );
@@ -58,6 +74,9 @@ class Options_Transaction {
 	 * @param mixed $new_value
 	 */
 	function _capture_updated_option( $option_name, $old_value, $new_value ) {
+		if ( $this->is_option_ignored( $option_name ) ) {
+			return;
+		}
 		$this->options[$option_name] = $new_value;
 		$operation = 'update';
 		$this->_operations[] = compact( 'operation', 'option_name', 'old_value', 'new_value' );
@@ -72,8 +91,10 @@ class Options_Transaction {
 	 * @param string $option_name
 	 */
 	function _capture_pre_deleted_option( $option_name ) {
+		if ( $this->is_option_ignored( $option_name ) ) {
+			return;
+		}
 		global $wpdb;
-
 		$autoload = $wpdb->get_var( $wpdb->prepare( "SELECT autoload FROM $wpdb->options WHERE option_name = %s", $option_name ) ); // db call ok; no-cache ok
 		$this->_pending_delete_option_autoload = $autoload;
 		$this->_pending_delete_option_value    = get_option( $option_name );
@@ -84,6 +105,9 @@ class Options_Transaction {
 	 * @param string $option_name
 	 */
 	function _capture_deleted_option( $option_name ) {
+		if ( $this->is_option_ignored( $option_name ) ) {
+			return;
+		}
 		unset( $this->options[$option_name] );
 		$operation = 'delete';
 		$old_value = $this->_pending_delete_option_value;
