@@ -1020,8 +1020,14 @@ var WidgetCustomizer = ( function ($) {
 			var widget_content = control.container.find( '.widget-content' );
 
 			var element_id_to_refocus = null;
+			var active_input_selection_start = null;
+			var active_input_selection_end = null;
+			// @todo Support more selectors than IDs?
 			if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
 				element_id_to_refocus = $( document.activeElement ).prop( 'id' );
+				// @todo IE8 support: http://stackoverflow.com/a/4207763/93579
+				active_input_selection_start = $( document.activeElement ).prop( 'selectionStart' );
+				active_input_selection_end = $( document.activeElement ).prop( 'selectionEnd' );
 			}
 
 			control.container.addClass( 'widget-form-loading' );
@@ -1092,10 +1098,13 @@ var WidgetCustomizer = ( function ($) {
 						widget_content.html( r.data.form );
 						// @todo yellowfade all widget-inside?
 						if ( element_id_to_refocus ) {
-							// @todo Prevent focus() from doing a select()
-							// @todo try to preserve cursor location after replacing value
 							// not using jQuery selector so we don't have to worry about escaping IDs with brackets and other characters
-							$( document.getElementById( element_id_to_refocus ) ).focus();
+							$( document.getElementById( element_id_to_refocus ) )
+								.prop( {
+									selectionStart: active_input_selection_start,
+									selectionEnd: active_input_selection_end
+								} )
+								.focus();
 						}
 					}
 
