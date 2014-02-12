@@ -1414,11 +1414,11 @@ class Widget_Customizer {
 			 */
 			if ( 0 !== $options_transaction->count() ) {
 				if ( count( $options_transaction->options ) > 1 ) {
-					throw new Widget_Customizer_Exception( sprintf( 'Widget %$1s unexpectedly updated more than one option.', $widget_id ) );
+					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s unexpectedly updated more than one option.', $widget_id ) );
 				}
 				$updated_option_name = key( $options_transaction->options );
 				if ( $updated_option_name !== $option_name ) {
-					throw new Widget_Customizer_Exception( sprintf( 'Widget %$1s updated option "%$2s", but expected "%$3s".', $widget_id, $updated_option_name, $option_name ) );
+					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s updated option "%2$s", but expected "%3$s".', $widget_id, $updated_option_name, $option_name ) );
 				}
 			}
 
