@@ -521,11 +521,14 @@ var WidgetCustomizer = ( function ($) {
 			customize_control.slideDown( function () {
 				if ( is_existing_widget ) {
 					widget_form_control.expandForm();
-					widget_form_control.updateWidget( widget_form_control.setting(), function ( error ) {
-						if ( error ) {
-							throw error;
+					widget_form_control.updateWidget( {
+						instance: widget_form_control.setting(),
+						complete: function ( error ) {
+							if ( error ) {
+								throw error;
+							}
+							widget_form_control.focus();
 						}
-						widget_form_control.focus();
 					} );
 				} else {
 					widget_form_control.focus();
@@ -577,7 +580,7 @@ var WidgetCustomizer = ( function ($) {
 			// Update widget whenever model changes
 			control.setting.bind( function( to, from ) {
 				if ( ! _( from ).isEqual( to ) && ! control.is_widget_updating ) {
-					control.updateWidget( to );
+					control.updateWidget( { instance: to } );
 				}
 			} );
 		},
@@ -839,21 +842,19 @@ var WidgetCustomizer = ( function ($) {
 			} );
 
 			var trigger_save = _.debounce( function () {
-				// For compatibility with other plugins, we trigger a click event
-				control.container.find( '.widget-control-save' ).click();
+				// @todo For compatibility with other plugins, should we trigger a click event? What about form submit event?
+				control.updateWidget();
 			}, 250 );
 
-			/**
-			 * Trigger widget form update when hitting Enter within an input
-			 */
+			// Trigger widget form update when hitting Enter within an input
 			control.container.find( '.widget-content' ).on( 'keydown', 'input', function( e ) {
 				if ( 13 === e.which ) { // Enter
 					e.preventDefault();
-					control.container.find( '.widget-control-save' ).click();
-					// @todo This should force the field update even if document.activeElement
+					control.updateWidget( { ignore_active_element: true } );
 				}
 			} );
 
+			// Handle widgets that support live previews
 			if ( control.params.is_live_previewable ) {
 				widget_content.on( 'change input propertychange', ':input', function ( e ) {
 					var input = $( this );
@@ -998,11 +999,20 @@ var WidgetCustomizer = ( function ($) {
 		 * Submit the widget form via Ajax and get back the updated instance,
 		 * along with the new widget control form to render.
 		 *
-		 * @param {object|null} [instance_override]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
-		 * @param {function} [complete_callback]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
+		 * @param {object} [args]
+		 * @param {Object|null} [args.instance=null]  When the model changes, the instance is sent here; otherwise, the inputs from the form are used
+		 * @param {Function|null} [args.complete=null]  Function which is called when the request finishes. Context is bound to the control. First argument is any error. Following arguments are for success.
+		 * @param {Boolean} [args.ignore_active_element=false] Whether or not updating a field will be deferred if focus is still on the element.
 		 */
-		updateWidget: function ( instance_override, complete_callback ) {
+		updateWidget: function ( args ) {
 			var control = this;
+			args = $.extend( {
+				instance: null,
+				complete: null,
+				ignore_active_element: false
+			}, args );
+			var instance_override = args.instance;
+			var complete_callback = args.complete;
 
 			control._update_count += 1;
 			var update_number = control._update_count;
@@ -1064,7 +1074,7 @@ var WidgetCustomizer = ( function ($) {
 								// Only update now if not currently focused on it,
 								// so that we don't cause the cursor
 								// it will be updated upon the change event
-								if ( ! input.is( document.activeElement ) ) {
+								if ( args.ignore_active_element || ! input.is( document.activeElement ) ) {
 									input.prop( property, sanitized_state );
 									input.removeClass( 'server-invalid' );
 									input.removeClass( 'client-invalid' );
