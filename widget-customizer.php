@@ -1140,15 +1140,15 @@ class Widget_Customizer {
 		}
 
 		global $wp_registered_widgets, $wp_registered_sidebars;
-		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
+		require_once plugin_dir_path( __FILE__ ) . '/class-option-update-capture.php';
 
 		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
 		try {
 			do_action( 'load-widgets.php' );
 			do_action( 'widgets.php' );
 
-			$options_transaction = new Options_Transaction();
-			$options_transaction->start();
+			$option_capture = new Option_Update_Capture();
+			$option_capture->start();
 			if ( empty( $_POST['widget_id'] ) ) {
 				throw new Widget_Customizer_Exception( __( 'Missing widget_id param', 'widget-customizer' ) );
 			}
@@ -1242,11 +1242,11 @@ class Widget_Customizer {
 				}
 				$rendered_widget = ob_get_clean();
 			}
-			$options_transaction->rollback();
+			$option_capture->stop();
 			wp_send_json_success( compact( 'rendered_widget', 'sidebar_id' ) );
 		}
 		catch ( Exception $e ) {
-			$options_transaction->rollback();
+			$option_capture->stop();
 			if ( $e instanceof Widget_Customizer_Exception ) {
 				$message = $e->getMessage();
 			} else {
@@ -1355,11 +1355,11 @@ class Widget_Customizer {
 	static function call_widget_update( $widget_id ) {
 		global $wp_registered_widget_updates, $wp_registered_widget_controls;
 
-		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
-		$options_transaction = new Options_Transaction();
+		require_once plugin_dir_path( __FILE__ ) . '/class-option-update-capture.php';
+		$option_capture = new Option_Update_Capture();
 
 		try {
-			$options_transaction->start();
+			$option_capture->start();
 			$parsed_id   = self::parse_widget_id( $widget_id );
 			$option_name = 'widget_' . $parsed_id['id_base'];
 
@@ -1412,11 +1412,11 @@ class Widget_Customizer {
 			/**
 			 * Make sure the expected option was updated
 			 */
-			if ( 0 !== $options_transaction->count() ) {
-				if ( count( $options_transaction->options ) > 1 ) {
+			if ( 0 !== $option_capture->count() ) {
+				if ( count( $option_capture->options ) > 1 ) {
 					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s unexpectedly updated more than one option.', $widget_id ) );
 				}
-				$updated_option_name = key( $options_transaction->options );
+				$updated_option_name = key( $option_capture->options );
 				if ( $updated_option_name !== $option_name ) {
 					throw new Widget_Customizer_Exception( sprintf( 'Widget %1$s updated option "%2$s", but expected "%3$s".', $widget_id, $updated_option_name, $option_name ) );
 				}
@@ -1442,11 +1442,11 @@ class Widget_Customizer {
 				$instance = $option;
 			}
 
-			$options_transaction->rollback();
+			$option_capture->stop();
 			return compact( 'instance', 'form' );
 		}
 		catch ( Exception $e ) {
-			$options_transaction->rollback();
+			$option_capture->stop();
 			throw $e;
 		}
 	}
