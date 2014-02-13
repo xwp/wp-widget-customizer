@@ -1059,8 +1059,11 @@ var WidgetCustomizer = ( function ($) {
 			if ( $.contains( control.container[0], document.activeElement ) && $( document.activeElement ).is( '[id]' ) ) {
 				element_id_to_refocus = $( document.activeElement ).prop( 'id' );
 				// @todo IE8 support: http://stackoverflow.com/a/4207763/93579
-				active_input_selection_start = $( document.activeElement ).prop( 'selectionStart' );
-				active_input_selection_end = $( document.activeElement ).prop( 'selectionEnd' );
+				try {
+					active_input_selection_start = document.activeElement.selectionStart;
+					active_input_selection_end = document.activeElement.selectionEnd;
+				}
+				catch( e ) {} // catch InvalidStateError in case of checkboxes
 			}
 
 			control.container.addClass( 'widget-form-loading' );
