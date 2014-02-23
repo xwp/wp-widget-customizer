@@ -51,7 +51,7 @@
 }
 
 
-.customize-control-widget_form.is-live-previewable .widget-control-save {
+.customize-control-widget_form .widget-control-save {
 	display: none;
 }
 
@@ -63,15 +63,6 @@
 }
 .customize-control-widget_form.previewer-loading .spinner {
 	opacity: 1.0;
-}
-
-.customize-control-widget_form.widget-form-loading:not(.is-live-previewable) .widget-content {
-	opacity: 0.7;
-	pointer-events: none;
-	-moz-user-select: none;
-	-webkit-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
 }
 
 .customize-control-widget_form .widget {

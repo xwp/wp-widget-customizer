@@ -17,8 +17,6 @@ var WidgetCustomizer = ( function ($) {
 		available_widgets: [], // available widgets for instantiating
 		registered_widgets: [], // all widgets registered
 		active_sidebar_control: null,
-		sidebars_eligible_for_post_message: {},
-		widgets_eligible_for_post_message: {},
 		current_theme_supports: false,
 		previewer: null,
 		saved_widget_ids: {},
@@ -464,14 +462,9 @@ var WidgetCustomizer = ( function ($) {
 			var is_existing_widget = wp.customize.has( setting_id );
 			if ( ! is_existing_widget ) {
 				var setting_args = {
-					transport: 'refresh', // preview window will opt-in to postMessage if available
+					transport: 'refresh',
 					previewer: control.setting.previewer
 				};
-				var sidebar_can_live_preview = self.getPreviewWindow().WidgetCustomizerPreview.sidebarCanLivePreview( control.params.sidebar_id );
-				var widget_can_live_preview = !! self.widgets_eligible_for_post_message[ widget_id_base ];
-				if ( self.current_theme_supports && sidebar_can_live_preview && widget_can_live_preview ) {
-					setting_args.transport = 'postMessage';
-				}
 				wp.customize.create( setting_id, setting_id, {}, setting_args );
 			}
 
@@ -488,8 +481,7 @@ var WidgetCustomizer = ( function ($) {
 					is_new: ! is_existing_widget,
 					width: widget.get( 'width' ),
 					height: widget.get( 'height' ),
-					is_wide: widget.get( 'is_wide' ),
-					is_live_previewable: widget.get( 'is_live_previewable' )
+					is_wide: widget.get( 'is_wide' )
 				},
 				previewer: control.setting.previewer
 			} );
@@ -868,7 +860,6 @@ var WidgetCustomizer = ( function ($) {
 		_setupUpdateUI: function () {
 			var control = this;
 
-			control.container.toggleClass( 'is-live-previewable', control.params.is_live_previewable );
 			var widget_content = control.container.find( '.widget-content' );
 
 			// Configure update button
@@ -895,13 +886,11 @@ var WidgetCustomizer = ( function ($) {
 			} );
 
 			// Handle widgets that support live previews
-			if ( control.params.is_live_previewable ) {
-				widget_content.on( 'change input propertychange', ':input', function ( e ) {
-					if ( e.type === 'change' || ( this.checkValidity && this.checkValidity() ) ) {
-						trigger_save();
-					}
-				} );
-			}
+			widget_content.on( 'change input propertychange', ':input', function ( e ) {
+				if ( e.type === 'change' || ( this.checkValidity && this.checkValidity() ) ) {
+					trigger_save();
+				}
+			} );
 
 			// Remove loading indicators when the setting is saved and the preview updates
 			control.setting.previewer.channel.bind( 'synced', function () {
@@ -1069,10 +1058,6 @@ var WidgetCustomizer = ( function ($) {
 			control.container.addClass( 'widget-form-loading' );
 			control.container.addClass( 'previewer-loading' );
 
-			if ( ! control.params.is_live_previewable ) {
-				widget_content.prop( 'disabled', true );
-			}
-
 			var params = {};
 			params.action = self.update_widget_ajax_action;
 			params[self.update_widget_nonce_post_key] = self.update_widget_nonce_value;
@@ -1104,7 +1089,7 @@ var WidgetCustomizer = ( function ($) {
 					var sanitized_inputs = sanitized_form.find( ':input, option' );
 					var has_same_inputs_in_response = control._getInputsSignature( inputs ) === control._getInputsSignature( sanitized_inputs );
 
-					if ( control.params.is_live_previewable && has_same_inputs_in_response ) {
+					if ( has_same_inputs_in_response ) {
 						inputs.each( function ( i ) {
 							var input = $( this );
 							var sanitized_input = $( sanitized_inputs[i] );
@@ -1179,11 +1164,7 @@ var WidgetCustomizer = ( function ($) {
 				}
 			} );
 			jqxhr.always( function () {
-				if ( ! control.params.is_live_previewable ) {
-					widget_content.prop( 'disabled', false );
-					control.container.removeClass( 'widget-form-loading' );
-				}
-
+				control.container.removeClass( 'widget-form-loading' );
 				inputs.each( function () {
 					$( this ).removeData( 'state' + update_number );
 				} );

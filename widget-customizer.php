@@ -30,10 +30,7 @@
 
 class Widget_Customizer {
 	const UPDATE_WIDGET_AJAX_ACTION    = 'update_widget';
-	const RENDER_WIDGET_AJAX_ACTION    = 'render_widget';
 	const UPDATE_WIDGET_NONCE_POST_KEY = 'update-sidebar-widgets-nonce';
-	const RENDER_WIDGET_NONCE_POST_KEY = 'render-sidebar-widgets-nonce';
-	const RENDER_WIDGET_QUERY_VAR      = 'widget_customizer_render_widget';
 
 	/**
 	 * All id_bases for widgets defined in core
@@ -82,8 +79,6 @@ class Widget_Customizer {
 		add_action( 'customize_controls_init', array( __CLASS__, 'customize_controls_init' ) );
 		add_action( 'customize_register', array( __CLASS__, 'schedule_customize_register' ), 1 );
 		add_action( sprintf( 'wp_ajax_%s', self::UPDATE_WIDGET_AJAX_ACTION ), array( __CLASS__, 'wp_ajax_update_widget' ) );
-		add_filter( 'query_vars', array( __CLASS__, 'add_render_widget_query_var' ) );
-		add_action( 'template_redirect', array( __CLASS__, 'render_widget' ) );
 		add_action( 'customize_controls_enqueue_scripts', array( __CLASS__, 'customize_controls_enqueue_deps' ) );
 		add_action( 'customize_controls_print_footer_scripts', array( __CLASS__, 'output_widget_control_templates' ) );
 		add_action( 'customize_preview_init', array( __CLASS__, 'customize_preview_init' ) );
@@ -199,14 +194,6 @@ class Widget_Customizer {
 			check_ajax_referer( self::UPDATE_WIDGET_AJAX_ACTION, self::UPDATE_WIDGET_NONCE_POST_KEY, false )
 		);
 
-		$is_widget_render = (
-			isset( $_POST[self::RENDER_WIDGET_QUERY_VAR] )
-			&&
-			self::get_post_value( 'action' ) === self::RENDER_WIDGET_AJAX_ACTION
-			&&
-			check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false )
-		);
-
 		$is_ajax_customize_save = (
 			( defined( 'DOING_AJAX' ) && DOING_AJAX )
 			&&
@@ -215,7 +202,7 @@ class Widget_Customizer {
 			check_ajax_referer( 'save-customize_' . $wp_customize->get_stylesheet(), 'nonce' )
 		);
 
-		$is_valid_request = ( $is_ajax_widget_update || $is_widget_render || $is_customize_preview || $is_ajax_customize_save );
+		$is_valid_request = ( $is_ajax_widget_update || $is_customize_preview || $is_ajax_customize_save );
 		if ( ! $is_valid_request ) {
 			return;
 		}
@@ -349,20 +336,6 @@ class Widget_Customizer {
 	}
 
 	/**
-	 * Add query var so that we can request a widget to be rendered standalone
-	 * on any queried page. This will facilitate rendering widgets if Jetpack's
-	 * Widget Visibility is used, as opposed to rendering a widget via WP Ajax.
-	 *
-	 * @filter query_vars
-	 */
-	static function add_render_widget_query_var( $query_vars ) {
-		if ( ! is_admin() ) {
-			$query_vars[] = self::RENDER_WIDGET_QUERY_VAR;
-		}
-		return $query_vars;
-	}
-
-	/**
 	 * When in preview, invoke customize_register for settings after WordPress is
 	 * loaded so that all filters have been initialized (e.g. Widget Visibility)
 	 */
@@ -373,9 +346,6 @@ class Widget_Customizer {
 			add_action( 'wp', array( __CLASS__, 'customize_register' ) );
 		}
 	}
-
-	static $sidebars_eligible_for_post_message = array();
-	static $widgets_eligible_for_post_message  = array();
 
 	/**
 	 * Register customizer settings and controls for all sidebars and widgets
@@ -426,11 +396,6 @@ class Widget_Customizer {
 			if ( $is_registered_sidebar || $is_inactive_widgets ) {
 				$setting_id   = sprintf( 'sidebars_widgets[%s]', $sidebar_id );
 				$setting_args = self::get_setting_args( $setting_id );
-				if ( $is_inactive_widgets ) {
-					$setting_args['transport'] = 'postMessage'; // prevent refresh since not rendered anyway
-				} else {
-					self::$sidebars_eligible_for_post_message[$sidebar_id] = ( 'postMessage' === self::get_sidebar_widgets_setting_transport( $sidebar_id ) );
-				}
 				$setting_args['sanitize_callback']    = array( __CLASS__, 'sanitize_sidebar_widgets' );
 				$setting_args['sanitize_js_callback'] = array( __CLASS__, 'sanitize_sidebar_widgets_js_instance' );
 				$wp_customize->add_setting( $setting_id, $setting_args );
@@ -487,7 +452,6 @@ class Widget_Customizer {
 						'width' => $wp_registered_widget_controls[$widget_id]['width'],
 						'height' => $wp_registered_widget_controls[$widget_id]['height'],
 						'is_wide' => self::is_wide_widget( $widget_id ),
-						'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 					)
 				);
 				$wp_customize->add_control( $control );
@@ -620,7 +584,6 @@ class Widget_Customizer {
 		foreach ( self::get_available_widgets() as $available_widget ) {
 			unset( $available_widget['control_tpl'] );
 			$available_widgets[] = $available_widget;
-			self::$widgets_eligible_for_post_message[$available_widget['id_base']] = ( 'postMessage' === self::get_widget_setting_transport( $available_widget['id_base'] ) );
 		}
 
 		$widget_reorder_nav_tpl = sprintf(
@@ -673,8 +636,6 @@ class Widget_Customizer {
 				'widget_reorder_nav' => $widget_reorder_nav_tpl,
 				'move_widget_area' => $move_widget_area_tpl,
 			),
-			'sidebars_eligible_for_post_message' => self::$sidebars_eligible_for_post_message,
-			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
 			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
 		foreach ( $exports['registered_widgets'] as &$registered_widget ) {
@@ -764,66 +725,6 @@ class Widget_Customizer {
 	}
 
 	/**
-	 * Get the customizer preview transport for the widget's setting
-	 *
-	 * @param string $id_base
-	 * @return string {refresh|postMessage}
-	 */
-	static function get_widget_setting_transport( $id_base ) {
-		if ( ! current_theme_supports( 'widget-customizer' ) || ! self::is_widget_live_previewable( $id_base ) ) {
-			return 'refresh';
-		} else {
-			return 'postMessage';
-		}
-	}
-
-	/**
-	 * Return whether a widget supports being
-	 *
-	 * @param string $id_base
-	 * @return boolean
-	 */
-	static function is_widget_live_previewable( $id_base ) {
-		global $wp_registered_widgets, $wp_registered_widget_controls;
-		$live_previewable = false;
-
-		// Core widgets all have built-in support
-		if ( in_array( $id_base, self::$core_widget_id_bases ) ) {
-			$live_previewable = true;
-		} else {
-			// Other widgets can opt-in via the customizer_support widget_option passed to the WP_Widget constructor
-			// @todo Should we have a lookup of widgets and their controls by id_base?
-			foreach ( $wp_registered_widget_controls as $widget_id => $widget_control ) {
-				if ( $widget_control['id_base'] === $id_base ) {
-					assert( isset( $wp_registered_widgets[$widget_id] ) );
-					$live_previewable = ! empty( $wp_registered_widgets[$widget_id]['customizer_support'] );
-					break;
-				}
-			}
-		}
-
-		$live_previewable = apply_filters( 'customizer_widget_live_previewable', $live_previewable, $id_base );
-		$live_previewable = apply_filters( "customizer_widget_live_previewable_{$id_base}", $live_previewable );
-		return $live_previewable;
-	}
-
-	/**
-	 * Get the customizer preview transport for a sidebar
-	 *
-	 * @param string $sidebar_id
-	 * @return string
-	 */
-	static function get_sidebar_widgets_setting_transport( $sidebar_id ) {
-		$live_previewable = false;
-		if ( current_theme_supports( 'widget-customizer' ) ) {
-			$live_previewable = true;
-		}
-		$live_previewable = apply_filters( 'customizer_sidebar_widgets_live_previewable', $live_previewable, $sidebar_id );
-		$live_previewable = apply_filters( "customizer_sidebar_widgets_live_previewable_{$sidebar_id}", $live_previewable );
-		return $live_previewable ? 'postMessage' : 'refresh';
-	}
-
-	/**
 	 * Build up an index of all available widgets for use in Backbone models
 	 *
 	 * @see wp_list_widgets()
@@ -895,11 +796,10 @@ class Widget_Customizer {
 					'multi_number' => ( $args['_add'] === 'multi' ) ? $args['_multi_num'] : false,
 					'is_disabled' => $is_disabled,
 					'id_base' => $id_base,
-					'transport' => self::get_widget_setting_transport( $id_base ),
+					'transport' => 'refresh',
 					'width' => $wp_registered_widget_controls[$widget['id']]['width'],
 					'height' => $wp_registered_widget_controls[$widget['id']]['height'],
 					'is_wide' => self::is_wide_widget( $widget['id'] ),
-					'is_live_previewable' => self::is_widget_live_previewable( $id_base ),
 				)
 			);
 
@@ -969,8 +869,6 @@ class Widget_Customizer {
 	 * @action wp_enqueue_scripts
 	 */
 	static function customize_preview_enqueue_deps() {
-		global $wp_registered_widgets, $wp_registered_widget_controls;
-
 		wp_enqueue_script(
 			'widget-customizer-preview',
 			self::get_plugin_path_url( 'widget-customizer-preview.js' ),
@@ -985,36 +883,6 @@ class Widget_Customizer {
 			self::get_version()
 		);
 
-		// Enqueue any scripts provided to add live preview support for buultin themes (e.g. twentythirteen)
-		$applied_themes = array( get_template() );
-		if ( get_stylesheet() !== get_template() ) {
-			$applied_themes[] = get_stylesheet();
-		}
-		foreach ( $applied_themes as $applied_theme ) {
-			if ( ! empty( self::$builtin_supported_themes_with_scripts[ $applied_theme ] ) ) {
-				wp_enqueue_script(
-					"widget-customizer-$applied_theme",
-					self::get_plugin_path_url( "theme-support/$applied_theme.js" ),
-					array( 'customize-preview' ),
-					self::get_version(),
-					true
-				);
-			}
-		}
-
-		$all_id_bases = array();
-		foreach ( $wp_registered_widgets as $widget ) {
-			if ( isset( $wp_registered_widget_controls[$widget['id']]['id_base'] ) ) {
-				$all_id_bases[] = $wp_registered_widget_controls[$widget['id']]['id_base'];
-			} else {
-				$all_id_bases[] = $widget['id'];
-			}
-		}
-		$all_id_bases = array_unique( $all_id_bases );
-		foreach ( $all_id_bases as $id_base ) {
-			self::$widgets_eligible_for_post_message[$id_base] = ( 'postMessage' === self::get_widget_setting_transport( $id_base ) );
-		}
-
 		// Why not wp_localize_script? Because we're not localizing, and it forces values into strings
 		global $wp_scripts;
 		$exports = array(
@@ -1023,12 +891,7 @@ class Widget_Customizer {
 			'i18n' => array(
 				'widget_tooltip' => __( 'Press shift and then click to edit widget in customizer...', 'widget-customizer' ),
 			),
-			'render_widget_ajax_action' => self::RENDER_WIDGET_AJAX_ACTION,
-			'render_widget_nonce_value' => wp_create_nonce( self::RENDER_WIDGET_AJAX_ACTION ),
-			'render_widget_nonce_post_key' => self::RENDER_WIDGET_NONCE_POST_KEY,
 			'request_uri' => wp_unslash( $_SERVER['REQUEST_URI'] ),
-			'sidebars_eligible_for_post_message' => self::$sidebars_eligible_for_post_message,
-			'widgets_eligible_for_post_message' => self::$widgets_eligible_for_post_message,
 			'current_theme_supports' => current_theme_supports( 'widget-customizer' ),
 		);
 		foreach ( $exports['registered_widgets'] as &$registered_widget ) {
@@ -1121,140 +984,6 @@ class Widget_Customizer {
 		// We may need to force this to true, and also force-true the value for temp_is_active_sidebar
 		// if we want to ensure that there is an area to drop widgets into, if the sidebar is empty.
 		return $has_widgets;
-	}
-
-	/**
-	 * When the RENDER_WIDGET_QUERY_VAR query_var is supplied, short-circuit the
-	 * default template from being used and instead render the standalone widget
-	 * in the context of the original WP query so that things like Jetpack's
-	 * Widget Visibility work.
-	 *
-	 * @uses wp_send_json_success
-	 * @uses wp_send_json_error
-	 * @see dynamic_sidebar()
-	 * @action template_redirect
-	 */
-	static function render_widget() {
-		if ( ! get_query_var( self::RENDER_WIDGET_QUERY_VAR ) ) {
-			return;
-		}
-
-		global $wp_registered_widgets, $wp_registered_sidebars;
-		require_once plugin_dir_path( __FILE__ ) . '/class-options-transaction.php';
-
-		$generic_error = __( 'An error has occurred. Please reload the page and try again.', 'widget-customizer' );
-		try {
-			do_action( 'load-widgets.php' );
-			do_action( 'widgets.php' );
-
-			$options_transaction = new Options_Transaction();
-			$options_transaction->start();
-			if ( empty( $_POST['widget_id'] ) ) {
-				throw new Widget_Customizer_Exception( __( 'Missing widget_id param', 'widget-customizer' ) );
-			}
-			if ( empty( $_POST['setting_id'] ) ) {
-				throw new Widget_Customizer_Exception( __( 'Missing setting_id param', 'widget-customizer' ) );
-			}
-			if ( empty( $_POST[self::RENDER_WIDGET_NONCE_POST_KEY] ) ) {
-				throw new Widget_Customizer_Exception( __( 'Missing nonce param', 'widget-customizer' ) );
-			}
-			if ( ! check_ajax_referer( self::RENDER_WIDGET_AJAX_ACTION, self::RENDER_WIDGET_NONCE_POST_KEY, false ) ) {
-				throw new Widget_Customizer_Exception( __( 'Nonce check failed. Reload and try again?', 'widget-customizer' ) );
-			}
-			if ( ! current_user_can( 'edit_theme_options' ) ) {
-				throw new Widget_Customizer_Exception( __( 'Current user cannot!', 'widget-customizer' ) );
-			}
-			$widget_id = self::get_post_value( 'widget_id' );
-			if ( ! isset( $wp_registered_widgets[$widget_id] ) ) {
-				throw new Widget_Customizer_Exception( __( 'Unable to find registered widget', 'widget-customizer' ) );
-			}
-			$widget = $wp_registered_widgets[$widget_id];
-
-			if ( empty( $_POST['setting'] ) ) {
-				throw new Widget_Customizer_Exception( __( 'Missing instance', 'widget-customizer' ) );
-			}
-			$setting = json_decode( self::get_post_value( 'setting' ), true );
-			if ( is_null( $setting ) ) {
-				throw new Widget_Customizer_Exception( __( 'JSON parse error', 'widget-customizer' ) );
-			}
-			$instance = self::sanitize_widget_instance( $setting );
-			if ( is_null( $instance ) ) {
-				throw new Widget_Customizer_Exception( __( 'Unsanitary widget instance provided', 'widget-customizer' ) );
-			}
-
-			$setting_id = self::get_post_value( 'setting_id' );
-			if ( ! preg_match( '/^(.+?)(?:\[(\d+)])?$/', $setting_id, $matches ) ) {
-				throw new Widget_Customizer_Exception( __( 'Malformed setting', 'widget-customizer' ) );
-			}
-			$option_name   = $matches[1];
-			$widget_number = ! empty( $matches[2] ) ? intval( $matches[2] ) : null;
-			$option_value  = get_option( $option_name );
-			if ( is_null( $widget_number ) ) {
-				$option_value = $instance;
-			} else {
-				if ( ! is_array( $option_value ) ) {
-					$option_value = array();
-				}
-				$option_value[$widget_number] = $instance;
-			}
-			update_option( $option_name, $option_value );
-
-			$rendered_widget = null;
-			$sidebar_id = is_active_widget( $widget['callback'], $widget['id'], false, false );
-
-			// Render the widget if it is assigned to a sidebar (and not temporarily removed, for example by Widget Visibility)
-			if ( $sidebar_id ) {
-				$sidebar = $wp_registered_sidebars[$sidebar_id];
-				$params  = array_merge(
-					array(
-						array_merge(
-							$sidebar,
-							array(
-								'widget_id' => $widget_id,
-								'widget_name' => $widget['name'],
-							)
-						),
-					),
-					(array) $widget['params']
-				);
-
-				$callback = $widget['callback'];
-
-				// Substitute HTML id and class attributes into before_widget
-				$classname_ = '';
-				foreach ( (array) $widget['classname'] as $cn ) {
-					if ( is_string( $cn ) ) {
-						$classname_ .= '_' . $cn;
-					} else if ( is_object( $cn ) ) {
-						$classname_ .= '_' . get_class( $cn );
-					}
-				}
-				$classname_ = ltrim( $classname_, '_' );
-
-				$params[0]['before_widget'] = sprintf( $params[0]['before_widget'], $widget_id, $classname_ );
-				$params = apply_filters( 'dynamic_sidebar_params', $params );
-
-				// Render the widget
-				ob_start();
-				do_action( 'dynamic_sidebar', $widget );
-				if ( is_callable( $callback ) ) {
-					call_user_func_array( $callback, $params );
-				}
-				$rendered_widget = ob_get_clean();
-			}
-			$options_transaction->rollback();
-			wp_send_json_success( compact( 'rendered_widget', 'sidebar_id' ) );
-		}
-		catch ( Exception $e ) {
-			$options_transaction->rollback();
-			if ( $e instanceof Widget_Customizer_Exception ) {
-				$message = $e->getMessage();
-			} else {
-				error_log( sprintf( '%s in %s: %s', get_class( $e ), __FUNCTION__, $e->getMessage() ) );
-				$message = $generic_error;
-			}
-			wp_send_json_error( compact( 'message' ) );
-		}
 	}
 
 	/**
