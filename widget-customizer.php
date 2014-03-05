@@ -1,14 +1,19 @@
 <?php
 /**
  * Plugin Name: Widget Customizer
- * Description: Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
- * Version:     0.15
+ * Description: Description: (As of r27419 in WordPress Core trunk, the functionality in this plugin has been merged into core and this plugin will deactivate itself.) Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
+ * Version:     0.15.1
  * Author:      X-Team
  * Author URI:  http://x-team.com/wordpress/
  * License:     GPLv2+
  * Text Domain: widget-customizer
  * Domain Path: /languages
  */
+
+if ( file_exists( ABSPATH . WPINC . '/class-wp-customize-widgets.php' ) ) {
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	deactivate_plugins( 'widget-customizer/widget-customizer.php' );
+} else {
 
 /**
  * Copyright (c) 2013 X-Team (http://x-team.com/)
@@ -1552,3 +1557,5 @@ class Widget_Customizer {
 class Widget_Customizer_Exception extends Exception {}
 
 add_action( 'plugins_loaded', array( 'Widget_Customizer', 'setup' ) );
+
+} // end if ( file_exists( ABSPATH . WPINC . '/class-widget-customizer.php' ) )

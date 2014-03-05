@@ -15,7 +15,7 @@ Edit widgets and preview changes in Theme Customizer, with a control for each wi
 
 **This plugin is being developed as part of the Widgets UI Refresh feature-as-plugin group. Read the [Widget Customizer Feature-as-Plugin Merge Proposal](http://make.wordpress.org/core/2014/01/28/widget-customizer-feature-as-plugin-merge-proposal/).**
 
-***New:*** Wide widget controls and live previews as you type are now supported. See [full changelog](http://wordpress.org/plugins/widget-customizer/changelog/).
+***New:*** This plugin has been merged into WordPress Core! See [r27419](https://core.trac.wordpress.org/changeset/27419). This plugin will deactivate itself when WordPress is updated to this revision.
 
 **Notice regarding empty sidebars:** Unless you are running trunk, you won't be able to add widgets to *empty* sidebars. This is because the [temporary hooks](http://core.trac.wordpress.org/ticket/25368) necessary are [removed in final releases](http://core.trac.wordpress.org/changeset/25878/branches/3.7/src/wp-includes/widgets.php). So you must currently add at least one widget to each sidebar (in the traditional way) for it to appear in the customizer.
 
