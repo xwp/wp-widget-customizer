@@ -1,4 +1,4 @@
 [submodule "dev-lib"]
 	path = dev-lib
-	url = ../wp-plugin-dev-lib
+	url = git@github.com:xwp/wp-plugin-dev-lib.git
 	branch = vip-themes

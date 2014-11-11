@@ -2,8 +2,8 @@
 /**
  * Test widget-customizer.php
  *
- * @author X-Team
- * @author Akeda Bagus <akeda@x-team.com>
+ * @author XWP
+ * @author Akeda Bagus <akeda@xwp.co>
  */
 
 class Test_Widget_Customizer extends WP_UnitTestCase {
