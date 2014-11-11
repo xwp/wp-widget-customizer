@@ -3,8 +3,8 @@
  * Plugin Name: Widget Customizer
  * Description: Description: (As of r27419 in WordPress Core trunk, the functionality in this plugin has been merged into core and this plugin will deactivate itself.) Edit widgets and preview changes in Theme Customizer, with a control for each widget form in sections added for each sidebar rendered in the preview.
  * Version:     0.15.1
- * Author:      X-Team
- * Author URI:  http://x-team.com/wordpress/
+ * Author:      XWP
+ * Author URI:  https://xwp.co/
  * License:     GPLv2+
  * Text Domain: widget-customizer
  * Domain Path: /languages
@@ -16,7 +16,7 @@ if ( file_exists( ABSPATH . WPINC . '/class-wp-customize-widgets.php' ) ) {
 } else {
 
 /**
- * Copyright (c) 2013 X-Team (http://x-team.com/)
+ * Copyright (c) 2013 XWP (https://xwp.co/)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, version 2 or, at

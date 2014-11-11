@@ -2,8 +2,8 @@
 /**
  * Tests bootstrapper.
  *
- * @author X-Team
- * @author Akeda Bagus <akeda@x-team.com>
+ * @author XWP
+ * @author Akeda Bagus <akeda@xwp.co>
  */
 
 require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
